@@ -1,0 +1,97 @@
+[project]
+name = "adk-agui-py-middleware"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ag-ui-protocol>=0.1.8",
+    "google-adk>=1.10.0",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.8",
+]
+
+[tool.ruff]
+src = ["adk-agui-middleware"]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+[tool.ruff.lint]
+# Enable comprehensive linting rules for high code quality
+select = [
+    "E", # pycodestyle errors – PEP 8 outright violations (indentation, whitespace, etc.)
+    "W", # pycodestyle warnings – stylistic issues like excessive line length
+    "F", # Pyflakes – logical errors (unused imports, undefined names, etc.)
+    "UP", # pyupgrade – suggest modern Python syntax (f-strings, pathlib, etc.)
+    "B", # flake8-bugbear – common bugs and design problems
+    "SIM", # flake8-simplify – propose simpler, more readable constructs
+    "I", # isort – import grouping and ordering
+    "N", # pep8-naming – enforce naming conventions
+    "C90", # mccabe – cyclomatic complexity checks
+    "ARG", # flake8-unused-arguments – detect unused or redundant arguments
+    "S", # flake8-bandit – security-oriented code issues
+    "T20", # flake8-print – forbid stray print/debug statements
+    "RET", # flake8-return – ensure explicit and consistent return patterns
+    "ICN", # flake8-import-conventions – enforce import aliasing rules (e.g., `import numpy as np`)
+    "PIE", # flake8-pie – miscellaneous correctness & readability improvements
+    "PT", # flake8-pytest-style – enforce idiomatic pytest usage and best practices
+    "PL", # Pylint subset – broader code-quality checks (convention, error, refactor, warning)
+    "TRY", # tryceratops – encourage explicit, focused exception handling
+    "FLY", # flynt – suggest converting old string formatting to f-strings
+    "PERF" # perflint – flag patterns with measurable performance overhead
+]
+
+ignore = [
+    "W191", # tab-indentation
+    "W291", # trailing-whitespace
+    "W293", # blank-line-has-no-content
+    "E111", # indentation-with-invalid-multiple
+    "E114", # indentation-with-invalid-multiple-comment
+    "E117", # over-indented
+    "E501", # line-too-long
+
+    "Q000", # bad-quotes-inline-string
+    "Q001", # bad-quotes-multiline-string
+    "Q002", # bad-quotes-docstring
+    "Q003", # avoidable-escaped-quote
+
+    "COM812", # missing-trailing-comma
+    "COM819", # prohibited-trailing-comma
+
+    "ISC002", # multi-line-implicit-string-concatenation
+
+    "TRY003", # try-except-else-finally-missing-else
+    "TRY400", # try-except-else-finally
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "F401", # Unused import - imports in __init__.py are often for package API
+]
+
+# Configure pydocstyle to use Google docstring convention
+[tool.ruff.lint.pydocstyle]
+convention = "google" # Use Google-style docstrings (Args:, Returns:, Raises:)
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.setuptools.package-data]
+"adk-agui-middleware" = ["py.typed"]
