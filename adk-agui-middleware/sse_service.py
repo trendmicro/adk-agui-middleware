@@ -8,18 +8,19 @@ from ag_ui.core import (
     RunErrorEvent,
     RunFinishedEvent,
     RunStartedEvent,
-    ToolMessage, ToolCallEndEvent, ToolCallResultEvent,
+    ToolCallEndEvent,
+    ToolCallResultEvent,
+    ToolMessage,
 )
 from ag_ui.encoder import EventEncoder
-from google.adk.memory import BaseMemoryService
 from google.adk.sessions import BaseSessionService
 from google.genai import types
 
 from data_model.session import SessionParameter
-from error_event import AGUIErrorEvent, AGUIEncoderError
+from error_event import AGUIEncoderError, AGUIErrorEvent
 from loggers.record_log import record_log
 from manager.execution_manger import ExecutionManger
-from manager.session_manager import SessionManager, SessionHandler
+from manager.session_manager import SessionHandler, SessionManager
 from pattern import Singleton
 
 
@@ -75,12 +76,11 @@ class AGUIMessageHandler:
 
 
 class AGUIUserHandler:
-
     def __init__(
-            self,
-            agui_message: AGUIMessageHandler,
-            session_handler: SessionHandler,
-            execution_handler: ExecutionManger
+        self,
+        agui_message: AGUIMessageHandler,
+        session_handler: SessionHandler,
+        execution_handler: ExecutionManger,
     ):
         self.agui_message = agui_message
         self.session_handler = session_handler
@@ -106,7 +106,10 @@ class AGUIUserHandler:
     async def check_tools_event(event: BaseEvent, tool_call_ids: list[str]):
         if isinstance(event, ToolCallEndEvent):
             tool_call_ids.append(event.tool_call_id)
-        if isinstance(event, ToolCallResultEvent) and event.tool_call_id in tool_call_ids:
+        if (
+            isinstance(event, ToolCallResultEvent)
+            and event.tool_call_id in tool_call_ids
+        ):
             tool_call_ids.remove(event.tool_call_id)
 
     def call_start(self):
@@ -125,7 +128,9 @@ class AGUIUserHandler:
             return AGUIErrorEvent.no_tool_results(self.agui_message.thread_id)
         try:
             for tool_result in tool_results:
-                await self.session_handler.check_and_remove_pending_tool_call(tool_result["message"].tool_call_id)
+                await self.session_handler.check_and_remove_pending_tool_call(
+                    tool_result["message"].tool_call_id
+                )
             record_log(
                 f"Starting new execution for tool result in thread {self.session_id}"
             )
@@ -149,7 +154,7 @@ class AGUIUserHandler:
 
     async def run(self) -> AsyncGenerator[BaseEvent]:
         if self.agui_message.is_tool_result_submission and (
-                error := await self.remove_pending_tool_call()
+            error := await self.remove_pending_tool_call()
         ):
             yield error
             return
@@ -178,7 +183,7 @@ class SSEService(metaclass=Singleton):
             return AGUIEncoderError.encoding_error(encoder, e)
 
     async def get_runner(
-            self, agui_content: RunAgentInput
+        self, agui_content: RunAgentInput
     ) -> Callable[[], AsyncGenerator[BaseEvent]]:
         async def runner() -> AsyncGenerator[BaseEvent]:
             user_handler = AGUIUserHandler(
@@ -188,10 +193,10 @@ class SSEService(metaclass=Singleton):
                     session_parameter=SessionParameter(
                         app_name="?????????????",
                         user_id="?????????????",
-                        session_id=agui_content.thread_id
-                    )
+                        session_id=agui_content.thread_id,
+                    ),
                 ),
-                execution_handler=self.execution_handler
+                execution_handler=self.execution_handler,
             )
             async for event in user_handler.run():
                 yield event
@@ -199,9 +204,9 @@ class SSEService(metaclass=Singleton):
         return runner
 
     async def event_generator(
-            self,
-            encoder: EventEncoder,
-            runner: Callable[[], AsyncGenerator[BaseEvent]],
+        self,
+        encoder: EventEncoder,
+        runner: Callable[[], AsyncGenerator[BaseEvent]],
     ) -> AsyncGenerator[str]:
         try:
             async for event in runner():

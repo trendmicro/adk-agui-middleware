@@ -9,16 +9,15 @@ from tools.json_encoder import DataclassesEncoder
 
 
 def _create_and_log_message(
-        msg: str,
-        log_level=logger.logging.info,
-        body: Any = None,
-        error: Exception | None = None,
+    msg: str,
+    log_level=logger.logging.info,
+    body: Any = None,
+    error: Exception | None = None,
 ) -> dict:
     message_data = LogMessage(
         msg=msg,
         func_name=get_function_name(full_chain=True, max_depth=5),
-        body=json.loads(json.dumps(body, cls=DataclassesEncoder)
-                        ),
+        body=json.loads(json.dumps(body, cls=DataclassesEncoder)),
     )
     if error is not None:
         message_data.error_message = repr(error)

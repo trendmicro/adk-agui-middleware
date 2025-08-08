@@ -1,5 +1,6 @@
 from ag_ui.core import EventType, RunErrorEvent
 from ag_ui.encoder import EventEncoder
+
 from loggers.record_log import record_error_log
 
 
@@ -28,7 +29,7 @@ class AGUIEncoderError(Exception):
 class AGUIErrorEvent:
     @staticmethod
     def execution_error(e: Exception) -> RunErrorEvent:
-        record_error_log(f"Error in new execution", e)
+        record_error_log("Error in new execution", e)
         return RunErrorEvent(
             type=EventType.RUN_ERROR, message=repr(e), code="EXECUTION_ERROR"
         )

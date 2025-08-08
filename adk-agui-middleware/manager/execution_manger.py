@@ -1,6 +1,6 @@
 import asyncio
 
-from loggers.record_log import record_log, record_error_log
+from loggers.record_log import record_error_log, record_log
 from manager.session_manager import SessionHandler
 from tools.execution_state import ExecutionState
 
@@ -51,4 +51,6 @@ class ExecutionManger:
                 del self._active_executions[session_id]
                 record_log(f"Cleaned up execution for session {session_id}")
                 return
-            record_log(f"Preserving execution for session {session_id} - has pending tool calls (HITL scenario)")
+            record_log(
+                f"Preserving execution for session {session_id} - has pending tool calls (HITL scenario)"
+            )

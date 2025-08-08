@@ -7,13 +7,13 @@ from fastapi import HTTPException, Request, status
 
 from data_model.error import ErrorModel
 from loggers.record_log import record_error_log
-from loggers.record_request_log import record_request_log, record_request_error_log
+from loggers.record_request_log import record_request_error_log, record_request_log
 
 
 def get_common_http_exception(
-        status_code: int,
-        error_message: str,
-        error_description: dict,
+    status_code: int,
+    error_message: str,
+    error_description: dict,
 ) -> HTTPException:
     return HTTPException(
         status_code=status_code,
@@ -25,9 +25,7 @@ def get_common_http_exception(
     )
 
 
-def get_http_internal_server_error_exception(
-        error_description: dict
-) -> HTTPException:
+def get_http_internal_server_error_exception(error_description: dict) -> HTTPException:
     return get_common_http_exception(
         status.HTTP_500_INTERNAL_SERVER_ERROR,
         "Internal Server Error.",
@@ -45,7 +43,9 @@ async def exception_http_handler(request: Request):
         raise
     except Exception as e:
         await record_request_error_log(request, e)
-        raise get_http_internal_server_error_exception({"error_message": repr(e)}) from e
+        raise get_http_internal_server_error_exception(
+            {"error_message": repr(e)}
+        ) from e
 
 
 @asynccontextmanager

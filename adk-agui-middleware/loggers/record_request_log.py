@@ -26,7 +26,7 @@ async def record_request_log(request: Request) -> dict:
         msg="record request log",
         func_name=get_function_name(full_chain=True, max_depth=5),
         headers=dict(request.headers),
-        request_body=(await request.body()).decode()
+        request_body=(await request.body()).decode(),
     )
     message_dump = message.model_dump(exclude_none=True)
     logger.logging.info(message_dump)
