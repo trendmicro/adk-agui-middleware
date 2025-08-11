@@ -1,3 +1,4 @@
+import json
 from collections.abc import AsyncGenerator, Callable
 
 from ag_ui.core import (
@@ -13,15 +14,19 @@ from ag_ui.core import (
     ToolMessage,
 )
 from ag_ui.encoder import EventEncoder
+from google.adk import Runner
+from google.adk.agents import BaseAgent, RunConfig
+from google.adk.events import Event
 from google.adk.sessions import BaseSessionService
 from google.genai import types
 
 from data_model.session import SessionParameter
 from error_event import AGUIEncoderError, AGUIErrorEvent
-from loggers.record_log import record_log
-from manager.execution_manger import ExecutionManger
-from manager.session_manager import SessionHandler, SessionManager
+from handler.session import SessionHandler
+from loggers.record_log import record_error_log, record_log, record_warning_log
+from manager.session import SessionManager
 from pattern import Singleton
+from tools.event_translator import EventTranslator
 
 
 class AGUIMessageHandler:
@@ -37,6 +42,23 @@ class AGUIMessageHandler:
         if not self.agui_content.messages:
             return False
         return self.agui_content.messages[-1].role == "tool"
+
+    @staticmethod
+    def _parse_tool_content(content: str, tool_call_id: str) -> dict:
+        if not content or not content.strip():
+            record_warning_log(
+                f"Empty tool result content for tool call {tool_call_id}, using empty success result"
+            )
+            return {"success": True, "result": None}
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError as e:
+            record_error_log("Invalid JSON in tool result", e)
+            return {
+                "error": f"Invalid JSON in tool result: {str(e)}",
+                "raw_content": content,
+                "error_type": "JSON_DECODE_ERROR",
+            }
 
     async def get_latest_message(self) -> types.Content | None:
         if not self.agui_content.messages:
@@ -74,17 +96,42 @@ class AGUIMessageHandler:
         )
         return [{"tool_name": tool_name, "message": most_recent_tool_message}]
 
+    async def process_tool_results(self) -> types.Content | None:
+        if not self.is_tool_result_submission:
+            return None
+        parts = []
+        for tool_msg in await self.extract_tool_results():
+            tool_call_id = tool_msg["message"].tool_call_id
+            content = tool_msg["message"].content
+            result = self._parse_tool_content(content, tool_call_id)
+            parts.append(
+                types.Part(
+                    function_response=types.FunctionResponse(
+                        id=tool_call_id,
+                        name=tool_msg["tool_name"],
+                        response=result,
+                    )
+                )
+            )
+        return types.Content(parts=parts, role="user")
+
+    async def get_message(self) -> types.Content:
+        return await self.process_tool_results() or await self.get_latest_message()
+
 
 class AGUIUserHandler:
     def __init__(
         self,
+        runner: Runner,
+        run_config: RunConfig,
         agui_message: AGUIMessageHandler,
         session_handler: SessionHandler,
-        execution_handler: ExecutionManger,
     ):
+        self.runner = runner
+        self.run_config = run_config
         self.agui_message = agui_message
         self.session_handler = session_handler
-        self.execution_handler = execution_handler
+        self.event_translator = EventTranslator()
 
     @property
     def app_name(self):
@@ -111,6 +158,7 @@ class AGUIUserHandler:
             and event.tool_call_id in tool_call_ids
         ):
             tool_call_ids.remove(event.tool_call_id)
+        return tool_call_ids
 
     def call_start(self):
         return RunStartedEvent(
@@ -121,6 +169,28 @@ class AGUIUserHandler:
         return RunFinishedEvent(
             type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
         )
+
+    async def run_async(self, message: types.Content) -> AsyncGenerator[Event]:
+        async for event in self.runner.run_async(
+            user_id=self.user_id,
+            session_id=self.session_id,
+            new_message=message,
+        ):
+            yield event
+
+    async def translator_to_agui(self, adk_event: Event) -> AsyncGenerator[BaseEvent]:
+        is_long_running_tool = False
+        if not adk_event.is_final_response():
+            async for ag_ui_event in self.event_translator.translate(adk_event):
+                yield ag_ui_event
+        else:
+            async for ag_ui_event in self.event_translator.translate_lro_function_calls(
+                adk_event
+            ):
+                yield ag_ui_event
+                is_long_running_tool = ag_ui_event.type == EventType.TOOL_CALL_END
+            if is_long_running_tool:
+                return
 
     async def remove_pending_tool_call(self) -> RunErrorEvent | None:
         tool_results = await self.agui_message.extract_tool_results()
@@ -139,15 +209,13 @@ class AGUIUserHandler:
 
     async def _run_workflow(self) -> AsyncGenerator[BaseEvent]:
         yield self.call_start()
-
-        await self.execution_handler.check_existing_execution(self.session_id)
-        execution = await self._start_background_execution()
-        await self.execution_handler.lock_execution(self.session_id, execution)
-
+        await self.session_handler.check_and_create_session()
+        await self.session_handler.update_session_state()
         tool_call_ids = []
-        async for event in self._stream_events(execution):
-            await self.check_tools_event(event, tool_call_ids)
-            yield event
+        async for adk_event in self.run_async(await self.agui_message.get_message()):
+            async for agui_event in self.translator_to_agui(adk_event):
+                await self.check_tools_event(agui_event, tool_call_ids)
+                yield agui_event
         for tool_call_id in tool_call_ids:
             await self.session_handler.add_pending_tool_call(tool_call_id)
         yield self.call_finished()
@@ -158,22 +226,20 @@ class AGUIUserHandler:
         ):
             yield error
             return
-
         try:
             async for event in self._run_workflow():
                 yield event
         except Exception as e:
             yield AGUIErrorEvent.execution_error(e)
-        finally:
-            await self.execution_handler.unlock_execution(self.session_id)
 
 
 class SSEService(metaclass=Singleton):
-    def __init__(self, session_service: BaseSessionService):
+    def __init__(self, session_service: BaseSessionService, agent: BaseAgent):
+        self.agent = agent
         self.session_manager = SessionManager(
             session_service=session_service,
         )
-        self.execution_handler = ExecutionManger()
+        self.runner_box: dict[str, Runner] = {}
 
     @staticmethod
     def _encoding_handler(encoder: EventEncoder, event: BaseEvent) -> str:
@@ -182,11 +248,22 @@ class SSEService(metaclass=Singleton):
         except Exception as e:
             return AGUIEncoderError.encoding_error(encoder, e)
 
+    def _create_runner(self, app_name: str) -> Runner:
+        if app_name not in self.runner_box:
+            self.runner_box[app_name] = Runner(
+                app_name=app_name,
+                agent=self.agent,
+                session_service=self.session_manager.session_service,
+            )
+        return self.runner_box[app_name]
+
     async def get_runner(
         self, agui_content: RunAgentInput
     ) -> Callable[[], AsyncGenerator[BaseEvent]]:
         async def runner() -> AsyncGenerator[BaseEvent]:
             user_handler = AGUIUserHandler(
+                runner=self._create_runner("?????????????"),
+                run_config=RunConfig(),
                 agui_message=AGUIMessageHandler(agui_content),
                 session_handler=SessionHandler(
                     session_manger=self.session_manager,
@@ -196,7 +273,6 @@ class SSEService(metaclass=Singleton):
                         session_id=agui_content.thread_id,
                     ),
                 ),
-                execution_handler=self.execution_handler,
             )
             async for event in user_handler.run():
                 yield event
