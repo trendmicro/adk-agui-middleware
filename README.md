@@ -36,6 +36,14 @@ The middleware follows a modular architecture with clear separation of concerns:
 
 ## Installation
 
+### Using pip
+
+```bash
+pip install adk-agui-py-middleware
+```
+
+Available on PyPI: https://pypi.org/project/adk-agui-py-middleware/
+
 ### Requirements
 
 - Python 3.13+
@@ -43,7 +51,7 @@ The middleware follows a modular architecture with clear separation of concerns:
 - AGUI Protocol (`ag-ui-protocol>=0.1.8`)
 - Pydantic (`pydantic>=2.11.7`)
 
-### Install Dependencies
+### Development Install
 
 ```bash
 # Using uv (recommended)
