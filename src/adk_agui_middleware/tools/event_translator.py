@@ -27,27 +27,51 @@ from loggers.record_log import (
 
 
 class EventTranslator:
+    """Translates events between ADK (Agent Development Kit) and AGUI formats.
+
+    Handles the complex conversion of ADK events to AGUI events, managing streaming
+    messages, tool calls, function calls, and state updates. Maintains internal state
+    for streaming operations and long-running tool executions.
+    """
+
     def __init__(self):
-        self._active_tool_calls: dict[str, str] = {}
-        self._streaming_message_id: str | None = None
-        self._is_streaming: bool = False
-        self.long_running_tool_ids: list[str] = []
+        """Initialize the event translator with empty state containers."""
+        self._active_tool_calls: dict[str, str] = {}  # Track active tool call IDs
+        self._streaming_message_id: str | None = None  # Current streaming message ID
+        self._is_streaming: bool = False  # Whether currently streaming a message
+        self.long_running_tool_ids: list[str] = []  # IDs of long-running tools
 
     async def translate(self, adk_event: ADKEvent) -> AsyncGenerator[BaseEvent]:
+        """Translate an ADK event into corresponding AGUI events.
+
+        Processes different types of ADK events (text content, function calls,
+        function responses, state updates) and yields appropriate AGUI events.
+
+        Args:
+            adk_event: ADK event to translate
+
+        Yields:
+            BaseEvent objects in AGUI format
+        """
         try:
+            # Skip user-authored events as they don't need translation
             if adk_event.author == "user":
                 return
+            # Handle text content streaming
             if adk_event.content and adk_event.content.parts:
                 async for event in self._translate_text_content(adk_event):
                     yield event
+            # Handle function calls with proper streaming closure
             if adk_event.get_function_calls():
                 async for event in self._handle_function_calls(adk_event):
                     yield event
+            # Handle function responses from tool execution
             if adk_event.get_function_responses():
                 async for event in self.translate_function_response(
                     adk_event.get_function_responses()
                 ):
                     yield event
+            # Handle state updates and custom metadata
             async for event in self._handle_additional_data(adk_event):
                 yield event
         except Exception as e:
@@ -56,8 +80,18 @@ class EventTranslator:
     async def _handle_function_calls(
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
+        """Handle function calls by closing streaming messages and translating calls.
+
+        Args:
+            adk_event: ADK event containing function calls
+
+        Yields:
+            BaseEvent objects for function call handling
+        """
+        # Force close any active streaming message before handling function calls
         async for event in self.force_close_streaming_message():
             yield event
+        # Translate the function calls to AGUI events
         async for event in self.translate_function_calls(
             adk_event.get_function_calls()
         ):
@@ -66,8 +100,18 @@ class EventTranslator:
     async def _handle_additional_data(
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
+        """Handle additional data like state deltas and custom metadata.
+
+        Args:
+            adk_event: ADK event potentially containing additional data
+
+        Yields:
+            BaseEvent objects for state updates and custom events
+        """
+        # Handle state delta updates
         if adk_event.actions and adk_event.actions.state_delta:
             yield self.create_state_delta_event(adk_event.actions.state_delta)
+        # Handle custom metadata as custom events
         if adk_event.custom_metadata:
             yield CustomEvent(
                 type=EventType.CUSTOM,
@@ -212,6 +256,14 @@ class EventTranslator:
         )
 
     async def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent]:
+        """Force close any active streaming message that wasn't properly terminated.
+
+        This method is used to clean up streaming state when transitioning to
+        function calls or other operations that require a clean state.
+
+        Yields:
+            TextMessageEndEvent if there was an active streaming message
+        """
         if not (self._is_streaming and self._streaming_message_id):
             return
         record_warning_log(
