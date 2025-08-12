@@ -4,15 +4,22 @@ from typing import Any
 from ag_ui.core import AssistantMessage, RunAgentInput, ToolMessage
 from google.genai import types
 from loggers.record_log import record_error_log, record_log, record_warning_log
+from fastapi import Request
 
 
-class AGUIMessageHandler:
-    def __init__(self, agui_content: RunAgentInput):
+class UserMessageHandler:
+    def __init__(self, agui_content: RunAgentInput, request: Request, initial_state: dict[str, str] | None = None):
         self.agui_content = agui_content
+        self.request = request
+        self.initial_state = initial_state
 
     @property
     def thread_id(self) -> str:
         return self.agui_content.thread_id
+
+    @property
+    def initial_state(self) -> dict[str, str] | None:
+        return self.initial_state
 
     @property
     def is_tool_result_submission(self) -> bool:

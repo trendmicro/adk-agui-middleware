@@ -12,7 +12,7 @@ from event.error_event import AGUIEncoderError
 from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
-from handler.agui_message import AGUIMessageHandler
+from handler.user_message import UserMessageHandler
 from handler.agui_user import AGUIUserHandler
 from handler.session import SessionHandler
 from manager.session import SessionManager
@@ -20,10 +20,10 @@ from manager.session import SessionManager
 
 class SSEService(BaseSSEService):
     def __init__(
-        self,
-        agent: BaseAgent,
-        runner_config: RunnerConfig,
-        context_config: ContextConfig,
+            self,
+            agent: BaseAgent,
+            runner_config: RunnerConfig,
+            context_config: ContextConfig,
     ):
         self.agent = agent
         self.runner_config = runner_config
@@ -34,8 +34,8 @@ class SSEService(BaseSSEService):
         self.context_config = context_config
 
     async def _get_config_value(
-        self, config_attr: str, agui_content: RunAgentInput, request: Request
-    ) -> str:
+            self, config_attr: str, agui_content: RunAgentInput, request: Request
+    ) -> str | None:
         value: Callable[[RunAgentInput, Request], Awaitable[str]] | str = getattr(
             self.context_config, config_attr
         )
@@ -43,16 +43,21 @@ class SSEService(BaseSSEService):
             return await value(agui_content, request)
         return value
 
-    async def get_app_name(self, agui_content: RunAgentInput, request: Request) -> str:
+    async def extract_app_name(self, agui_content: RunAgentInput, request: Request) -> str:
         return await self._get_config_value("app_name", agui_content, request)
 
-    async def get_user_id(self, agui_content: RunAgentInput, request: Request) -> str:
+    async def extract_user_id(self, agui_content: RunAgentInput, request: Request) -> str:
         return await self._get_config_value("user_id", agui_content, request)
 
-    async def get_session_id(
-        self, agui_content: RunAgentInput, request: Request
+    async def extract_session_id(
+            self, agui_content: RunAgentInput, request: Request
     ) -> str:
         return await self._get_config_value("session_id", agui_content, request)
+
+    async def extract_initial_state(
+            self, agui_content: RunAgentInput, request: Request
+    ) -> dict[str, str] | None:
+        return await self._get_config_value("extract_initial_state", agui_content, request)
 
     @staticmethod
     def _encoding_handler(encoder: EventEncoder, event: BaseEvent) -> str:
@@ -74,16 +79,17 @@ class SSEService(BaseSSEService):
         return self.runner_box[app_name]
 
     async def get_runner(
-        self, agui_content: RunAgentInput, request: Request
+            self, agui_content: RunAgentInput, request: Request
     ) -> Callable[[], AsyncGenerator[BaseEvent]]:
         async def runner() -> AsyncGenerator[BaseEvent]:
-            app_name = await self.get_app_name(agui_content, request)
-            user_id = await self.get_user_id(agui_content, request)
-            session_id = await self.get_session_id(agui_content, request)
+            app_name = await self.extract_app_name(agui_content, request)
+            user_id = await self.extract_user_id(agui_content, request)
+            session_id = await self.extract_session_id(agui_content, request)
+            initial_state = await self.extract_initial_state(agui_content, request)
             user_handler = AGUIUserHandler(
                 runner=self._create_runner(app_name),
                 run_config=self.runner_config.run_config,
-                agui_message=AGUIMessageHandler(agui_content),
+                agui_message=UserMessageHandler(agui_content, request, initial_state),
                 session_handler=SessionHandler(
                     session_manger=self.session_manager,
                     session_parameter=SessionParameter(
@@ -97,7 +103,7 @@ class SSEService(BaseSSEService):
         return runner
 
     async def event_generator(
-        self, runner: Callable[[], AsyncGenerator[BaseEvent]], encoder: EventEncoder
+            self, runner: Callable[[], AsyncGenerator[BaseEvent]], encoder: EventEncoder
     ) -> AsyncGenerator[str]:
         try:
             async for event in runner():

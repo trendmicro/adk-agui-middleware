@@ -17,7 +17,7 @@ from google.genai import types
 from loggers.record_log import record_log
 from tools.event_translator import EventTranslator
 
-from handler.agui_message import AGUIMessageHandler
+from handler.user_message import UserMessageHandler
 from handler.session import SessionHandler
 
 
@@ -26,12 +26,12 @@ class AGUIUserHandler:
         self,
         runner: Runner,
         run_config: RunConfig,
-        agui_message: AGUIMessageHandler,
+        agui_message: UserMessageHandler,
         session_handler: SessionHandler,
     ):
         self.runner = runner
         self.run_config = run_config
-        self.agui_message = agui_message
+        self.user_message = agui_message
         self.session_handler = session_handler
 
         self.event_translator = EventTranslator()
@@ -52,7 +52,7 @@ class AGUIUserHandler:
 
     @property
     def run_id(self) -> str:
-        return self.agui_message.agui_content.run_id
+        return self.user_message.agui_content.run_id
 
     def call_start(self) -> RunStartedEvent:
         return RunStartedEvent(
@@ -74,9 +74,9 @@ class AGUIUserHandler:
             self.tool_call_ids.remove(event.tool_call_id)
 
     async def remove_pending_tool_call(self) -> RunErrorEvent | None:
-        tool_results = await self.agui_message.extract_tool_results()
+        tool_results = await self.user_message.extract_tool_results()
         if not tool_results:
-            return AGUIErrorEvent.no_tool_results(self.agui_message.thread_id)
+            return AGUIErrorEvent.no_tool_results(self.user_message.thread_id)
         try:
             for tool_result in tool_results:
                 await self.session_handler.check_and_remove_pending_tool_call(
@@ -113,7 +113,7 @@ class AGUIUserHandler:
 
     async def _run_async(self) -> AsyncGenerator[BaseEvent]:
         async for adk_event in self._run_async_with_adk(
-            await self.agui_message.get_message()
+            await self.user_message.get_message()
         ):
             async for agui_event in self._run_async_translator_adk_to_agui(adk_event):
                 await self.check_tools_event(agui_event)
@@ -127,8 +127,8 @@ class AGUIUserHandler:
 
     async def _run_workflow(self) -> AsyncGenerator[BaseEvent]:
         yield self.call_start()
-        await self.session_handler.check_and_create_session()
-        await self.session_handler.update_session_state()
+        await self.session_handler.check_and_create_session(self.user_message.initial_state)
+        await self.session_handler.update_session_state(self.user_message.initial_state)
         async for event in self._run_async():
             yield event
         for tool_call_id in self.tool_call_ids:
@@ -136,7 +136,7 @@ class AGUIUserHandler:
         yield self.call_finished()
 
     async def run(self) -> AsyncGenerator[BaseEvent]:
-        if self.agui_message.is_tool_result_submission and (
+        if self.user_message.is_tool_result_submission and (
             error := await self.remove_pending_tool_call()
         ):
             yield error
