@@ -30,7 +30,7 @@ jobs:
 
     - name: Build package
       run: |
-        uv tool run build
+        uv tool run --from build pyproject-build
 
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1

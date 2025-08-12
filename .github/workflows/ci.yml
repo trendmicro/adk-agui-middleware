@@ -104,7 +104,7 @@ jobs:
 
     - name: Build package
       run: |
-        uv tool run build
+        uv tool run --from build pyproject-build
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v3
