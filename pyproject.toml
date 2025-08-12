@@ -3,6 +3,7 @@ name = "adk-agui-py-middleware"
 version = "0.1.0"
 description = ""
 readme = "README.md"
+requires-python = ">=3.13"
 dependencies = [
     "ag-ui-protocol>=0.1.8",
     "google-adk>=1.10.0",
@@ -12,11 +13,26 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "mypy>=1.17.1",
     "ruff>=0.12.8",
 ]
 
+[build-system]
+requires = ["setuptools>=80", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"adk_agui_middleware" = ["py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------- Ruff ----------------
+
 [tool.ruff]
-src = ["adk-agui-middleware"]
 line-length = 88
 target-version = "py313"
 
@@ -76,12 +92,12 @@ convention = "google" # Use Google-style docstrings (Args:, Returns:, Raises:)
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
-[tool.setuptools.package-data]
-"adk-agui-middleware" = ["py.typed"]
+# ---------------- mypy ----------------
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
+plugins = ["pydantic.mypy"]
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 disallow_untyped_calls = true
@@ -89,3 +105,8 @@ disallow_any_generics = true
 no_implicit_optional = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+[pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_untyped_fields = true
