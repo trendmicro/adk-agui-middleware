@@ -14,7 +14,7 @@ from loggers.record_request_log import record_request_error_log, record_request_
 def get_common_http_exception(
     status_code: int,
     error_message: str,
-    error_description: dict,
+    error_description: dict[str, Any],
 ) -> HTTPException:
     return HTTPException(
         status_code=status_code,
@@ -26,7 +26,7 @@ def get_common_http_exception(
     )
 
 
-def get_http_internal_server_error_exception(error_description: dict) -> HTTPException:
+def get_http_internal_server_error_exception(error_description: dict[str, Any]) -> HTTPException:
     return get_common_http_exception(
         status.HTTP_500_INTERNAL_SERVER_ERROR,
         "Internal Server Error.",
@@ -51,7 +51,7 @@ async def exception_http_handler(request: Request) -> AsyncGenerator[None, Any]:
 
 @asynccontextmanager
 async def exception_agui_handler(
-    event_queue: asyncio.Queue,
+    event_queue: asyncio.Queue[Any],
 ) -> AsyncGenerator[None, Any]:
     try:
         yield

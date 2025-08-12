@@ -68,11 +68,11 @@ class EventTranslator:
     ) -> AsyncGenerator[BaseEvent]:
         if adk_event.actions and adk_event.actions.state_delta:
             yield self.create_state_delta_event(adk_event.actions.state_delta)
-        if adk_event.custom_data:
+        if adk_event.custom_metadata:
             yield CustomEvent(
                 type=EventType.CUSTOM,
-                name="adk_metadata",
-                value=adk_event.custom_data,
+                name="adk_custom_metadata",
+                value=adk_event.custom_metadata,
             )
 
     async def _translate_text_content(

@@ -82,7 +82,7 @@ class SSEService(BaseSSEService):
             session_id = await self.get_session_id(agui_content, request)
             user_handler = AGUIUserHandler(
                 runner=self._create_runner(app_name),
-                run_config=self.context_config.run_config,
+                run_config=self.runner_config.run_config,
                 agui_message=AGUIMessageHandler(agui_content),
                 session_handler=SessionHandler(
                     session_manger=self.session_manager,

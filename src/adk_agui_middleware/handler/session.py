@@ -32,7 +32,7 @@ class SessionHandler:
     async def get_session(self) -> Session | None:
         return await self.session_manger.get_session(self.session_parameter)
 
-    async def get_session_state(self) -> dict:
+    async def get_session_state(self) -> dict[str, Any]:
         return await self.session_manger.get_session_state(self.session_parameter)
 
     async def check_and_create_session(

@@ -1,4 +1,5 @@
 import inspect
+from typing import Any
 
 
 def _should_skip_function(function_name: str) -> bool:
@@ -32,7 +33,7 @@ def _should_skip_function(function_name: str) -> bool:
     )
 
 
-def _format_function_name(function_name: str, frame_locals: dict) -> str:
+def _format_function_name(function_name: str, frame_locals: dict[str, Any]) -> str:
     if "self" in frame_locals:
         class_name = frame_locals["self"].__class__.__name__
         return f"{class_name}.{function_name}"
@@ -42,7 +43,7 @@ def _format_function_name(function_name: str, frame_locals: dict) -> str:
     return function_name
 
 
-def _collect_valid_functions(stack_frames: list) -> list[str]:
+def _collect_valid_functions(stack_frames: list[Any]) -> list[str]:
     valid_functions = []
     for frame_info in stack_frames:
         function_name = frame_info.function

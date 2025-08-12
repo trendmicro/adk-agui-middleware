@@ -88,11 +88,11 @@ def convert_agui_to_adk_event(message: BaseMessage) -> types.Content | None:
 
 def _create_tool_call(function_call: FunctionCall, event_id: str) -> ToolCall:
     return ToolCall(
-        id=function_call.id or event_id,
+        id=event_id,
         type="function",
         function=FunctionCall(
             name=function_call.name,
-            arguments=json.dumps(function_call.args) if function_call.args else "{}",
+            arguments=json.dumps(function_call.arguments) if function_call.args else "{}",
         ),
     )
 

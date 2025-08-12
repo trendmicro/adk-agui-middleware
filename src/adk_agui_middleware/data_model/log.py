@@ -7,7 +7,7 @@ class LogMessage(BaseModel):
     msg: str
     func_name: str
     error_message: str | None = None
-    headers: dict | None = None
+    headers: dict[str, Any] | None = None
     request_body: str | None = None
     body: Any | None = None
     stack_message: Any | None = None

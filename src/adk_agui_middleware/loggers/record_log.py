@@ -13,7 +13,7 @@ def _create_and_log_message(
     log_level: Any = logger.logging.info,
     body: Any = None,
     error: Exception | None = None,
-) -> dict:
+) -> dict[str, Any]:
     message_data = LogMessage(
         msg=msg,
         func_name=get_function_name(full_chain=True, max_depth=5),
@@ -27,17 +27,17 @@ def _create_and_log_message(
     return message_dump
 
 
-def record_debug_log(msg: str, body: Any = None) -> dict:
+def record_debug_log(msg: str, body: Any = None) -> dict[str, Any]:
     return _create_and_log_message(msg, logger.logging.debug, body)
 
 
-def record_log(msg: str, body: Any = None) -> dict:
+def record_log(msg: str, body: Any = None) -> dict[str, Any]:
     return _create_and_log_message(msg, body=body)
 
 
-def record_warning_log(msg: str, body: Any = None) -> dict:
+def record_warning_log(msg: str, body: Any = None) -> dict[str, Any]:
     return _create_and_log_message(msg, logger.logging.warning, body)
 
 
-def record_error_log(msg: str, e: Exception | None = None, body: Any = None) -> dict:
+def record_error_log(msg: str, e: Exception | None = None, body: Any = None) -> dict[str, Any]:
     return _create_and_log_message(msg, logger.logging.error, body, e)

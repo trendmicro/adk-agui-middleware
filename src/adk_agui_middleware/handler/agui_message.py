@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from ag_ui.core import AssistantMessage, RunAgentInput, ToolMessage
 from google.genai import types
@@ -20,7 +21,7 @@ class AGUIMessageHandler:
         return self.agui_content.messages[-1].role == "tool"
 
     @staticmethod
-    def _parse_tool_content(content: str, tool_call_id: str) -> dict:
+    def _parse_tool_content(content: str, tool_call_id: str) -> dict[str, str | None]:
         if not content or not content.strip():
             record_warning_log(
                 f"Empty tool result content for tool call {tool_call_id}, using empty success result"
@@ -46,7 +47,7 @@ class AGUIMessageHandler:
                 )
         return None
 
-    async def extract_tool_results(self) -> list[dict]:
+    async def extract_tool_results(self) -> list[dict[str, Any]]:
         most_recent_tool_message = next(
             (
                 msg
@@ -91,5 +92,5 @@ class AGUIMessageHandler:
             )
         return types.Content(parts=parts, role="user")
 
-    async def get_message(self) -> types.Content:
+    async def get_message(self) -> types.Content | None:
         return await self.process_tool_results() or await self.get_latest_message()
