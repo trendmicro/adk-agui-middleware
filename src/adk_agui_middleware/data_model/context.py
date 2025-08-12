@@ -30,7 +30,9 @@ class ContextConfig(BaseModel):
     session_id: str | Callable[[RunAgentInput, Request], Awaitable[str]] = (
         default_session_id
     )
-    extract_initial_state: Callable[[RunAgentInput, Request], Awaitable[dict[str, str]]] | None = None
+    extract_initial_state: (
+        Callable[[RunAgentInput, Request], Awaitable[dict[str, str]]] | None
+    ) = None
 
 
 class RunnerConfig(BaseModel):

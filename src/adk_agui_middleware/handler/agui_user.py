@@ -17,8 +17,8 @@ from google.genai import types
 from loggers.record_log import record_log
 from tools.event_translator import EventTranslator
 
-from handler.user_message import UserMessageHandler
 from handler.session import SessionHandler
+from handler.user_message import UserMessageHandler
 
 
 class AGUIUserHandler:
@@ -127,7 +127,9 @@ class AGUIUserHandler:
 
     async def _run_workflow(self) -> AsyncGenerator[BaseEvent]:
         yield self.call_start()
-        await self.session_handler.check_and_create_session(self.user_message.initial_state)
+        await self.session_handler.check_and_create_session(
+            self.user_message.initial_state
+        )
         await self.session_handler.update_session_state(self.user_message.initial_state)
         async for event in self._run_async():
             yield event

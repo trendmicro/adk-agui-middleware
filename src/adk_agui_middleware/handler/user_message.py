@@ -2,13 +2,18 @@ import json
 from typing import Any
 
 from ag_ui.core import AssistantMessage, RunAgentInput, ToolMessage
+from fastapi import Request
 from google.genai import types
 from loggers.record_log import record_error_log, record_log, record_warning_log
-from fastapi import Request
 
 
 class UserMessageHandler:
-    def __init__(self, agui_content: RunAgentInput, request: Request, initial_state: dict[str, str] | None = None):
+    def __init__(
+        self,
+        agui_content: RunAgentInput,
+        request: Request,
+        initial_state: dict[str, str] | None = None,
+    ):
         self.agui_content = agui_content
         self.request = request
         self.initial_state = initial_state
