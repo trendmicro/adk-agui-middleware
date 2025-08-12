@@ -1,14 +1,106 @@
 """Unit tests for adk_agui_middleware.handler.user_message module."""
 
+import sys
+import os
 import json
 import unittest
+import importlib.util
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
-from ag_ui.core import AssistantMessage, RunAgentInput, ToolCall, ToolMessage, UserMessage
-from fastapi import Request
-from google.genai import types
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from adk_agui_middleware.handler.user_message import UserMessageHandler
+# Mock external dependencies
+class MockAssistantMessage:
+    def __init__(self, content="", **kwargs):
+        self.content = content
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class MockRunAgentInput:
+    def __init__(self, thread_id="test_thread", messages=None):
+        self.thread_id = thread_id
+        self.messages = messages or []
+
+class MockToolCall:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class MockToolMessage:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class MockUserMessage:
+    def __init__(self, content="", **kwargs):
+        self.content = content
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+class MockRequest:
+    def __init__(self):
+        pass
+
+class MockGenAITypes:
+    class Content:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+    
+    class Part:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+    
+    class FunctionCall:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+    
+    class FunctionResponse:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+# Mock logging functions
+mock_record_log = Mock()
+mock_record_warning_log = Mock()
+mock_record_error_log = Mock()
+
+# Mock all external dependencies
+sys.modules['ag_ui'] = Mock()
+sys.modules['ag_ui.core'] = Mock()
+sys.modules['ag_ui.core'].AssistantMessage = MockAssistantMessage
+sys.modules['ag_ui.core'].RunAgentInput = MockRunAgentInput
+sys.modules['ag_ui.core'].ToolCall = MockToolCall
+sys.modules['ag_ui.core'].ToolMessage = MockToolMessage
+sys.modules['ag_ui.core'].UserMessage = MockUserMessage
+sys.modules['fastapi'] = Mock()
+sys.modules['fastapi'].Request = MockRequest
+sys.modules['google'] = Mock()
+sys.modules['google.genai'] = Mock()
+sys.modules['google.genai'].types = MockGenAITypes()
+sys.modules['loggers'] = Mock()
+sys.modules['loggers.record_log'] = Mock()
+sys.modules['loggers.record_log'].record_error_log = mock_record_error_log
+sys.modules['loggers.record_log'].record_log = mock_record_log
+sys.modules['loggers.record_log'].record_warning_log = mock_record_warning_log
+
+# Load the handler.user_message module directly
+spec = importlib.util.spec_from_file_location(
+    "handler_user_message_module", 
+    os.path.join(os.path.dirname(__file__), '..', 'src', 'adk_agui_middleware', 'handler', 'user_message.py')
+)
+handler_user_message_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(handler_user_message_module)
+
+UserMessageHandler = handler_user_message_module.UserMessageHandler
+
+# Import what we need for tests
+Request = MockRequest
+RunAgentInput = MockRunAgentInput
 
 
 class TestUserMessageHandler(unittest.TestCase):
@@ -16,10 +108,11 @@ class TestUserMessageHandler(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures."""
-        self.mock_request = Mock(spec=Request)
-        self.mock_agui_content = Mock(spec=RunAgentInput)
-        self.mock_agui_content.thread_id = "test_thread_123"
-        self.mock_agui_content.messages = []
+        self.mock_request = MockRequest()
+        self.mock_agui_content = MockRunAgentInput(
+            thread_id="test_thread_123",
+            messages=[]
+        )
         
         self.handler = UserMessageHandler(
             agui_content=self.mock_agui_content,
