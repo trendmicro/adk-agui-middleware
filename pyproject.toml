@@ -3,7 +3,6 @@ name = "adk-agui-py-middleware"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.13"
 dependencies = [
     "ag-ui-protocol>=0.1.8",
     "google-adk>=1.10.0",
@@ -55,35 +54,19 @@ select = [
     "PL", # Pylint subset – broader code-quality checks (convention, error, refactor, warning)
     "TRY", # tryceratops – encourage explicit, focused exception handling
     "FLY", # flynt – suggest converting old string formatting to f-strings
-    "PERF" # perflint – flag patterns with measurable performance overhead
+    "PERF", # perflint – flag patterns with measurable performance overhead
+    "ANN" # flake8-annotations – enforce type annotations for function signatures
 ]
 
 ignore = [
-    "W191", # tab-indentation
-    "W291", # trailing-whitespace
-    "W293", # blank-line-has-no-content
-    "E111", # indentation-with-invalid-multiple
-    "E114", # indentation-with-invalid-multiple-comment
-    "E117", # over-indented
     "E501", # line-too-long
 
-    "Q000", # bad-quotes-inline-string
-    "Q001", # bad-quotes-multiline-string
-    "Q002", # bad-quotes-docstring
-    "Q003", # avoidable-escaped-quote
-
-    "COM812", # missing-trailing-comma
     "COM819", # prohibited-trailing-comma
 
-    "ISC002", # multi-line-implicit-string-concatenation
-
     "TRY003", # try-except-else-finally-missing-else
-    "TRY400", # try-except-else-finally
-]
 
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = [
-    "F401", # Unused import - imports in __init__.py are often for package API
+    "ANN204", # missing-type-annotation-in-function
+    "ANN401"  # missing-type-annotation
 ]
 
 # Configure pydocstyle to use Google docstring convention
@@ -95,3 +78,14 @@ max-complexity = 10
 
 [tool.setuptools.package-data]
 "adk-agui-middleware" = ["py.typed"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_any_generics = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true

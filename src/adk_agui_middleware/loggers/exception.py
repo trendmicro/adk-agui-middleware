@@ -1,6 +1,8 @@
 import asyncio
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from ag_ui.core import EventType, RunErrorEvent
 from data_model.error import ErrorModel
@@ -33,7 +35,7 @@ def get_http_internal_server_error_exception(error_description: dict) -> HTTPExc
 
 
 @asynccontextmanager
-async def exception_http_handler(request: Request):
+async def exception_http_handler(request: Request) -> AsyncGenerator[None, Any]:
     try:
         await record_request_log(request)
         yield
@@ -48,7 +50,9 @@ async def exception_http_handler(request: Request):
 
 
 @asynccontextmanager
-async def exception_agui_handler(event_queue: asyncio.Queue):
+async def exception_agui_handler(
+    event_queue: asyncio.Queue,
+) -> AsyncGenerator[None, Any]:
     try:
         yield
     except Exception as e:

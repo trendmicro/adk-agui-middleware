@@ -10,7 +10,7 @@ from tools.json_encoder import DataclassesEncoder
 
 def _create_and_log_message(
     msg: str,
-    log_level=logger.logging.info,
+    log_level: Any = logger.logging.info,
     body: Any = None,
     error: Exception | None = None,
 ) -> dict:

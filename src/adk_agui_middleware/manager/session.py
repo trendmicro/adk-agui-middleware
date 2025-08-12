@@ -11,7 +11,7 @@ class SessionManager:
     def __init__(self, session_service: BaseSessionService):
         self.session_service = session_service
 
-    async def get_session(self, session_parameter) -> Session | None:
+    async def get_session(self, session_parameter: SessionParameter) -> Session | None:
         return await self.session_service.get_session(
             session_id=session_parameter.session_id,
             app_name=session_parameter.app_name,

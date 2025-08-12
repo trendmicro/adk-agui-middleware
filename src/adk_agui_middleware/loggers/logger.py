@@ -2,6 +2,7 @@ import json
 import logging as log
 from typing import Any
 
+from config.log import log_config
 from tools.json_encoder import DataclassesEncoder
 
 
@@ -49,9 +50,7 @@ class JsonFormatter(log.Formatter):
         return json.dumps(message_dict, default=str, cls=self.cls, ensure_ascii=False)
 
 
-def create_logger(
-    name: str, fmt_dict: dict[str, str] | None = None, log_config=None
-) -> log.Logger:
+def create_logger(name: str, fmt_dict: dict[str, str] | None = None) -> log.Logger:
     log_level = log_config.LOG_LEVEL.upper()
     if log_level not in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
         log_level = "INFO"

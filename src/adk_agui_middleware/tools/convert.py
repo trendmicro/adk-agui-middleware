@@ -51,16 +51,14 @@ def _handle_assistant_message(message: AssistantMessage) -> types.Content:
     return types.Content(role="model", parts=parts) if parts else None
 
 
-def _handle_tool_message(message) -> types.Content:
+def _handle_tool_message(message: ToolMessage) -> types.Content:
     return types.Content(
         role="function",
         parts=[
             types.Part(
                 function_response=types.FunctionResponse(
                     name=message.tool_call_id,
-                    response={"result": message.content}
-                    if isinstance(message.content, str)
-                    else message.content,
+                    response={"result": message.content},
                     id=message.tool_call_id,
                 )
             )
@@ -88,7 +86,7 @@ def convert_agui_to_adk_event(message: BaseMessage) -> types.Content | None:
     return None
 
 
-def _create_tool_call(function_call, event_id: str) -> ToolCall:
+def _create_tool_call(function_call: FunctionCall, event_id: str) -> ToolCall:
     return ToolCall(
         id=function_call.id or event_id,
         type="function",

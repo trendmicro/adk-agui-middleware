@@ -38,22 +38,32 @@ class AGUIUserHandler:
         self.tool_call_ids = []
 
     @property
-    def app_name(self):
+    def app_name(self) -> str:
         return self.session_handler.app_name
 
     @property
-    def user_id(self):
+    def user_id(self) -> str:
         return self.session_handler.user_id
 
     @property
-    def session_id(self):
+    def session_id(self) -> str:
         return self.session_handler.session_id
 
     @property
-    def run_id(self):
+    def run_id(self) -> str:
         return self.agui_message.agui_content.run_id
 
-    async def check_tools_event(self, event: BaseEvent):
+    def call_start(self) -> RunStartedEvent:
+        return RunStartedEvent(
+            type=EventType.RUN_STARTED, thread_id=self.session_id, run_id=self.run_id
+        )
+
+    def call_finished(self) -> RunFinishedEvent:
+        return RunFinishedEvent(
+            type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
+        )
+
+    async def check_tools_event(self, event: BaseEvent) -> None:
         if isinstance(event, ToolCallEndEvent):
             self.tool_call_ids.append(event.tool_call_id)
         if (
@@ -61,16 +71,6 @@ class AGUIUserHandler:
             and event.tool_call_id in self.tool_call_ids
         ):
             self.tool_call_ids.remove(event.tool_call_id)
-
-    def call_start(self):
-        return RunStartedEvent(
-            type=EventType.RUN_STARTED, thread_id=self.session_id, run_id=self.run_id
-        )
-
-    def call_finished(self):
-        return RunFinishedEvent(
-            type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
-        )
 
     async def remove_pending_tool_call(self) -> RunErrorEvent | None:
         tool_results = await self.agui_message.extract_tool_results()
@@ -87,7 +87,7 @@ class AGUIUserHandler:
         except Exception as e:
             return AGUIErrorEvent.tool_result_processing_error(e)
 
-    async def translator_adk_to_agui_run_async(
+    async def _run_async_translator_adk_to_agui(
         self, adk_event: Event
     ) -> AsyncGenerator[BaseEvent]:
         if not adk_event.is_final_response():
@@ -100,7 +100,9 @@ class AGUIUserHandler:
                 yield ag_ui_event
                 self.is_long_running_tool = ag_ui_event.type == EventType.TOOL_CALL_END
 
-    async def adk_run_async(self, message: types.Content) -> AsyncGenerator[Event]:
+    async def _run_async_with_adk(
+        self, message: types.Content
+    ) -> AsyncGenerator[Event]:
         async for event in self.runner.run_async(
             user_id=self.user_id,
             session_id=self.session_id,
@@ -108,11 +110,11 @@ class AGUIUserHandler:
         ):
             yield event
 
-    async def run_async(self):
-        async for adk_event in self.adk_run_async(
+    async def _run_async(self) -> AsyncGenerator[BaseEvent]:
+        async for adk_event in self._run_async_with_adk(
             await self.agui_message.get_message()
         ):
-            async for agui_event in self.translator_adk_to_agui_run_async(adk_event):
+            async for agui_event in self._run_async_translator_adk_to_agui(adk_event):
                 await self.check_tools_event(agui_event)
                 yield agui_event
                 if self.is_long_running_tool:
@@ -126,7 +128,7 @@ class AGUIUserHandler:
         yield self.call_start()
         await self.session_handler.check_and_create_session()
         await self.session_handler.update_session_state()
-        async for event in self.run_async():
+        async for event in self._run_async():
             yield event
         for tool_call_id in self.tool_call_ids:
             await self.session_handler.add_pending_tool_call(tool_call_id)

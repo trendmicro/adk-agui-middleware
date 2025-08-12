@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ag_ui.core import RunAgentInput
 from google.adk.agents import RunConfig
@@ -36,7 +37,9 @@ class RunnerConfig(BaseModel):
     memory_service: BaseMemoryService | None = None
     credential_service: BaseCredentialService | None = None
 
-    def _get_or_create_service(self, service_attr: str, service_class):
+    def _get_or_create_service(
+        self, service_attr: str, service_class: Any
+    ) -> BaseArtifactService | BaseMemoryService | BaseCredentialService:
         service = getattr(self, service_attr)
         if service is None:
             if self.use_in_memory_services:

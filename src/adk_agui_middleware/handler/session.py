@@ -14,19 +14,19 @@ class SessionHandler:
         self.session_parameter = session_parameter
 
     @property
-    def app_name(self):
+    def app_name(self) -> str:
         return self.session_parameter.app_name
 
     @property
-    def user_id(self):
+    def user_id(self) -> str:
         return self.session_parameter.user_id
 
     @property
-    def session_id(self):
+    def session_id(self) -> str:
         return self.session_parameter.session_id
 
     @staticmethod
-    def get_pending_tool_calls_dict(pending_calls) -> Any:
+    def get_pending_tool_calls_dict(pending_calls: Any) -> dict[str, Any]:
         return {"pending_tool_calls": pending_calls}
 
     async def get_session(self) -> Session | None:
@@ -50,7 +50,7 @@ class SessionHandler:
             state_updates=initial_state,
         )
 
-    async def check_and_remove_pending_tool_call(self, tool_call_id: str):
+    async def check_and_remove_pending_tool_call(self, tool_call_id: str) -> None:
         pending_calls = await self.get_pending_tool_calls()
         if tool_call_id not in pending_calls:
             record_warning_log(
@@ -69,7 +69,7 @@ class SessionHandler:
             f"Removed tool call {tool_call_id} from session {self.session_parameter.session_id} pending list is {success}."
         )
 
-    async def add_pending_tool_call(self, tool_call_id: str):
+    async def add_pending_tool_call(self, tool_call_id: str) -> None:
         record_log(
             f"Adding pending tool call {tool_call_id} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
         )

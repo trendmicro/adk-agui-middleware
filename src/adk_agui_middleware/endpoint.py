@@ -6,9 +6,13 @@ from loggers.exception import exception_http_handler
 from starlette.responses import StreamingResponse
 
 
-def register_agui_endpoint(app: FastAPI, sse_service: BaseSSEService, path: str = "/"):
+def register_agui_endpoint(
+    app: FastAPI, sse_service: BaseSSEService, path: str = "/"
+) -> None:
     @app.post(path)
-    async def agui_endpoint(agui_content: RunAgentInput, request: Request):
+    async def agui_endpoint(
+        agui_content: RunAgentInput, request: Request
+    ) -> StreamingResponse:
         async with exception_http_handler(request):
             encoder = EventEncoder(accept=request.headers.get("accept"))
             return StreamingResponse(
