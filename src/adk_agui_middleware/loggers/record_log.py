@@ -3,9 +3,10 @@ import traceback
 from typing import Any
 
 from data_model.log import LogMessage
-from loggers import logger
 from tools.function_name import get_function_name
 from tools.json_encoder import DataclassesEncoder
+
+from loggers import logger
 
 
 def _create_and_log_message(
@@ -39,5 +40,7 @@ def record_warning_log(msg: str, body: Any = None) -> dict[str, Any]:
     return _create_and_log_message(msg, logger.logging.warning, body)
 
 
-def record_error_log(msg: str, e: Exception | None = None, body: Any = None) -> dict[str, Any]:
+def record_error_log(
+    msg: str, e: Exception | None = None, body: Any = None
+) -> dict[str, Any]:
     return _create_and_log_message(msg, logger.logging.error, body, e)

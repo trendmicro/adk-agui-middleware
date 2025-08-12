@@ -2,9 +2,10 @@ import traceback
 from typing import Any
 
 from data_model.log import LogMessage
-from loggers import logger
 from starlette.requests import Request
 from tools.function_name import get_function_name
+
+from loggers import logger
 
 
 async def record_request_error_log(request: Request, e: Exception) -> dict[str, Any]:

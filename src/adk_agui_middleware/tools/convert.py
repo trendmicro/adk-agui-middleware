@@ -92,7 +92,9 @@ def _create_tool_call(function_call: FunctionCall, event_id: str) -> ToolCall:
         type="function",
         function=FunctionCall(
             name=function_call.name,
-            arguments=json.dumps(function_call.arguments) if function_call.args else "{}",
+            arguments=json.dumps(function_call.arguments)
+            if function_call.args
+            else "{}",
         ),
     )
 

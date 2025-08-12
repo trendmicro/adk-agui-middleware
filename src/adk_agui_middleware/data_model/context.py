@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TypeVar
 
 from ag_ui.core import RunAgentInput
 from google.adk.agents import RunConfig
@@ -15,6 +15,9 @@ from google.adk.memory import BaseMemoryService, InMemoryMemoryService
 from google.adk.sessions import BaseSessionService, InMemorySessionService
 from pydantic import BaseModel, Field
 from starlette.requests import Request
+
+
+T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
 
 
 async def default_session_id(agui_content: RunAgentInput, request: Request) -> str:  # noqa: ARG001
@@ -37,9 +40,7 @@ class RunnerConfig(BaseModel):
     memory_service: BaseMemoryService | None = None
     credential_service: BaseCredentialService | None = None
 
-    def _get_or_create_service(
-        self, service_attr: str, service_class: Any
-    ) -> BaseArtifactService | BaseMemoryService | BaseCredentialService:
+    def _get_or_create_service(self, service_attr: str, service_class: type[T]) -> T:
         service = getattr(self, service_attr)
         if service is None:
             if self.use_in_memory_services:

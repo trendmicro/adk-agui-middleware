@@ -53,7 +53,9 @@ class SessionManager:
         await self.session_service.append_event(session, event)
         return True
 
-    async def get_session_state(self, session_parameter: SessionParameter) -> dict[str, Any]:
+    async def get_session_state(
+        self, session_parameter: SessionParameter
+    ) -> dict[str, Any]:
         try:
             if session := await self.get_session(session_parameter):
                 return session.state

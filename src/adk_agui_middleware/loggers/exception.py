@@ -7,6 +7,7 @@ from typing import Any
 from ag_ui.core import EventType, RunErrorEvent
 from data_model.error import ErrorModel
 from fastapi import HTTPException, Request, status
+
 from loggers.record_log import record_error_log
 from loggers.record_request_log import record_request_error_log, record_request_log
 
@@ -26,7 +27,9 @@ def get_common_http_exception(
     )
 
 
-def get_http_internal_server_error_exception(error_description: dict[str, Any]) -> HTTPException:
+def get_http_internal_server_error_exception(
+    error_description: dict[str, Any],
+) -> HTTPException:
     return get_common_http_exception(
         status.HTTP_500_INTERNAL_SERVER_ERROR,
         "Internal Server Error.",
