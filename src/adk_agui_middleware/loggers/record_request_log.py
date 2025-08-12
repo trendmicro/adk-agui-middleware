@@ -1,9 +1,8 @@
 import traceback
 
-from starlette.requests import Request
-
 from data_model.log import LogMessage
 from loggers import logger
+from starlette.requests import Request
 from tools.function_name import get_function_name
 
 

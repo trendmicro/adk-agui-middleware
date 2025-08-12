@@ -1,6 +1,5 @@
 from ag_ui.core import EventType, RunErrorEvent
 from ag_ui.encoder import EventEncoder
-
 from loggers.record_log import record_error_log
 
 

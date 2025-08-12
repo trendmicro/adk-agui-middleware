@@ -12,7 +12,6 @@ from ag_ui.core import (
 )
 from google.adk.events import Event as ADKEvent
 from google.genai import types
-
 from loggers.record_log import record_error_log
 
 
@@ -38,16 +37,17 @@ def _handle_assistant_message(message: AssistantMessage) -> types.Content:
     if message.content:
         parts.append(types.Part(text=message.content))
     if message.tool_calls:
-        for tool_call in message.tool_calls:
-            parts.append(
-                types.Part(
-                    function_call=types.FunctionCall(
-                        name=tool_call.function.name,
-                        args=json.loads(tool_call.function.arguments),
-                        id=tool_call.id,
-                    )
+        tool_parts = [
+            types.Part(
+                function_call=types.FunctionCall(
+                    name=tool_call.function.name,
+                    args=json.loads(tool_call.function.arguments),
+                    id=tool_call.id,
                 )
             )
+            for tool_call in message.tool_calls
+        ]
+        parts.extend(tool_parts)
     return types.Content(role="model", parts=parts) if parts else None
 
 
@@ -79,7 +79,7 @@ def _handle_user_system_message(
 
 
 def convert_agui_to_adk_event(message: BaseMessage) -> types.Content | None:
-    if isinstance(message, (UserMessage, SystemMessage)) and message.content:
+    if isinstance(message, UserMessage | SystemMessage) and message.content:
         return _handle_user_system_message(message)
     if isinstance(message, AssistantMessage):
         return _handle_assistant_message(message)

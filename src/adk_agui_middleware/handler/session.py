@@ -1,6 +1,7 @@
 from typing import Any
 
 from data_model.session import SessionParameter
+from google.adk.sessions import Session
 from loggers.record_log import record_error_log, record_log, record_warning_log
 from manager.session import SessionManager
 
@@ -28,13 +29,23 @@ class SessionHandler:
     def get_pending_tool_calls_dict(pending_calls) -> Any:
         return {"pending_tool_calls": pending_calls}
 
-    def check_and_create_session(self, initial_state: dict[str, Any] | None = None):
-        return self.session_manger.check_and_create_session(
+    async def get_session(self) -> Session | None:
+        return await self.session_manger.get_session(self.session_parameter)
+
+    async def get_session_state(self) -> dict:
+        return await self.session_manger.get_session_state(self.session_parameter)
+
+    async def check_and_create_session(
+        self, initial_state: dict[str, Any] | None = None
+    ) -> Session:
+        return await self.session_manger.check_and_create_session(
             session_parameter=self.session_parameter, initial_state=initial_state
         )
 
-    def update_session_state(self, initial_state: dict[str, Any] | None = None):
-        return self.session_manger.update_session_state(
+    async def update_session_state(
+        self, initial_state: dict[str, Any] | None = None
+    ) -> bool:
+        return await self.session_manger.update_session_state(
             session_parameter=self.session_parameter,
             state_updates=initial_state,
         )

@@ -19,7 +19,6 @@ from ag_ui.core import (
 )
 from google.adk.events import Event as ADKEvent
 from google.genai import types
-
 from loggers.record_log import (
     record_debug_log,
     record_error_log,
@@ -120,7 +119,7 @@ class EventTranslator:
     ) -> AsyncGenerator[BaseEvent]:
         if not (adk_event.content and adk_event.content.parts):
             return
-        for i, part in enumerate(adk_event.content.parts):
+        for part in adk_event.content.parts:
             if (
                 (not part.function_call)
                 or part.function_call.id not in adk_event.long_running_tool_ids

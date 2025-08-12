@@ -1,10 +1,9 @@
 import time
 from typing import Any
 
+from data_model.session import SessionParameter
 from google.adk.events import Event, EventActions
 from google.adk.sessions import BaseSessionService, Session
-
-from data_model.session import SessionParameter
 from loggers.record_log import record_error_log, record_warning_log
 
 
@@ -61,10 +60,10 @@ class SessionManager:
             record_warning_log(
                 f"Session not found: {session_parameter.app_name}:{session_parameter.session_id}"
             )
-            return {}
         except Exception as e:
             record_error_log(f"Failed to get session state: {e}")
             return {}
+        return {}
 
     async def get_state_value(
         self,
