@@ -1,35 +1,63 @@
 [project]
 name = "adk-agui-py-middleware"
 version = "0.1.0"
-description = ""
+description = "Python middleware bridging Google ADK agents with AGUI protocol via Server-Sent Events for real-time agent interactions"
 readme = "README.md"
 requires-python = ">=3.13"
+license = {file = "LICENSE"}
+authors = [
+    {name = "DennySORA", email = "dennysora.main@gmail.com"},
+]
+maintainers = [
+    {name = "DennySORA", email = "dennysora.main@gmail.com"},
+]
+keywords = ["agent", "middleware", "sse", "fastapi", "google-adk", "agui"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "ag-ui-protocol>=0.1.8",
     "google-adk>=1.10.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
+    "fastapi>=0.104.0",
 ]
 
 [dependency-groups]
 dev = [
     "mypy>=1.17.1",
     "ruff>=0.12.8",
+    "build>=1.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/DennySORA/adk-agui-py-middleware"
+Repository = "https://github.com/DennySORA/adk-agui-py-middleware.git"
+Documentation = "https://github.com/DennySORA/adk-agui-py-middleware#readme"
+"Bug Tracker" = "https://github.com/DennySORA/adk-agui-py-middleware/issues"
+
 [build-system]
-requires = ["setuptools>=80", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-include-package-data = true
+[tool.hatch.build.targets.wheel]
+packages = ["src/adk_agui_middleware"]
 
-[tool.setuptools.package-data]
-"adk_agui_middleware" = ["py.typed"]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
 # ---------------- Ruff ----------------
 
 [tool.ruff]
