@@ -284,6 +284,10 @@ setup_logging(
 4. Write tests for new functionality
 5. Update documentation as needed
 
+### Acknowledgments
+
+This project is inspired by and builds upon the foundational work of [@contextablemark](https://github.com/contextablemark) and their [AG-UI implementation](https://github.com/contextablemark/ag-ui). We extend our gratitude for their innovative approach to agent-UI integration, which provided essential architectural insights and design patterns that shaped this middleware development.
+
 ## License
 
 This project is licensed under the terms specified in the LICENSE file.
