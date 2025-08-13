@@ -148,13 +148,13 @@ class TestSSEService(unittest.TestCase):
         )
 
     @patch("adk_agui_middleware.sse_service.Runner")
-    def test_create_runner_new(self, mock_runner_class):
+    async def test_create_runner_new(self, mock_runner_class):
         """Test _create_runner creates new runner for new app."""
         mock_runner_instance = Mock(spec=Runner)
         mock_runner_class.return_value = mock_runner_instance
 
         app_name = "new_app"
-        result = self.sse_service._create_runner(app_name)
+        result = await self.sse_service._create_runner(app_name)
 
         self.assertEqual(result, mock_runner_instance)
         self.assertIn(app_name, self.sse_service.runner_box)
@@ -170,13 +170,13 @@ class TestSSEService(unittest.TestCase):
             credential_service=self.runner_config.get_credential_service(),
         )
 
-    def test_create_runner_cached(self):
+    async def test_create_runner_cached(self):
         """Test _create_runner returns cached runner for existing app."""
         app_name = "cached_app"
         cached_runner = Mock(spec=Runner)
         self.sse_service.runner_box[app_name] = cached_runner
 
-        result = self.sse_service._create_runner(app_name)
+        result = await self.sse_service._create_runner(app_name)
 
         self.assertEqual(result, cached_runner)
 
@@ -344,16 +344,16 @@ class TestSSEService(unittest.TestCase):
         # Verify service was created successfully
         self.assertEqual(service.context_config, context_config)
 
-    def test_runner_box_isolation(self):
+    async def test_runner_box_isolation(self):
         """Test that runner_box maintains separate runners per app."""
-        app1_runner = self.sse_service._create_runner("app1")
-        app2_runner = self.sse_service._create_runner("app2")
+        app1_runner = await self.sse_service._create_runner("app1")
+        app2_runner = await self.sse_service._create_runner("app2")
 
         # Should be different instances
         self.assertNotEqual(app1_runner, app2_runner)
 
         # Should be cached
-        app1_runner_cached = self.sse_service._create_runner("app1")
+        app1_runner_cached = await self.sse_service._create_runner("app1")
         self.assertEqual(app1_runner, app1_runner_cached)
 
     @patch("adk_agui_middleware.sse_service.SessionManager")

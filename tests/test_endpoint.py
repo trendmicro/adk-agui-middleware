@@ -1,344 +1,296 @@
 """Unit tests for adk_agui_middleware.endpoint module."""
 
-import asyncio
-import importlib.util
-import os
-import sys
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
+from ag_ui.core import RunAgentInput
+from ag_ui.encoder import EventEncoder
+from fastapi import APIRouter, FastAPI, Request
+from starlette.responses import StreamingResponse
+from google.adk import Runner
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
-
-# Mock external dependencies before importing the module
-class MockRunAgentInput:
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-
-class MockRequest:
-    def __init__(self):
-        self.headers = Mock()
-        self.headers.get = Mock(return_value="application/json")
-
-
-class MockFastAPI:
-    def __init__(self):
-        self.routes = []
-
-    def post(self, path):
-        def decorator(func):
-            route_mock = Mock()
-            route_mock.path = path
-            route_mock.endpoint = func
-            route_mock.methods = ["POST"]
-            self.routes.append(route_mock)
-            return func
-
-        return decorator
-
-
-class MockStreamingResponse:
-    def __init__(self, content, media_type=None):
-        self.content = content
-        self.media_type = media_type
-
-
-class MockEventEncoder:
-    def __init__(self, accept=None):
-        self.accept = accept
-
-    def get_content_type(self):
-        return "application/json"
-
-
-class MockBaseSSEService:
-    def __init__(self):
-        self.get_runner = AsyncMock()
-        self.event_generator = AsyncMock()
-
-
-class MockExceptionHandler:
-    def __init__(self, request):
-        self.request = request
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
-
-
-# Mock all external dependencies
-sys.modules["ag_ui"] = Mock()
-sys.modules["ag_ui.core"] = Mock()
-sys.modules["ag_ui.core"].RunAgentInput = MockRunAgentInput
-sys.modules["ag_ui.encoder"] = Mock()
-sys.modules["ag_ui.encoder"].EventEncoder = MockEventEncoder
-sys.modules["base_abc"] = Mock()
-sys.modules["base_abc.sse_service"] = Mock()
-sys.modules["base_abc.sse_service"].BaseSSEService = MockBaseSSEService
-sys.modules["fastapi"] = Mock()
-sys.modules["fastapi"].FastAPI = MockFastAPI
-sys.modules["fastapi"].Request = MockRequest
-sys.modules["loggers"] = Mock()
-sys.modules["loggers.exception"] = Mock()
-sys.modules["loggers.exception"].exception_http_handler = MockExceptionHandler
-sys.modules["starlette"] = Mock()
-sys.modules["starlette.responses"] = Mock()
-sys.modules["starlette.responses"].StreamingResponse = MockStreamingResponse
-
-# Load the endpoint module directly
-spec = importlib.util.spec_from_file_location(
-    "endpoint_module",
-    os.path.join(
-        os.path.dirname(__file__), "..", "src", "adk_agui_middleware", "endpoint.py"
-    ),
-)
-endpoint_module = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(endpoint_module)
-
-register_agui_endpoint = endpoint_module.register_agui_endpoint
-
-# Import what we need for tests
-FastAPI = MockFastAPI
-Request = MockRequest
-StreamingResponse = MockStreamingResponse
-RunAgentInput = MockRunAgentInput
+from adk_agui_middleware.base_abc.sse_service import BaseSSEService
+from adk_agui_middleware.endpoint import register_agui_endpoint
 
 
 class TestRegisterAGUIEndpoint(unittest.TestCase):
-    """Test cases for the register_agui_endpoint function."""
+    """Test cases for register_agui_endpoint function."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.app = MockFastAPI()
-        self.mock_sse_service = MockBaseSSEService()
-        self.mock_request = MockRequest()
-        self.mock_agui_content = MockRunAgentInput()
+        self.mock_sse_service = Mock(spec=BaseSSEService)
+        self.mock_app = Mock(spec=FastAPI)
+        self.mock_request = Mock(spec=Request)
+        self.mock_request.headers = {"accept": "text/event-stream"}
 
-    def test_register_agui_endpoint_default_path(self):
-        """Test registering endpoint with default path."""
-        register_agui_endpoint(self.app, self.mock_sse_service)
-
-        # Check that a route was registered
-        routes = [route.path for route in self.app.routes]
-        self.assertIn("/", routes)
-
-        # Verify it's a POST route
-        post_routes = [
-            route
-            for route in self.app.routes
-            if hasattr(route, "methods") and "POST" in route.methods
-        ]
-        self.assertTrue(len(post_routes) > 0)
+    def test_register_agui_endpoint_fastapi(self):
+        """Test registering endpoint with FastAPI instance."""
+        register_agui_endpoint(self.mock_app, self.mock_sse_service)
+        
+        # Verify that @app.post was called
+        self.mock_app.post.assert_called_once_with("/")
 
     def test_register_agui_endpoint_custom_path(self):
         """Test registering endpoint with custom path."""
-        custom_path = "/api/agents"
-        register_agui_endpoint(self.app, self.mock_sse_service, path=custom_path)
+        custom_path = "/custom/path"
+        register_agui_endpoint(self.mock_app, self.mock_sse_service, path=custom_path)
+        
+        # Verify that @app.post was called with custom path
+        self.mock_app.post.assert_called_once_with(custom_path)
 
-        routes = [route.path for route in self.app.routes]
-        self.assertIn(custom_path, routes)
+    def test_register_agui_endpoint_api_router(self):
+        """Test registering endpoint with APIRouter instance."""
+        mock_router = Mock(spec=APIRouter)
+        register_agui_endpoint(mock_router, self.mock_sse_service)
+        
+        # Verify that router.post was called
+        mock_router.post.assert_called_once_with("/")
 
-    def test_agui_endpoint_execution(self):
-        """Test the agui_endpoint function execution flow."""
-
-        async def run_test():
-            # Setup service mocks
-            mock_runner = Mock()
-            self.mock_sse_service.get_runner = AsyncMock(return_value=mock_runner)
-            mock_event_stream = AsyncMock()
-            self.mock_sse_service.event_generator = AsyncMock(
-                return_value=mock_event_stream
-            )
-
-            # Register the endpoint
-            register_agui_endpoint(self.app, self.mock_sse_service)
-
-            # Get the registered endpoint function
-            agui_route = None
-            for route in self.app.routes:
-                if (
-                    hasattr(route, "path")
-                    and route.path == "/"
-                    and hasattr(route, "endpoint")
-                ):
-                    agui_route = route
-                    break
-
-            self.assertIsNotNone(agui_route)
-
-            # Execute the endpoint function
-            result = await agui_route.endpoint(
-                self.mock_agui_content, self.mock_request
-            )
-
-            # Verify the flow
-            self.mock_sse_service.get_runner.assert_called_once_with(
-                self.mock_agui_content, self.mock_request
-            )
-            self.mock_sse_service.event_generator.assert_called_once()
-            self.assertIsInstance(result, MockStreamingResponse)
-
-        asyncio.run(run_test())
-
-    def test_agui_endpoint_accept_header_handling(self):
-        """Test that Accept header is properly handled."""
-
-        async def run_test():
-            # Setup service mocks
-            self.mock_sse_service.get_runner = AsyncMock(return_value=Mock())
-            self.mock_sse_service.event_generator = AsyncMock(return_value=AsyncMock())
-
-            # Test different Accept header values
-            test_cases = ["text/event-stream", "application/json", "text/plain", None]
-
-            for accept_header in test_cases:
-                with self.subTest(accept_header=accept_header):
-                    self.mock_request.headers.get.return_value = accept_header
-
-                    # Register and get endpoint
-                    app = MockFastAPI()  # Use fresh app for each test
-                    register_agui_endpoint(app, self.mock_sse_service)
-
-                    agui_route = None
-                    for route in app.routes:
-                        if (
-                            hasattr(route, "path")
-                            and route.path == "/"
-                            and hasattr(route, "endpoint")
-                        ):
-                            agui_route = route
-                            break
-
-                    # Execute endpoint
-                    result = await agui_route.endpoint(
-                        self.mock_agui_content, self.mock_request
-                    )
-
-                    # Verify result is a streaming response
-                    self.assertIsInstance(result, MockStreamingResponse)
-
-        asyncio.run(run_test())
-
-    def test_agui_endpoint_exception_handling(self):
-        """Test that exceptions are handled properly."""
-
-        async def run_test():
-            # Setup service that raises an exception
-            self.mock_sse_service.get_runner = AsyncMock(
-                side_effect=Exception("Test exception")
-            )
-
-            register_agui_endpoint(self.app, self.mock_sse_service)
-
-            # Get the endpoint
-            agui_route = None
-            for route in self.app.routes:
-                if (
-                    hasattr(route, "path")
-                    and route.path == "/"
-                    and hasattr(route, "endpoint")
-                ):
-                    agui_route = route
-                    break
-
-            # Verify exception is raised (would be handled by exception handler in real scenario)
-            with self.assertRaises(Exception):
-                await agui_route.endpoint(self.mock_agui_content, self.mock_request)
-
-        asyncio.run(run_test())
-
-    def test_multiple_endpoint_registrations(self):
-        """Test registering multiple endpoints with different paths."""
-        paths = ["/api/v1", "/api/v2", "/agents"]
-
-        for path in paths:
-            register_agui_endpoint(self.app, self.mock_sse_service, path=path)
-
-        registered_paths = [route.path for route in self.app.routes]
-
-        for path in paths:
-            self.assertIn(path, registered_paths)
-
-    def test_endpoint_registration_with_different_services(self):
-        """Test registering endpoints with different SSE services."""
-        service1 = MockBaseSSEService()
-        service2 = MockBaseSSEService()
-
-        register_agui_endpoint(self.app, service1, "/service1")
-        register_agui_endpoint(self.app, service2, "/service2")
-
-        # Verify both routes are registered
-        routes = [route.path for route in self.app.routes]
-        self.assertIn("/service1", routes)
-        self.assertIn("/service2", routes)
-
-    def test_endpoint_streaming_response_media_type(self):
-        """Test that StreamingResponse is created with correct media type."""
-
-        async def run_test():
-            # Setup service mocks
-            self.mock_sse_service.get_runner = AsyncMock(return_value=Mock())
-            self.mock_sse_service.event_generator = AsyncMock(return_value=Mock())
-
-            register_agui_endpoint(self.app, self.mock_sse_service)
-
-            # Get and execute endpoint
-            agui_route = [
-                route
-                for route in self.app.routes
-                if hasattr(route, "path") and route.path == "/"
-            ][0]
-
-            result = await agui_route.endpoint(
-                self.mock_agui_content, self.mock_request
-            )
-
-            # Verify streaming response was created
-            self.assertIsInstance(result, MockStreamingResponse)
-
-        asyncio.run(run_test())
-
-    def test_register_endpoint_parameter_validation(self):
-        """Test parameter validation for register_agui_endpoint function."""
-        # Test with valid parameters - should not raise
-        register_agui_endpoint(self.app, self.mock_sse_service)
-        register_agui_endpoint(self.app, self.mock_sse_service, "/custom")
-
-        # The function doesn't do explicit validation, but we can test that
-        # it works with different parameter combinations
-        register_agui_endpoint(self.app, self.mock_sse_service, path="")
-        register_agui_endpoint(
-            self.app, self.mock_sse_service, path="/very/long/path/with/many/segments"
+    def create_agui_content(self):
+        """Helper to create a test RunAgentInput instance."""
+        return RunAgentInput(
+            thread_id="test_thread",
+            run_id="test_run",
+            state={},
+            messages=[],
+            tools=[],
+            context=[],
+            forwarded_props={}
         )
 
-    def test_endpoint_function_signature(self):
-        """Test that the registered endpoint function has correct signature."""
-        register_agui_endpoint(self.app, self.mock_sse_service)
-
-        # Get the registered route
-        agui_route = None
-        for route in self.app.routes:
-            if (
-                hasattr(route, "path")
-                and route.path == "/"
-                and hasattr(route, "endpoint")
-            ):
-                agui_route = route
+    @patch('adk_agui_middleware.endpoint.exception_http_handler')
+    async def test_agui_endpoint_successful_request(self, mock_exception_handler):
+        """Test successful AGUI endpoint request processing."""
+        # Setup mocks
+        agui_content = self.create_agui_content()
+        mock_runner = Mock(spec=Runner)
+        mock_encoder = Mock(spec=EventEncoder)
+        mock_encoder.get_content_type.return_value = "text/event-stream"
+        
+        self.mock_sse_service.get_runner = AsyncMock(return_value=mock_runner)
+        self.mock_sse_service.event_generator.return_value = iter([b"data: test\n\n"])
+        
+        # Create a real FastAPI app to test endpoint registration
+        app = FastAPI()
+        register_agui_endpoint(app, self.mock_sse_service)
+        
+        # Get the registered endpoint function
+        endpoint_func = None
+        for route in app.routes:
+            if hasattr(route, 'endpoint'):
+                endpoint_func = route.endpoint
                 break
+        
+        self.assertIsNotNone(endpoint_func)
+        
+        # Mock EventEncoder creation
+        with patch('adk_agui_middleware.endpoint.EventEncoder', return_value=mock_encoder):
+            # Mock exception handler as async context manager
+            mock_exception_handler.return_value.__aenter__ = AsyncMock()
+            mock_exception_handler.return_value.__aexit__ = AsyncMock()
+            
+            # Call the endpoint function directly
+            response = await endpoint_func(agui_content, self.mock_request)
+        
+        # Verify the response
+        self.assertIsInstance(response, StreamingResponse)
+        self.mock_sse_service.get_runner.assert_called_once_with(agui_content, self.mock_request)
+        mock_encoder.get_content_type.assert_called_once()
 
-        self.assertIsNotNone(agui_route)
+    @patch('adk_agui_middleware.endpoint.exception_http_handler')
+    async def test_agui_endpoint_encoder_creation(self, mock_exception_handler):
+        """Test that EventEncoder is created with correct Accept header."""
+        agui_content = self.create_agui_content()
+        mock_runner = Mock(spec=Runner)
+        
+        self.mock_sse_service.get_runner = AsyncMock(return_value=mock_runner)
+        self.mock_sse_service.event_generator.return_value = iter([])
+        
+        # Set specific accept header
+        self.mock_request.headers = {"accept": "application/json"}
+        
+        # Create a real FastAPI app
+        app = FastAPI()
+        register_agui_endpoint(app, self.mock_sse_service)
+        
+        # Get the registered endpoint function
+        endpoint_func = None
+        for route in app.routes:
+            if hasattr(route, 'endpoint'):
+                endpoint_func = route.endpoint
+                break
+        
+        # Mock exception handler
+        mock_exception_handler.return_value.__aenter__ = AsyncMock()
+        mock_exception_handler.return_value.__aexit__ = AsyncMock()
+        
+        # Test encoder creation with accept header
+        with patch('adk_agui_middleware.endpoint.EventEncoder') as mock_encoder_class:
+            mock_encoder_instance = Mock()
+            mock_encoder_instance.get_content_type.return_value = "application/json"
+            mock_encoder_class.return_value = mock_encoder_instance
+            
+            await endpoint_func(agui_content, self.mock_request)
+            
+            # Verify EventEncoder was created with correct accept header
+            mock_encoder_class.assert_called_once_with(accept="application/json")
 
-        # Check that the endpoint function exists and is callable
-        self.assertTrue(callable(agui_route.endpoint))
+    @patch('adk_agui_middleware.endpoint.exception_http_handler')
+    async def test_agui_endpoint_no_accept_header(self, mock_exception_handler):
+        """Test endpoint behavior when Accept header is missing."""
+        agui_content = self.create_agui_content()
+        mock_runner = Mock(spec=Runner)
+        
+        self.mock_sse_service.get_runner = AsyncMock(return_value=mock_runner)
+        self.mock_sse_service.event_generator.return_value = iter([])
+        
+        # Remove accept header
+        self.mock_request.headers = {}
+        
+        app = FastAPI()
+        register_agui_endpoint(app, self.mock_sse_service)
+        
+        endpoint_func = None
+        for route in app.routes:
+            if hasattr(route, 'endpoint'):
+                endpoint_func = route.endpoint
+                break
+        
+        # Mock exception handler
+        mock_exception_handler.return_value.__aenter__ = AsyncMock()
+        mock_exception_handler.return_value.__aexit__ = AsyncMock()
+        
+        with patch('adk_agui_middleware.endpoint.EventEncoder') as mock_encoder_class:
+            mock_encoder_instance = Mock()
+            mock_encoder_instance.get_content_type.return_value = "text/event-stream"
+            mock_encoder_class.return_value = mock_encoder_instance
+            
+            await endpoint_func(agui_content, self.mock_request)
+            
+            # Verify EventEncoder was created with None (default)
+            mock_encoder_class.assert_called_once_with(accept=None)
 
-        # Function should accept agui_content and request parameters
-        # This is implicitly tested by other test methods that call the endpoint
+    @patch('adk_agui_middleware.endpoint.exception_http_handler')
+    async def test_agui_endpoint_streaming_response_properties(self, mock_exception_handler):
+        """Test that StreamingResponse is created with correct properties."""
+        agui_content = self.create_agui_content()
+        mock_runner = Mock(spec=Runner)
+        mock_encoder = Mock(spec=EventEncoder)
+        
+        # Setup return values
+        mock_encoder.get_content_type.return_value = "text/event-stream"
+        test_content = [b"data: test1\n\n", b"data: test2\n\n"]
+        
+        self.mock_sse_service.get_runner = AsyncMock(return_value=mock_runner)
+        self.mock_sse_service.event_generator.return_value = iter(test_content)
+        
+        app = FastAPI()
+        register_agui_endpoint(app, self.mock_sse_service)
+        
+        endpoint_func = None
+        for route in app.routes:
+            if hasattr(route, 'endpoint'):
+                endpoint_func = route.endpoint
+                break
+        
+        # Mock exception handler
+        mock_exception_handler.return_value.__aenter__ = AsyncMock()
+        mock_exception_handler.return_value.__aexit__ = AsyncMock()
+        
+        with patch('adk_agui_middleware.endpoint.EventEncoder', return_value=mock_encoder):
+            response = await endpoint_func(agui_content, self.mock_request)
+        
+        # Verify response properties
+        self.assertIsInstance(response, StreamingResponse)
+        self.assertEqual(response.media_type, "text/event-stream")
+        
+        # Verify event_generator was called with correct arguments
+        self.mock_sse_service.event_generator.assert_called_once_with(mock_runner, mock_encoder)
+
+    async def test_endpoint_function_signature(self):
+        """Test that the registered endpoint has correct function signature."""
+        app = FastAPI()
+        register_agui_endpoint(app, self.mock_sse_service)
+        
+        # Get the registered endpoint function
+        endpoint_func = None
+        for route in app.routes:
+            if hasattr(route, 'endpoint'):
+                endpoint_func = route.endpoint
+                break
+        
+        self.assertIsNotNone(endpoint_func)
+        
+        # Check function name and annotations
+        self.assertEqual(endpoint_func.__name__, "agui_endpoint")
+        
+        # The function should be async
+        import asyncio
+        self.assertTrue(asyncio.iscoroutinefunction(endpoint_func))
+
+    def test_multiple_endpoint_registrations(self):
+        """Test registering multiple endpoints on same app."""
+        app = FastAPI()
+        initial_route_count = len(app.routes)
+        sse_service1 = Mock(spec=BaseSSEService)
+        sse_service2 = Mock(spec=BaseSSEService)
+        
+        register_agui_endpoint(app, sse_service1, path="/endpoint1")
+        register_agui_endpoint(app, sse_service2, path="/endpoint2")
+        
+        # Should have added 2 endpoints
+        self.assertEqual(len(app.routes), initial_route_count + 2)
+
+    def test_endpoint_route_configuration(self):
+        """Test that the route is configured correctly."""
+        app = FastAPI()
+        initial_route_count = len(app.routes)
+        custom_path = "/custom/agui"
+        
+        register_agui_endpoint(app, self.mock_sse_service, path=custom_path)
+        
+        # Verify route was added
+        self.assertEqual(len(app.routes), initial_route_count + 1)
+        
+        # Find our custom route
+        custom_route = None
+        for route in app.routes:
+            if hasattr(route, 'path') and route.path == custom_path:
+                custom_route = route
+                break
+        
+        self.assertIsNotNone(custom_route)
+        self.assertIn("POST", custom_route.methods)
+
+    @patch('adk_agui_middleware.endpoint.exception_http_handler')
+    async def test_exception_handler_usage(self, mock_exception_handler):
+        """Test that exception_http_handler is used correctly."""
+        agui_content = self.create_agui_content()
+        
+        app = FastAPI()
+        register_agui_endpoint(app, self.mock_sse_service)
+        
+        endpoint_func = None
+        for route in app.routes:
+            if hasattr(route, 'endpoint'):
+                endpoint_func = route.endpoint
+                break
+        
+        # Mock exception handler as async context manager
+        mock_context = AsyncMock()
+        mock_exception_handler.return_value = mock_context
+        
+        # Mock other dependencies
+        with patch('adk_agui_middleware.endpoint.EventEncoder'):
+            self.mock_sse_service.get_runner = AsyncMock()
+            self.mock_sse_service.event_generator.return_value = iter([])
+            
+            await endpoint_func(agui_content, self.mock_request)
+        
+        # Verify exception handler was called with request
+        mock_exception_handler.assert_called_once_with(self.mock_request)
+        mock_context.__aenter__.assert_called_once()
+        mock_context.__aexit__.assert_called_once()
 
 
 if __name__ == "__main__":

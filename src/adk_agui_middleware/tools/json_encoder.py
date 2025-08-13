@@ -34,7 +34,10 @@ class DataclassesEncoder(json.JSONEncoder):
 
         # Handle bytes objects by decoding to string
         if isinstance(o, bytes):
-            return o.decode()
+            try:
+                return o.decode('utf-8')
+            except UnicodeDecodeError:
+                return "[Binary Data]"
 
         # Fall back to default JSON encoder behavior
         return super().default(o)

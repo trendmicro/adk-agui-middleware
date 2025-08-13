@@ -4,7 +4,7 @@ import json
 import logging as log
 from typing import Any
 
-from config.log import log_config
+from ..config.log import log_config
 
 from ..tools.json_encoder import DataclassesEncoder
 

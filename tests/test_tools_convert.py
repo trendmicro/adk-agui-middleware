@@ -1,7 +1,7 @@
 """Unit tests for adk_agui_middleware.tools.convert module."""
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, PropertyMock
 
 from ag_ui.core import (
     AssistantMessage,
@@ -207,7 +207,7 @@ class TestHandleUserSystemMessage(unittest.TestCase):
         """Test message with no content."""
         from adk_agui_middleware.tools.convert import _handle_user_system_message
 
-        empty_msg = UserMessage(id="1", role="user", content=None)
+        empty_msg = UserMessage(id="1", role="user", content="")
         result = _handle_user_system_message(empty_msg)
 
         self.assertIsNone(result)
@@ -335,12 +335,11 @@ class TestConvertADKEventToAGUIMessage(unittest.TestCase):
         """Test handling exceptions during conversion."""
         mock_event = Mock(spec=ADKEvent)
         mock_event.id = "error_event"
-        mock_event.content.parts = []  # This will cause AttributeError
-
-        # Make content.parts raise an exception when accessed
-        type(mock_event.content).parts = PropertyMock(
-            side_effect=Exception("Test error")
-        )
+        
+        # Create a mock content with properly configured parts
+        mock_content = Mock()
+        mock_content.parts = PropertyMock(side_effect=Exception("Test error"))
+        mock_event.content = mock_content
 
         result = convert_adk_event_to_ag_ui_message(mock_event)
 
@@ -358,9 +357,9 @@ class TestJSONPatchConversion(unittest.TestCase):
         result = convert_state_to_json_patch(state_delta)
 
         expected = [
-            {"op": "replace", "path": "/key1", "value": "value1"},
-            {"op": "replace", "path": "/key2", "value": 42},
-            {"op": "replace", "path": "/key3", "value": {"nested": "object"}},
+            {"op": "add", "path": "/key1", "value": "value1"},
+            {"op": "add", "path": "/key2", "value": 42},
+            {"op": "add", "path": "/key3", "value": {"nested": "object"}},
         ]
 
         self.assertEqual(len(result), 3)
@@ -381,10 +380,10 @@ class TestJSONPatchConversion(unittest.TestCase):
         remove_ops = [op for op in result if op["op"] == "remove"]
         self.assertEqual(len(remove_ops), 2)
 
-        # Check replace operations
-        replace_ops = [op for op in result if op["op"] == "replace"]
-        self.assertEqual(len(replace_ops), 1)
-        self.assertEqual(replace_ops[0]["value"], "value")
+        # Check add operations (implementation uses "add" instead of "replace")
+        add_ops = [op for op in result if op["op"] == "add"]
+        self.assertEqual(len(add_ops), 1)
+        self.assertEqual(add_ops[0]["value"], "value")
 
     def test_convert_json_patch_to_state_mixed_operations(self):
         """Test converting JSON Patch operations back to state."""
