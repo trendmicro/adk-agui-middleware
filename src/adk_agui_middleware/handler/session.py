@@ -17,15 +17,15 @@ class SessionHandler:
     """
 
     def __init__(
-        self, session_manger: SessionManager, session_parameter: SessionParameter
+        self, session_manager: SessionManager, session_parameter: SessionParameter
     ):
         """Initialize the session handler.
 
         Args:
-            session_manger: Manager for session operations
+            session_manager: Manager for session operations
             session_parameter: Parameters identifying the session (app, user, session ID)
         """
-        self.session_manger = session_manger
+        self.session_manager = session_manager
         self.session_parameter = session_parameter
 
     @property
@@ -73,7 +73,7 @@ class SessionHandler:
         Returns:
             Session object if found, None otherwise
         """
-        return await self.session_manger.get_session(self.session_parameter)
+        return await self.session_manager.get_session(self.session_parameter)
 
     async def get_session_state(self) -> dict[str, Any]:
         """Get the current state dictionary for this session.
@@ -81,7 +81,7 @@ class SessionHandler:
         Returns:
             Dictionary containing session state key-value pairs
         """
-        return await self.session_manger.get_session_state(self.session_parameter)
+        return await self.session_manager.get_session_state(self.session_parameter)
 
     async def check_and_create_session(
         self, initial_state: dict[str, Any] | None = None
@@ -94,7 +94,7 @@ class SessionHandler:
         Returns:
             Session object (either existing or newly created)
         """
-        return await self.session_manger.check_and_create_session(
+        return await self.session_manager.check_and_create_session(
             session_parameter=self.session_parameter, initial_state=initial_state
         )
 
@@ -109,7 +109,7 @@ class SessionHandler:
         Returns:
             True if update was successful, False otherwise
         """
-        return await self.session_manger.update_session_state(
+        return await self.session_manager.update_session_state(
             session_parameter=self.session_parameter,
             state_updates=initial_state,
         )
@@ -135,7 +135,7 @@ class SessionHandler:
         # Remove the tool call ID from the pending list
         pending_calls.remove(tool_call_id)
         # Update session state with the modified pending calls list
-        success = await self.session_manger.update_session_state(
+        success = await self.session_manager.update_session_state(
             session_parameter=self.session_parameter,
             state_updates=self.get_pending_tool_calls_dict(pending_calls),
         )
@@ -158,7 +158,7 @@ class SessionHandler:
         try:
             # Get current pending calls from session state
             pending_calls = (
-                await self.session_manger.get_session_state(
+                await self.session_manager.get_session_state(
                     self.session_parameter,
                 )
             ).get("pending_tool_calls", [])
@@ -166,7 +166,7 @@ class SessionHandler:
             if tool_call_id not in pending_calls:
                 pending_calls.append(tool_call_id)
                 # Update session state with the new pending calls list
-                if await self.session_manger.update_session_state(
+                if await self.session_manager.update_session_state(
                     self.session_parameter,
                     state_updates=self.get_pending_tool_calls_dict(pending_calls),
                 ):
@@ -190,7 +190,7 @@ class SessionHandler:
         """
         try:
             # Get current session state
-            session_history = await self.session_manger.get_session_state(
+            session_history = await self.session_manager.get_session_state(
                 self.session_parameter
             )
             # Check if session exists in the state

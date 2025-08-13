@@ -202,7 +202,7 @@ class SSEService(BaseSSEService):
                 run_config=self.runner_config.run_config,
                 agui_message=UserMessageHandler(agui_content, request, initial_state),
                 session_handler=SessionHandler(
-                    session_manger=self.session_manager,
+                    session_manager=self.session_manager,
                     session_parameter=SessionParameter(
                         app_name=app_name, user_id=user_id, session_id=session_id
                     ),
