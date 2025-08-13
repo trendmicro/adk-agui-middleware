@@ -6,7 +6,8 @@ from typing import Any
 from ag_ui.core import AssistantMessage, RunAgentInput, ToolMessage
 from fastapi import Request
 from google.genai import types
-from loggers.record_log import record_error_log, record_log, record_warning_log
+
+from ..loggers.record_log import record_error_log, record_log, record_warning_log
 
 
 class UserMessageHandler:

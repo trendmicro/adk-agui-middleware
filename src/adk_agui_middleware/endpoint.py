@@ -2,14 +2,15 @@
 
 from ag_ui.core import RunAgentInput
 from ag_ui.encoder import EventEncoder
-from base_abc.sse_service import BaseSSEService
-from fastapi import FastAPI, Request
-from loggers.exception import exception_http_handler
+from fastapi import APIRouter, FastAPI, Request
 from starlette.responses import StreamingResponse
+
+from .base_abc.sse_service import BaseSSEService
+from .loggers.exception import exception_http_handler
 
 
 def register_agui_endpoint(
-    app: FastAPI, sse_service: BaseSSEService, path: str = "/"
+    app: FastAPI | APIRouter, sse_service: BaseSSEService, path: str = "/"
 ) -> None:
     """Register AGUI endpoint for handling agent interactions via Server-Sent Events.
 

@@ -5,7 +5,8 @@ import logging as log
 from typing import Any
 
 from config.log import log_config
-from tools.json_encoder import DataclassesEncoder
+
+from ..tools.json_encoder import DataclassesEncoder
 
 
 class JsonFormatter(log.Formatter):

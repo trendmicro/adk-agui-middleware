@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 from typing import TypeVar
 
 from ag_ui.core import RunAgentInput
+from fastapi import Request
 from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
 from google.adk.artifacts import BaseArtifactService, InMemoryArtifactService
@@ -16,7 +17,6 @@ from google.adk.auth.credential_service.in_memory_credential_service import (
 from google.adk.memory import BaseMemoryService, InMemoryMemoryService
 from google.adk.sessions import BaseSessionService, InMemorySessionService
 from pydantic import BaseModel, Field
-from starlette.requests import Request
 
 
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)

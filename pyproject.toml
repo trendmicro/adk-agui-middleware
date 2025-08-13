@@ -1,6 +1,6 @@
 [project]
 name = "adk-agui-py-middleware"
-version = "0.1.2"
+version = "0.1.3"
 description = "Python middleware bridging Google ADK agents with AGUI protocol via Server-Sent Events for real-time agent interactions"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,6 +36,18 @@ dev = [
     "mypy>=1.17.1",
     "ruff>=0.12.8",
     "build>=1.0.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "coverage>=7.0.0",
+    "pre-commit>=3.0.0",
+    "bandit[toml]>=1.7.0",
+]
+test = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-asyncio>=0.21.0",
+    "coverage>=7.0.0",
 ]
 
 [project.urls]
@@ -62,7 +74,7 @@ include = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+target-version = "py310"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -103,14 +115,16 @@ select = [
 ]
 
 ignore = [
-    "E501", # line-too-long
+    "E501",   # line-too-long
 
     "COM819", # prohibited-trailing-comma
 
-    "TRY003", # try-except-else-finally-missing-else
+    "TRY003", # raise-vanilla-args (avoid specifying long messages outside the exception class)
 
-    "ANN204", # missing-type-annotation-in-function
-    "ANN401"  # missing-type-annotation
+    "PERF203", # try-except-in-loop (try-except within a loop incurs performance overhead)
+
+    "ANN204", # missing-return-type-special-method
+    "ANN401", # any-type (dynamically typed expressions (typing.Any) are disallowed)
 ]
 
 # Configure pydocstyle to use Google docstring convention
@@ -123,7 +137,7 @@ max-complexity = 10
 # ---------------- mypy ----------------
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.10"
 strict = true
 plugins = ["pydantic.mypy"]
 disallow_untyped_defs = true
@@ -133,3 +147,69 @@ disallow_any_generics = true
 no_implicit_optional = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+# ---------------- pytest ----------------
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--disable-warnings",
+    "-ra",
+]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+# ---------------- coverage ----------------
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+parallel = true
+omit = [
+    "tests/*",
+    "*/venv/*",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.paths]
+source = [
+    "src/",
+    "*/site-packages/",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# ---------------- bandit ----------------
+
+[tool.bandit]
+targets = ["src"]
+exclude_dirs = ["tests"]
+skips = ["B101", "B601"]
+# B101: Test for use of assert
+# B601: Parameterized shell injection
+
+[tool.bandit.assert_used]
+skips = ["**/test_*.py", "**/tests/**"]

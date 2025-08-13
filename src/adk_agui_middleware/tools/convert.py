@@ -14,7 +14,8 @@ from ag_ui.core import (
 )
 from google.adk.events import Event as ADKEvent
 from google.genai import types
-from loggers.record_log import record_error_log
+
+from ..loggers.record_log import record_error_log
 
 
 def convert_ag_ui_messages_to_adk(messages: list[BaseMessage]) -> list[ADKEvent]:
@@ -41,7 +42,6 @@ def convert_ag_ui_messages_to_adk(messages: list[BaseMessage]) -> list[ADKEvent]
             )
         except Exception as e:
             record_error_log(f"Error converting message {message.id}.", e)
-            continue
     return adk_events
 
 

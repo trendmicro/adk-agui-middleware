@@ -5,9 +5,10 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from data_model.error import ErrorModel
 from fastapi import HTTPException, Request, status
-from loggers.record_request_log import record_request_error_log, record_request_log
+
+from ..data_model.error import ErrorModel
+from ..loggers.record_request_log import record_request_error_log, record_request_log
 
 
 def get_common_http_exception(

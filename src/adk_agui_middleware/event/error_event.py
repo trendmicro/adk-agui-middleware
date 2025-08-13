@@ -2,7 +2,8 @@
 
 from ag_ui.core import EventType, RunErrorEvent
 from ag_ui.encoder import EventEncoder
-from loggers.record_log import record_error_log
+
+from ..loggers.record_log import record_error_log
 
 
 class AGUIEncoderError(Exception):

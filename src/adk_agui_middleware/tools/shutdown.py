@@ -3,8 +3,9 @@ import signal
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from loggers.record_log import record_error_log, record_log
 from pattern.singleton import Singleton
+
+from ..loggers.record_log import record_error_log, record_log
 
 
 class ShutdownHandler(metaclass=Singleton):
