@@ -49,7 +49,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ag-ui-protocol", specifier = ">=0.1.8" },
+    { name = "ag-ui-protocol", specifier = ">=0.1.7" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "google-adk", specifier = ">=1.9.0" },
     { name = "pydantic", specifier = ">=2.11.7" },

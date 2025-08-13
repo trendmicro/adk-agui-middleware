@@ -54,6 +54,6 @@ def register_agui_endpoint(
             runner = await sse_service.get_runner(agui_content, request)
             # Generate streaming response with encoded events
             return StreamingResponse(
-                await sse_service.event_generator(runner, encoder),
+                sse_service.event_generator(runner, encoder),
                 media_type=encoder.get_content_type(),
             )
