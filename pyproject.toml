@@ -1,9 +1,9 @@
 [project]
 name = "adk-agui-py-middleware"
-version = "0.1.1"
+version = "0.1.2"
 description = "Python middleware bridging Google ADK agents with AGUI protocol via Server-Sent Events for real-time agent interactions"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [
     {name = "DennySORA", email = "dennysora.main@gmail.com"},
@@ -25,7 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "ag-ui-protocol>=0.1.8",
-    "google-adk>=1.10.0",
+    "google-adk>=1.9.0",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "fastapi>=0.104.0",
