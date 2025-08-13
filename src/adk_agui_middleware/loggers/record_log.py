@@ -5,10 +5,9 @@ import traceback
 from typing import Any
 
 from data_model.log import LogMessage
+from loggers import logger
 from tools.function_name import get_function_name
 from tools.json_encoder import DataclassesEncoder
-
-from loggers import logger
 
 
 def _create_and_log_message(

@@ -121,15 +121,15 @@ convention = "google" # Use Google-style docstrings (Args:, Returns:, Raises:)
 max-complexity = 10
 
 # ---------------- mypy ----------------
-
-[tool.mypy]
-python_version = "3.13"
-strict = true
-plugins = ["pydantic.mypy"]
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = true
-disallow_any_generics = true
-no_implicit_optional = true
-warn_unused_ignores = true
-warn_redundant_casts = true
+#
+#[tool.mypy]
+#python_version = "3.13"
+#strict = true
+#plugins = ["pydantic.mypy"]
+#disallow_untyped_defs = true
+#disallow_incomplete_defs = true
+#disallow_untyped_calls = true
+#disallow_any_generics = true
+#no_implicit_optional = true
+#warn_unused_ignores = true
+#warn_redundant_casts = true

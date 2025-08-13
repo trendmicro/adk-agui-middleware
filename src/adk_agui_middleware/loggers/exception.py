@@ -7,7 +7,6 @@ from typing import Any
 
 from data_model.error import ErrorModel
 from fastapi import HTTPException, Request, status
-
 from loggers.record_request_log import record_request_error_log, record_request_log
 
 
