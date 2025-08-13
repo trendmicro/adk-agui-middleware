@@ -3,9 +3,9 @@
 import traceback
 from typing import Any
 
-from data_model.log import LogMessage
 from starlette.requests import Request
 
+from ..data_model.log import LogMessage
 from ..tools.function_name import get_function_name
 from . import logger
 

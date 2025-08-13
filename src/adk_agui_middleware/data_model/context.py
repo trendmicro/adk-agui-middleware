@@ -16,7 +16,7 @@ from google.adk.auth.credential_service.in_memory_credential_service import (
 )
 from google.adk.memory import BaseMemoryService, InMemoryMemoryService
 from google.adk.sessions import BaseSessionService, InMemorySessionService
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
@@ -59,6 +59,8 @@ class RunnerConfig(BaseModel):
     Manages the configuration of various services required for agent execution
     including session, artifact, memory, and credential services.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     use_in_memory_services: bool = True
     run_config: RunConfig = RunConfig(streaming_mode=StreamingMode.SSE)

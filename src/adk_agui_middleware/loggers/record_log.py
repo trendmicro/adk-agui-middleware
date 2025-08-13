@@ -4,8 +4,7 @@ import json
 import traceback
 from typing import Any
 
-from data_model.log import LogMessage
-
+from ..data_model.log import LogMessage
 from ..tools.function_name import get_function_name
 from ..tools.json_encoder import DataclassesEncoder
 from . import logger
