@@ -19,6 +19,7 @@ from handler.agui_user import AGUIUserHandler
 from handler.session import SessionHandler
 from handler.user_message import UserMessageHandler
 from manager.session import SessionManager
+from tools.shutdown import ShutdownHandler
 
 
 class SSEService(BaseSSEService):
@@ -49,6 +50,7 @@ class SSEService(BaseSSEService):
         self._runner_lock = asyncio.Lock()
         self.runner_box: dict[str, Runner] = {}
         self.context_config = context_config
+        self.shutdown_handler = ShutdownHandler()
 
     async def _get_config_value(
         self, config_attr: str, agui_content: RunAgentInput, request: Request
@@ -164,7 +166,7 @@ class SSEService(BaseSSEService):
         """
         async with self._runner_lock:
             if app_name not in self.runner_box:
-                self.runner_box[app_name] = Runner(
+                runner = Runner(
                     app_name=app_name,
                     agent=self.agent,
                     session_service=self.session_manager.session_service,
@@ -172,6 +174,8 @@ class SSEService(BaseSSEService):
                     memory_service=self.runner_config.get_memory_service(),
                     credential_service=self.runner_config.get_credential_service(),
                 )
+                self.shutdown_handler.register_shutdown_function(runner.close)
+                self.runner_box[app_name] = runner
             return self.runner_box[app_name]
 
     async def get_runner(
