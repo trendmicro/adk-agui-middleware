@@ -43,15 +43,6 @@ class UserMessageHandler:
         return self.agui_content.thread_id
 
     @property
-    def initial_state(self) -> dict[str, str] | None:
-        """Get the initial state dictionary.
-
-        Returns:
-            Initial state dictionary or None
-        """
-        return self.initial_state
-
-    @property
     def is_tool_result_submission(self) -> bool:
         """Check if the latest message is a tool result submission.
 
