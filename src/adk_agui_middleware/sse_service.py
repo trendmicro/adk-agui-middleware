@@ -1,5 +1,6 @@
 """Concrete implementation of Server-Sent Events service for AGUI middleware."""
 
+import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
 
 from ag_ui.core import (
@@ -45,6 +46,7 @@ class SSEService(BaseSSEService):
         self.session_manager = SessionManager(
             session_service=self.runner_config.session_service
         )
+        self._runner_lock = asyncio.Lock()
         self.runner_box: dict[str, Runner] = {}
         self.context_config = context_config
 
@@ -148,7 +150,7 @@ class SSEService(BaseSSEService):
         except Exception as e:
             return AGUIEncoderError.encoding_error(encoder, e)
 
-    def _create_runner(self, app_name: str) -> Runner:
+    async def _create_runner(self, app_name: str) -> Runner:
         """Create or retrieve a Runner instance for the specified application.
 
         Implements lazy initialization and caching of Runner instances per app.
@@ -160,16 +162,17 @@ class SSEService(BaseSSEService):
         Returns:
             Runner instance configured for the specified application
         """
-        if app_name not in self.runner_box:
-            self.runner_box[app_name] = Runner(
-                app_name=app_name,
-                agent=self.agent,
-                session_service=self.session_manager.session_service,
-                artifact_service=self.runner_config.get_artifact_service(),
-                memory_service=self.runner_config.get_memory_service(),
-                credential_service=self.runner_config.get_credential_service(),
-            )
-        return self.runner_box[app_name]
+        async with self._runner_lock:
+            if app_name not in self.runner_box:
+                self.runner_box[app_name] = Runner(
+                    app_name=app_name,
+                    agent=self.agent,
+                    session_service=self.session_manager.session_service,
+                    artifact_service=self.runner_config.get_artifact_service(),
+                    memory_service=self.runner_config.get_memory_service(),
+                    credential_service=self.runner_config.get_credential_service(),
+                )
+            return self.runner_box[app_name]
 
     async def get_runner(
         self, agui_content: RunAgentInput, request: Request
@@ -198,7 +201,7 @@ class SSEService(BaseSSEService):
             session_id = await self.extract_session_id(agui_content, request)
             initial_state = await self.extract_initial_state(agui_content, request)
             user_handler = AGUIUserHandler(
-                runner=self._create_runner(app_name),
+                runner=await self._create_runner(app_name),
                 run_config=self.runner_config.run_config,
                 agui_message=UserMessageHandler(agui_content, request, initial_state),
                 session_handler=SessionHandler(
@@ -233,3 +236,10 @@ class SSEService(BaseSSEService):
                 yield self._encoding_handler(encoder, event)
         except Exception as e:
             yield AGUIEncoderError.agent_error(encoder, e)
+
+    async def close(self) -> None:
+        """Close all cached Runner instances."""
+        async with self._runner_lock:
+            for runner in self.runner_box.values():
+                await runner.close()
+            self.runner_box.clear()
