@@ -197,7 +197,6 @@ class EventTranslator:
         self,
         function_calls: list[types.FunctionCall],
     ) -> AsyncGenerator[BaseEvent]:
-        parent_message_id = None
         for func_call in function_calls:
             tool_call_id = func_call.id or str(uuid.uuid4())
             self._active_tool_calls[tool_call_id] = tool_call_id
@@ -205,7 +204,6 @@ class EventTranslator:
                 type=EventType.TOOL_CALL_START,
                 tool_call_id=tool_call_id,
                 tool_call_name=func_call.name,
-                parent_message_id=parent_message_id,
             )
             if func_call.args:
                 args_str = (

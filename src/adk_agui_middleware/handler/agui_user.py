@@ -19,7 +19,7 @@ from google.genai import types
 from ..event.error_event import AGUIErrorEvent
 from ..handler.session import SessionHandler
 from ..handler.user_message import UserMessageHandler
-from ..loggers.record_log import record_log
+from ..loggers.record_log import record_agui_raw_log, record_event_raw_log, record_log
 from ..tools.event_translator import EventTranslator
 
 
@@ -190,6 +190,7 @@ class AGUIUserHandler:
             session_id=self.session_id,
             new_message=message,
         ):
+            record_event_raw_log(event)
             yield event
 
     async def _run_async(self) -> AsyncGenerator[BaseEvent]:
@@ -206,6 +207,7 @@ class AGUIUserHandler:
         ):
             async for agui_event in self._run_async_translator_adk_to_agui(adk_event):
                 await self.check_tools_event(agui_event)
+                record_agui_raw_log(agui_event)
                 yield agui_event
                 if self.is_long_running_tool:
                     return

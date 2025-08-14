@@ -52,7 +52,7 @@ class UserMessageHandler:
         """
         if not self.agui_content.messages:
             return False
-        return self.agui_content.messages[-1].role == "tool"
+        return isinstance(self.agui_content.messages[-1], ToolMessage)
 
     @staticmethod
     def _parse_tool_content(content: str, tool_call_id: str) -> dict[str, str | None]:

@@ -208,8 +208,5 @@ directory = "htmlcov"
 targets = ["src"]
 exclude_dirs = ["tests"]
 skips = ["B101", "B601"]
-# B101: Test for use of assert
-# B601: Parameterized shell injection
-
 [tool.bandit.assert_used]
 skips = ["**/test_*.py", "**/tests/**"]

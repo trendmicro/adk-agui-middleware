@@ -12,6 +12,10 @@ class LogConfig(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
     """Logging level for the application (DEBUG, INFO, WARNING, ERROR, CRITICAL)."""
+    LOG_EVENT: bool = False
+    """Enable or disable logging level setting."""
+    LOG_AGUI: bool = False
+    """Enable or disable AGUI-specific logging."""
 
 
 # Global log configuration instance

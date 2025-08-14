@@ -5,6 +5,7 @@ import traceback
 from typing import Any
 
 from ..data_model.log import LogMessage
+from ..loggers.logger import log_config
 from ..tools.function_name import get_function_name
 from ..tools.json_encoder import DataclassesEncoder
 from . import logger
@@ -108,3 +109,13 @@ def record_error_log(
         Dictionary representation of the logged message with error details
     """
     return _create_and_log_message(msg, logger.logging.error, body, e)
+
+
+def record_agui_raw_log(raw_data: Any) -> None:
+    if log_config.LOG_AGUI:
+        _create_and_log_message("[RAW_DATA: AGUI] record AGUI raw log", body=raw_data)
+
+
+def record_event_raw_log(raw_data: Any) -> None:
+    if log_config.LOG_EVENT:
+        _create_and_log_message("[RAW_DATA: EVENT] record EVENT raw log", body=raw_data)

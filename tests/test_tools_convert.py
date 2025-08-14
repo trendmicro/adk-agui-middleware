@@ -1,7 +1,7 @@
 """Unit tests for adk_agui_middleware.tools.convert module."""
 
 import unittest
-from unittest.mock import Mock, patch, PropertyMock
+from unittest.mock import Mock, PropertyMock, patch
 
 from ag_ui.core import (
     AssistantMessage,
@@ -335,7 +335,7 @@ class TestConvertADKEventToAGUIMessage(unittest.TestCase):
         """Test handling exceptions during conversion."""
         mock_event = Mock(spec=ADKEvent)
         mock_event.id = "error_event"
-        
+
         # Create a mock content with properly configured parts
         mock_content = Mock()
         mock_content.parts = PropertyMock(side_effect=Exception("Test error"))

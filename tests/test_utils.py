@@ -1,16 +1,23 @@
 """Shared test utilities and fixtures for all test modules."""
 
-from typing import Any, Dict, List, Optional
-from unittest.mock import Mock, AsyncMock
+from typing import Any
+from unittest.mock import AsyncMock, Mock
 
-from ag_ui.core import RunAgentInput, UserMessage, AssistantMessage, ToolMessage, ToolCall, FunctionCall
+from ag_ui.core import (
+    AssistantMessage,
+    FunctionCall,
+    RunAgentInput,
+    ToolCall,
+    ToolMessage,
+    UserMessage,
+)
 from fastapi import Request
-from google.adk.sessions import Session
 from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
+from google.adk.sessions import Session
 
-from adk_agui_middleware.data_model.session import SessionParameter
 from adk_agui_middleware.data_model.context import ContextConfig, RunnerConfig
+from adk_agui_middleware.data_model.session import SessionParameter
 
 
 class TestDataFactory:
@@ -19,22 +26,20 @@ class TestDataFactory:
     @staticmethod
     def create_session_parameter(
         app_name: str = "test_app",
-        user_id: str = "test_user", 
-        session_id: str = "test_session"
+        user_id: str = "test_user",
+        session_id: str = "test_session",
     ) -> SessionParameter:
         """Create a test SessionParameter instance."""
         return SessionParameter(
-            app_name=app_name,
-            user_id=user_id,
-            session_id=session_id
+            app_name=app_name, user_id=user_id, session_id=session_id
         )
 
     @staticmethod
     def create_run_agent_input(
         thread_id: str = "test_thread",
         run_id: str = "test_run",
-        messages: Optional[List[Any]] = None,
-        state: Optional[Dict[str, Any]] = None
+        messages: list[Any] | None = None,
+        state: dict[str, Any] | None = None,
     ) -> RunAgentInput:
         """Create a test RunAgentInput instance."""
         return RunAgentInput(
@@ -44,84 +49,71 @@ class TestDataFactory:
             messages=messages or [],
             tools=[],
             context=[],
-            forwarded_props={}
+            forwarded_props={},
         )
 
     @staticmethod
     def create_user_message(
-        message_id: str = "1",
-        content: str = "Test message"
+        message_id: str = "1", content: str = "Test message"
     ) -> UserMessage:
         """Create a test UserMessage instance."""
-        return UserMessage(
-            id=message_id,
-            role="user",
-            content=content
-        )
+        return UserMessage(id=message_id, role="user", content=content)
 
     @staticmethod
     def create_assistant_message(
         message_id: str = "1",
         content: str = "Assistant response",
-        tool_calls: Optional[List[ToolCall]] = None
+        tool_calls: list[ToolCall] | None = None,
     ) -> AssistantMessage:
         """Create a test AssistantMessage instance."""
         return AssistantMessage(
             id=message_id,
-            role="assistant", 
+            role="assistant",
             content=content,
-            tool_calls=tool_calls or []
+            tool_calls=tool_calls or [],
         )
 
     @staticmethod
     def create_tool_message(
         message_id: str = "1",
         tool_call_id: str = "call_1",
-        content: str = '{"result": "success"}'
+        content: str = '{"result": "success"}',
     ) -> ToolMessage:
         """Create a test ToolMessage instance."""
         return ToolMessage(
-            id=message_id,
-            role="tool",
-            tool_call_id=tool_call_id,
-            content=content
+            id=message_id, role="tool", tool_call_id=tool_call_id, content=content
         )
 
     @staticmethod
     def create_tool_call(
         call_id: str = "call_1",
         function_name: str = "test_function",
-        arguments: str = "{}"
+        arguments: str = "{}",
     ) -> ToolCall:
         """Create a test ToolCall instance."""
         return ToolCall(
-            id=call_id,
-            function=FunctionCall(name=function_name, arguments=arguments)
+            id=call_id, function=FunctionCall(name=function_name, arguments=arguments)
         )
 
     @staticmethod
     def create_context_config(
-        app_name: str = "test_app",
-        user_id_func: Optional[Any] = None
+        app_name: str = "test_app", user_id_func: Any | None = None
     ) -> ContextConfig:
         """Create a test ContextConfig instance."""
+
         async def default_user_id(content, request):
             return "test_user"
-            
-        return ContextConfig(
-            app_name=app_name,
-            user_id=user_id_func or default_user_id
-        )
+
+        return ContextConfig(app_name=app_name, user_id=user_id_func or default_user_id)
 
     @staticmethod
     def create_runner_config(
-        use_in_memory: bool = True,
-        streaming_mode: StreamingMode = StreamingMode.SSE
+        use_in_memory: bool = True, streaming_mode: StreamingMode = StreamingMode.SSE
     ) -> RunnerConfig:
         """Create a test RunnerConfig instance."""
         return RunnerConfig(
             use_in_memory_services=use_in_memory,
-            run_config=RunConfig(streaming_mode=streaming_mode)
+            run_config=RunConfig(streaming_mode=streaming_mode),
         )
 
 
@@ -129,9 +121,7 @@ class MockFactory:
     """Factory class for creating mock objects."""
 
     @staticmethod
-    def create_request_mock(
-        headers: Optional[Dict[str, str]] = None
-    ) -> Mock:
+    def create_request_mock(headers: dict[str, str] | None = None) -> Mock:
         """Create a mock Request object."""
         mock_request = Mock(spec=Request)
         mock_request.headers = headers or {"accept": "text/event-stream"}
@@ -160,8 +150,7 @@ class TestAssertions:
 
     @staticmethod
     def assert_session_parameter_equal(
-        param1: SessionParameter, 
-        param2: SessionParameter
+        param1: SessionParameter, param2: SessionParameter
     ) -> None:
         """Assert two SessionParameter objects are equal."""
         assert param1.app_name == param2.app_name
@@ -170,8 +159,7 @@ class TestAssertions:
 
     @staticmethod
     def assert_dict_contains_keys(
-        target_dict: Dict[str, Any], 
-        expected_keys: List[str]
+        target_dict: dict[str, Any], expected_keys: list[str]
     ) -> None:
         """Assert dictionary contains all expected keys."""
         for key in expected_keys:
@@ -179,15 +167,16 @@ class TestAssertions:
 
     @staticmethod
     def assert_mock_called_with_args(
-        mock_obj: Mock, 
-        expected_args: tuple, 
-        expected_kwargs: Optional[Dict[str, Any]] = None
+        mock_obj: Mock,
+        expected_args: tuple,
+        expected_kwargs: dict[str, Any] | None = None,
     ) -> None:
         """Assert mock was called with specific arguments."""
         mock_obj.assert_called_once_with(*expected_args, **(expected_kwargs or {}))
 
 
 import unittest
+
 
 class BaseTestCase(unittest.TestCase):
     """Base test case with common setup and utilities."""
@@ -221,12 +210,13 @@ TEST_CONSTANTS = {
     "SUCCESS_RESPONSE": '{"success": true}',
     "ERROR_RESPONSE": '{"error": "test error"}',
     "EMPTY_STATE": {},
-    "DEFAULT_HEADERS": {"accept": "text/event-stream"}
+    "DEFAULT_HEADERS": {"accept": "text/event-stream"},
 }
 
 
-def parametrize_test_cases(test_cases: List[Dict[str, Any]]):
+def parametrize_test_cases(test_cases: list[dict[str, Any]]):
     """Decorator to parametrize test cases."""
+
     def decorator(test_func):
         def wrapper(self):
             for i, case in enumerate(test_cases):
@@ -234,5 +224,7 @@ def parametrize_test_cases(test_cases: List[Dict[str, Any]]):
                     test_func(self, **case)
                 except Exception as e:
                     self.fail(f"Test case {i} failed with {case}: {str(e)}")
+
         return wrapper
+
     return decorator

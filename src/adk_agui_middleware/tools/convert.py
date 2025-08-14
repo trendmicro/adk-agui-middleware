@@ -32,7 +32,7 @@ def convert_ag_ui_messages_to_adk(messages: list[BaseMessage]) -> list[ADKEvent]
     """
     if messages is None:
         return []
-    
+
     adk_events = []
     for message in messages:
         try:
@@ -184,7 +184,7 @@ def convert_adk_event_to_ag_ui_message(event: ADKEvent) -> BaseMessage | None:
     """
     if event is None:
         return None
-    
+
     try:
         if not event.content or not event.content.parts:
             return None
@@ -235,7 +235,7 @@ def convert_state_to_json_patch(state_delta: dict[str, Any]) -> list[dict[str, A
     """
     if state_delta is None:
         return []
-        
+
     patches = []
     for key, value in state_delta.items():
         if value is None:
@@ -261,16 +261,16 @@ def convert_json_patch_to_state(patches: list[dict[str, Any]]) -> dict[str, Any]
     """
     if patches is None:
         return {}
-    
+
     state_delta = {}
     for patch in patches:
         op = patch.get("op")
         path = patch.get("path", "")
-        
+
         # Skip invalid paths (must start with /)
         if not path.startswith("/"):
             continue
-            
+
         key = path.lstrip("/")  # Remove leading slash from path
 
         if op == "remove":
