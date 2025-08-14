@@ -5,8 +5,8 @@ from ag_ui.encoder import EventEncoder
 from fastapi import APIRouter, FastAPI, Request
 from starlette.responses import StreamingResponse
 
-from .base_abc.sse_service import BaseSSEService
 from .loggers.exception import exception_http_handler
+from .base_abc.sse_service import BaseSSEService
 
 
 def register_agui_endpoint(
