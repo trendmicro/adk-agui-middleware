@@ -31,11 +31,11 @@ class DataclassesEncoder(json.JSONEncoder):
         # Handle Pydantic BaseModel instances
         if isinstance(o, BaseModel):
             return o.model_dump()
-
-        # Handle bytes objects by decoding to string
-        if isinstance(o, bytes):
+        elif isinstance(o, set):
+            return list(o)
+        elif isinstance(o, bytes):
             try:
-                return o.decode("utf-8")
+                return o.decode()
             except UnicodeDecodeError:
                 return "[Binary Data]"
 
