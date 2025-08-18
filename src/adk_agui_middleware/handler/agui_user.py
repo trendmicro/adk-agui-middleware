@@ -11,16 +11,12 @@ from ag_ui.core import (
     ToolCallEndEvent,
     ToolCallResultEvent,
 )
-from google.adk import Runner
-from google.adk.agents import RunConfig
-from google.adk.events import Event
-from google.genai import types
 
 from ..event.error_event import AGUIErrorEvent
-from ..handler.session import SessionHandler
-from ..handler.user_message import UserMessageHandler
-from ..loggers.record_log import record_agui_raw_log, record_event_raw_log, record_log
-from ..tools.event_translator import EventTranslator
+from ..loggers.record_log import record_log
+from .running import RunningHandler
+from .session import SessionHandler
+from .user_message import UserMessageHandler
 
 
 class AGUIUserHandler:
@@ -32,26 +28,21 @@ class AGUIUserHandler:
 
     def __init__(
         self,
-        runner: Runner,
-        run_config: RunConfig,
-        agui_message: UserMessageHandler,
+        running_handler: RunningHandler,
+        user_message_handler: UserMessageHandler,
         session_handler: SessionHandler,
     ):
         """Initialize the AGUI user handler.
 
         Args:
-            runner: ADK Runner instance for agent execution
-            run_config: Configuration for agent execution
-            agui_message: Handler for processing user messages
+            running_handler: Handler for executing agent runs
+            user_message_handler: Handler for processing user messages
             session_handler: Handler for session state management
         """
-        self.runner = runner
-        self.run_config = run_config
-        self.user_message = agui_message
+        self.running_handler: RunningHandler = running_handler
+        self.user_message_handler = user_message_handler
         self.session_handler = session_handler
 
-        self.event_translator = EventTranslator()
-        self.is_long_running_tool = False
         self.tool_call_ids = []
 
     @property
@@ -88,7 +79,7 @@ class AGUIUserHandler:
         Returns:
             Run identifier string
         """
-        return self.user_message.agui_content.run_id
+        return self.user_message_handler.agui_content.run_id
 
     def call_start(self) -> RunStartedEvent:
         """Create a run started event.
@@ -110,7 +101,7 @@ class AGUIUserHandler:
             type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
         )
 
-    async def check_tools_event(self, event: BaseEvent) -> None:
+    def check_tools_event(self, event: BaseEvent) -> None:
         """Track tool call events for pending tool call management.
 
         Adds tool call IDs when tools are called and removes them when
@@ -136,9 +127,9 @@ class AGUIUserHandler:
         Returns:
             RunErrorEvent if tool result processing fails, None on success
         """
-        tool_results = await self.user_message.extract_tool_results()
+        tool_results = await self.user_message_handler.extract_tool_results()
         if not tool_results:
-            return AGUIErrorEvent.no_tool_results(self.user_message.thread_id)
+            return AGUIErrorEvent.no_tool_results(self.user_message_handler.thread_id)
         try:
             for tool_result in tool_results:
                 await self.session_handler.check_and_remove_pending_tool_call(
@@ -150,49 +141,6 @@ class AGUIUserHandler:
         except Exception as e:
             return AGUIErrorEvent.tool_result_processing_error(e)
 
-    async def _run_async_translator_adk_to_agui(
-        self, adk_event: Event
-    ) -> AsyncGenerator[BaseEvent]:
-        """Translate ADK events to AGUI events with long-running tool support.
-
-        Handles both regular event translation and long-running function calls,
-        setting the long-running tool flag when appropriate.
-
-        Args:
-            adk_event: ADK event to translate
-
-        Yields:
-            AGUI BaseEvent objects translated from the ADK event
-        """
-        if not adk_event.is_final_response():
-            async for ag_ui_event in self.event_translator.translate(adk_event):
-                yield ag_ui_event
-        else:
-            async for ag_ui_event in self.event_translator.translate_lro_function_calls(
-                adk_event
-            ):
-                yield ag_ui_event
-                self.is_long_running_tool = ag_ui_event.type == EventType.TOOL_CALL_END
-
-    async def _run_async_with_adk(
-        self, message: types.Content
-    ) -> AsyncGenerator[Event]:
-        """Execute the agent with the given message using ADK runner.
-
-        Args:
-            message: Google GenAI Content object containing the user message
-
-        Yields:
-            ADK Event objects from agent execution
-        """
-        async for event in self.runner.run_async(
-            user_id=self.user_id,
-            session_id=self.session_id,
-            new_message=message,
-        ):
-            record_event_raw_log(event)
-            yield event
-
     async def _run_async(self) -> AsyncGenerator[BaseEvent]:
         """Execute the agent asynchronously and yield translated events.
 
@@ -202,19 +150,20 @@ class AGUIUserHandler:
         Yields:
             AGUI BaseEvent objects from agent execution
         """
-        async for adk_event in self._run_async_with_adk(
-            await self.user_message.get_message()
+        async for adk_event in self.running_handler.run_async_with_adk(
+            user_id=self.user_id,
+            session_id=self.session_id,
+            new_message=await self.user_message_handler.get_message(),
         ):
-            async for agui_event in self._run_async_translator_adk_to_agui(adk_event):
-                await self.check_tools_event(agui_event)
-                record_agui_raw_log(agui_event)
+            async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 yield agui_event
-                if self.is_long_running_tool:
+                self.check_tools_event(agui_event)
+                if agui_event.type == EventType.TOOL_CALL_END:
                     return
-        async for ag_ui_event in self.event_translator.force_close_streaming_message():
+        async for ag_ui_event in self.running_handler.force_close_streaming_message():
             yield ag_ui_event
         if final_state := await self.session_handler.get_session_state():
-            yield self.event_translator.create_state_snapshot_event(final_state)
+            yield self.running_handler.create_state_snapshot_event(final_state)
 
     async def _run_workflow(self) -> AsyncGenerator[BaseEvent]:
         """Execute the complete agent workflow with session management.
@@ -227,9 +176,11 @@ class AGUIUserHandler:
         """
         yield self.call_start()
         await self.session_handler.check_and_create_session(
-            self.user_message.initial_state
+            self.user_message_handler.initial_state
         )
-        await self.session_handler.update_session_state(self.user_message.initial_state)
+        await self.session_handler.update_session_state(
+            self.user_message_handler.initial_state
+        )
         async for event in self._run_async():
             yield event
         for tool_call_id in self.tool_call_ids:
@@ -245,7 +196,7 @@ class AGUIUserHandler:
         Yields:
             AGUI BaseEvent objects from the handler execution
         """
-        if self.user_message.is_tool_result_submission and (
+        if self.user_message_handler.is_tool_result_submission and (
             error := await self.remove_pending_tool_call()
         ):
             yield error

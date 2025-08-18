@@ -18,6 +18,8 @@ from google.adk.memory import BaseMemoryService, InMemoryMemoryService
 from google.adk.sessions import BaseSessionService, InMemorySessionService
 from pydantic import BaseModel, ConfigDict, Field
 
+from ..base_abc.event_handler import BaseEventHandler
+
 
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
 
@@ -51,6 +53,8 @@ class ContextConfig(BaseModel):
     extract_initial_state: (
         Callable[[RunAgentInput, Request], Awaitable[dict[str, str]]] | None
     ) = None
+    adk_event_handler: BaseEventHandler | None = None
+    agui_event_handler: BaseEventHandler | None = None
 
 
 class RunnerConfig(BaseModel):

@@ -31,9 +31,9 @@ class DataclassesEncoder(json.JSONEncoder):
         # Handle Pydantic BaseModel instances
         if isinstance(o, BaseModel):
             return o.model_dump()
-        elif isinstance(o, set):
+        if isinstance(o, set):
             return list(o)
-        elif isinstance(o, bytes):
+        if isinstance(o, bytes):
             try:
                 return o.decode()
             except UnicodeDecodeError:

@@ -17,6 +17,7 @@ from .data_model.context import ContextConfig, RunnerConfig
 from .data_model.session import SessionParameter
 from .event.error_event import AGUIEncoderError
 from .handler.agui_user import AGUIUserHandler
+from .handler.running import RunningHandler
 from .handler.session import SessionHandler
 from .handler.user_message import UserMessageHandler
 from .manager.session import SessionManager
@@ -206,9 +207,14 @@ class SSEService(BaseSSEService):
             session_id = await self.extract_session_id(agui_content, request)
             initial_state = await self.extract_initial_state(agui_content, request)
             user_handler = AGUIUserHandler(
-                runner=await self._create_runner(app_name),
-                run_config=self.runner_config.run_config,
-                agui_message=UserMessageHandler(agui_content, request, initial_state),
+                RunningHandler(
+                    runner=await self._create_runner(app_name),
+                    run_config=self.runner_config.run_config,
+                    adk_event_handler=self.context_config.adk_event_handler,
+                ),
+                user_message_handler=UserMessageHandler(
+                    agui_content, request, initial_state
+                ),
                 session_handler=SessionHandler(
                     session_manager=self.session_manager,
                     session_parameter=SessionParameter(
