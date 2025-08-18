@@ -1,7 +1,7 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from ag_ui.core import BaseEvent, StateSnapshotEvent
+from ag_ui.core import BaseEvent, EventType, StateSnapshotEvent
 from google.adk import Runner
 from google.adk.agents import RunConfig
 from google.adk.events import Event
@@ -32,6 +32,7 @@ class RunningHandler:
             else None
         )
         self.event_translator = EventTranslator()
+        self.is_long_running_tool = False
 
     @staticmethod
     async def _process_events_with_handler(
@@ -56,6 +57,8 @@ class RunningHandler:
                 adk_event
             ):
                 yield agui_event
+                if adk_event.type == EventType.TOOL_CALL_END:
+                    self.is_long_running_tool = True
 
     def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent, None]:
         return self.event_translator.force_close_streaming_message()

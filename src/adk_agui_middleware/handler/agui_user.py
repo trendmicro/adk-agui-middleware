@@ -158,8 +158,8 @@ class AGUIUserHandler:
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 yield agui_event
                 self.check_tools_event(agui_event)
-                if agui_event.type == EventType.TOOL_CALL_END:
-                    return
+        if self.running_handler.is_long_running_tool:
+            return
         async for ag_ui_event in self.running_handler.force_close_streaming_message():
             yield ag_ui_event
         if final_state := await self.session_handler.get_session_state():

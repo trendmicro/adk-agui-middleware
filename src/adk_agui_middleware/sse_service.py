@@ -211,6 +211,7 @@ class SSEService(BaseSSEService):
                     runner=await self._create_runner(app_name),
                     run_config=self.runner_config.run_config,
                     adk_event_handler=self.context_config.adk_event_handler,
+                    agui_event_handler=self.context_config.agui_event_handler,
                 ),
                 user_message_handler=UserMessageHandler(
                     agui_content, request, initial_state
