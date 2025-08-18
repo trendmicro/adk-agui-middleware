@@ -45,6 +45,8 @@ class ContextConfig(BaseModel):
     that extracts the value dynamically from the request.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     app_name: str | Callable[[RunAgentInput, Request], Awaitable[str]] = "default"
     user_id: str | Callable[[RunAgentInput, Request], Awaitable[str]]
     session_id: str | Callable[[RunAgentInput, Request], Awaitable[str]] = (
