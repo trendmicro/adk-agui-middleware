@@ -1,9 +1,9 @@
 """Configuration models for AGUI middleware context and runner setup."""
 
-from collections.abc import Awaitable, Callable
-from typing import TypeVar
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from typing import Any, TypeVar
 
-from ag_ui.core import RunAgentInput
+from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
 from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
@@ -14,11 +14,10 @@ from google.adk.auth.credential_service.base_credential_service import (
 from google.adk.auth.credential_service.in_memory_credential_service import (
     InMemoryCredentialService,
 )
+from google.adk.events import Event
 from google.adk.memory import BaseMemoryService, InMemoryMemoryService
 from google.adk.sessions import BaseSessionService, InMemorySessionService
 from pydantic import BaseModel, ConfigDict, Field
-
-from ..base_abc.event_handler import BaseEventHandler
 
 
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
@@ -53,10 +52,15 @@ class ContextConfig(BaseModel):
         default_session_id
     )
     extract_initial_state: (
-        Callable[[RunAgentInput, Request], Awaitable[dict[str, str]]] | None
+        Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
     ) = None
-    adk_event_handler: BaseEventHandler | None = None
-    agui_event_handler: BaseEventHandler | None = None
+    adk_event_handler: Callable[[Event], AsyncGenerator[Event, None]] | None = None
+    agui_event_handler: (
+        Callable[[BaseEvent], AsyncGenerator[BaseEvent, None]] | None
+    ) = None
+    agui_state_snapshot_handler: (
+        Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None
+    ) = (None,)
 
 
 class RunnerConfig(BaseModel):

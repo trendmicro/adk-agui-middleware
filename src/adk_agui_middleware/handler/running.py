@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
 from ag_ui.core import BaseEvent, EventType, StateSnapshotEvent
@@ -6,7 +6,6 @@ from google.adk import Runner
 from google.adk.agents import RunConfig
 from google.adk.events import Event
 
-from ..base_abc.event_handler import BaseEventHandler
 from ..loggers.record_log import record_agui_raw_log, record_event_raw_log
 from ..tools.event_translator import EventTranslator
 
@@ -16,32 +15,35 @@ class RunningHandler:
         self,
         runner: Runner,
         run_config: RunConfig,
-        adk_event_handler: None | BaseEventHandler = None,
-        agui_event_handler: None | BaseEventHandler = None,
+        adk_event_handler: Callable[[Event], AsyncGenerator[Event, None]] | None = None,
+        agui_event_handler: Callable[[BaseEvent], AsyncGenerator[BaseEvent, None]]
+        | None = None,
+        agui_state_snapshot_handler: Callable[
+            [dict[str, Any]], Awaitable[dict[str, Any]]
+        ]
+        | None = None,
     ):
         self.runner: Runner = runner
         self.run_config: RunConfig = run_config
-        self.adk_event_handler = (
-            adk_event_handler
-            if isinstance(adk_event_handler, BaseEventHandler)
-            else None
-        )
-        self.agui_event_handler = (
-            agui_event_handler
-            if isinstance(agui_event_handler, BaseEventHandler)
-            else None
-        )
+        self.adk_event_handler = adk_event_handler
+        self.agui_event_handler = agui_event_handler
+        self.agui_state_snapshot_handler = agui_state_snapshot_handler
         self.event_translator = EventTranslator()
         self.is_long_running_tool = False
 
     @staticmethod
     async def _process_events_with_handler(
-        event_stream: AsyncGenerator, log_func: Any, event_handler: Any | None
+        event_stream: AsyncGenerator,
+        log_func: Any,
+        event_handler: Callable[
+            [Event | BaseEvent], AsyncGenerator[Event | BaseEvent, None]
+        ]
+        | None,
     ) -> AsyncGenerator:
         async for event in event_stream:
             log_func(event)
             if event_handler:
-                async for new_event in event_handler.run_async(event):
+                async for new_event in event_handler(event):
                     yield new_event
             else:
                 yield event
@@ -66,6 +68,8 @@ class RunningHandler:
     def create_state_snapshot_event(
         self, final_state: dict[str, Any]
     ) -> StateSnapshotEvent:
+        if self.agui_state_snapshot_handler is not None:
+            final_state = self.agui_state_snapshot_handler(final_state)
         return self.event_translator.create_state_snapshot_event(final_state)
 
     def run_async_with_adk(
