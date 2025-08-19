@@ -7,7 +7,6 @@ from ag_ui.core import (
     BaseEvent,
     RunAgentInput,
 )
-from ag_ui.encoder import EventEncoder
 from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
@@ -21,6 +20,7 @@ from .handler.running import RunningHandler
 from .handler.session import SessionHandler
 from .handler.user_message import UserMessageHandler
 from .manager.session import SessionManager
+from .tools.convert import agui_to_sse
 from .tools.shutdown import ShutdownHandler
 
 
@@ -136,23 +136,22 @@ class SSEService(BaseSSEService):
         )
 
     @staticmethod
-    def _encoding_handler(encoder: EventEncoder, event: BaseEvent) -> str:
+    def _encoding_handler(event: BaseEvent) -> dict[str, str]:
         """Handle event encoding with error recovery.
 
         Attempts to encode the event using the provided encoder, falling back
         to error event encoding if the primary encoding fails.
 
         Args:
-            encoder: Event encoder for formatting events
             event: Base event to be encoded
 
         Returns:
             Encoded event string, either successful encoding or error event
         """
         try:
-            return encoder.encode(event)
+            return agui_to_sse(event)
         except Exception as e:
-            return AGUIEncoderError.encoding_error(encoder, e)
+            return AGUIEncoderError.encoding_error(e)
 
     async def _create_runner(self, app_name: str) -> Runner:
         """Create or retrieve a Runner instance for the specified application.
@@ -230,8 +229,8 @@ class SSEService(BaseSSEService):
         return runner
 
     async def event_generator(
-        self, runner: Callable[[], AsyncGenerator[BaseEvent]], encoder: EventEncoder
-    ) -> AsyncGenerator[str]:
+        self, runner: Callable[[], AsyncGenerator[BaseEvent]]
+    ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.
 
         Executes the runner and encodes each event for SSE transmission,
@@ -239,16 +238,15 @@ class SSEService(BaseSSEService):
 
         Args:
             runner: Callable that returns an async generator of events
-            encoder: Event encoder for formatting events
 
         Yields:
             Encoded event strings ready for SSE transmission
         """
         try:
             async for event in runner():
-                yield self._encoding_handler(encoder, event)
+                yield self._encoding_handler(event)
         except Exception as e:
-            yield AGUIEncoderError.agent_error(encoder, e)
+            yield AGUIEncoderError.agent_error(e)
 
     async def close(self) -> None:
         """Close all cached Runner instances."""

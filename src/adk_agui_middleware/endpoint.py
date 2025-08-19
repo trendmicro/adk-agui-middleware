@@ -1,9 +1,8 @@
 """FastAPI endpoint registration for AGUI middleware service."""
 
 from ag_ui.core import RunAgentInput
-from ag_ui.encoder import EventEncoder
 from fastapi import APIRouter, FastAPI, Request
-from starlette.responses import StreamingResponse
+from sse_starlette import EventSourceResponse
 
 from .base_abc.sse_service import BaseSSEService
 from .loggers.exception import exception_http_handler
@@ -30,7 +29,7 @@ def register_agui_endpoint(
     @app.post(path)
     async def agui_endpoint(
         agui_content: RunAgentInput, request: Request
-    ) -> StreamingResponse:
+    ) -> EventSourceResponse:
         """Handle AGUI agent execution requests.
 
         Processes incoming agent requests and returns a streaming response
@@ -42,18 +41,16 @@ def register_agui_endpoint(
             request: FastAPI request object containing headers and client information
 
         Returns:
-            StreamingResponse containing encoded agent events with appropriate media type
+            EventSourceResponse containing encoded agent events with appropriate media type
 
         Raises:
             Exception: Handled by exception_http_handler context manager
         """
         async with exception_http_handler(request):
-            # Create encoder based on client's Accept header preferences
-            encoder = EventEncoder(accept=request.headers.get("accept"))
             # Get configured runner for this specific request and content
-            runner = await sse_service.get_runner(agui_content, request)
             # Generate streaming response with encoded events
-            return StreamingResponse(
-                sse_service.event_generator(runner, encoder),
-                media_type=encoder.get_content_type(),
+            return EventSourceResponse(
+                sse_service.event_generator(
+                    await sse_service.get_runner(agui_content, request)
+                ),
             )

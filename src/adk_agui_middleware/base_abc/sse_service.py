@@ -4,7 +4,6 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import AsyncGenerator, Callable
 
 from ag_ui.core import BaseEvent, RunAgentInput
-from ag_ui.encoder import EventEncoder
 from fastapi import Request
 
 
@@ -35,8 +34,8 @@ class BaseSSEService(metaclass=ABCMeta):
 
     @abstractmethod
     async def event_generator(
-        self, runner: Callable[[], AsyncGenerator[BaseEvent]], encoder: EventEncoder
-    ) -> AsyncGenerator[str]:
+        self, runner: Callable[[], AsyncGenerator[BaseEvent]]
+    ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.
 
         Takes the runner and encoder to produce a stream of encoded event strings
@@ -44,7 +43,6 @@ class BaseSSEService(metaclass=ABCMeta):
 
         Args:
             runner: Callable that returns an async generator of events
-            encoder: Event encoder for formatting events according to client requirements
 
         Yields:
             Encoded event strings ready for SSE transmission

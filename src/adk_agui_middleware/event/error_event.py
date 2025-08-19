@@ -1,7 +1,7 @@
 """Error event classes for handling encoding and execution errors in AGUI middleware."""
 
 from ag_ui.core import EventType, RunErrorEvent
-from ag_ui.encoder import EventEncoder
+from tools.convert import agui_to_sse
 
 from ..loggers.record_log import record_error_log
 
@@ -14,11 +14,10 @@ class AGUIEncoderError(Exception):
     """
 
     @staticmethod
-    def encoding_error(encoder: EventEncoder, e: Exception) -> str:
+    def encoding_error(e: Exception) -> dict[str, str]:
         """Create an encoded error event for encoding failures.
 
         Args:
-            encoder: Event encoder to use for encoding the error event
             e: Original exception that caused the encoding failure
 
         Returns:
@@ -30,14 +29,13 @@ class AGUIEncoderError(Exception):
             code="ENCODING_ERROR",
         )
         record_error_log("Event encoding failed", e)
-        return encoder.encode(error_event)
+        return agui_to_sse(error_event)
 
     @staticmethod
-    def agent_error(encoder: EventEncoder, e: Exception) -> str:
+    def agent_error(e: Exception) -> dict[str, str]:
         """Create an encoded error event for agent execution failures.
 
         Args:
-            encoder: Event encoder to use for encoding the error event
             e: Original exception that caused the agent failure
 
         Returns:
@@ -49,7 +47,7 @@ class AGUIEncoderError(Exception):
             code="AGENT_ERROR",
         )
         record_error_log("AGUI Agent Error Handler", e)
-        return encoder.encode(error_event)
+        return agui_to_sse(error_event)
 
 
 class AGUIErrorEvent:
