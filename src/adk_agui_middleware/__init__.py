@@ -8,6 +8,7 @@ capabilities for real-time agent interactions.
 from .endpoint import register_agui_endpoint
 from .sse_service import SSEService
 
+
 __author__ = "Denny Lee"
 __email__ = "dennysora.main@gmail.com"
 __version__ = "0.1.4"

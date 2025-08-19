@@ -1,6 +1,6 @@
 """Handler for managing agent execution and event translation between ADK and AGUI formats."""
 
-from collections.abc import AsyncGenerator, Awaitable, Callable
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from ag_ui.core import BaseEvent, EventType, StateSnapshotEvent
@@ -8,6 +8,11 @@ from google.adk import Runner
 from google.adk.agents import RunConfig
 from google.adk.events import Event
 
+from ..base_abc.handler import (
+    BaseADKEventHandler,
+    BaseAGUIEventHandler,
+)
+from ..data_model.context import HandlerContext
 from ..loggers.record_log import record_agui_raw_log, record_event_raw_log
 from ..tools.event_translator import EventTranslator
 
@@ -21,31 +26,17 @@ class RunningHandler:
     """
 
     def __init__(
-        self,
-        runner: Runner,
-        run_config: RunConfig,
-        adk_event_handler: Callable[[Event], AsyncGenerator[Event, None]] | None = None,
-        agui_event_handler: Callable[[BaseEvent], AsyncGenerator[BaseEvent, None]]
-        | None = None,
-        agui_state_snapshot_handler: Callable[
-            [dict[str, Any]], Awaitable[dict[str, Any]]
-        ]
-        | None = None,
+        self, runner: Runner, run_config: RunConfig, handler_context: HandlerContext
     ):
         """Initialize the running handler with agent runner and configuration.
 
         Args:
             runner: ADK Runner instance for executing agent operations
             run_config: Configuration for agent run behavior and streaming mode
-            adk_event_handler: Optional handler for processing ADK events before translation
-            agui_event_handler: Optional handler for processing AGUI events after translation
-            agui_state_snapshot_handler: Optional handler for processing state snapshots
         """
         self.runner: Runner = runner
         self.run_config: RunConfig = run_config
-        self.adk_event_handler = adk_event_handler
-        self.agui_event_handler = agui_event_handler
-        self.agui_state_snapshot_handler = agui_state_snapshot_handler
+        self.handler_context = handler_context
         self.event_translator = EventTranslator()
         self.is_long_running_tool = False
 
@@ -53,10 +44,7 @@ class RunningHandler:
     async def _process_events_with_handler(
         event_stream: AsyncGenerator,
         log_func: Any,
-        event_handler: Callable[
-            [Event | BaseEvent], AsyncGenerator[Event | BaseEvent, None]
-        ]
-        | None,
+        event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None = None,
     ) -> AsyncGenerator:
         """Process an event stream with optional event handler and logging.
 
@@ -74,10 +62,14 @@ class RunningHandler:
         async for event in event_stream:
             log_func(event)
             if event_handler:
-                async for new_event in event_handler(event):
+                async for new_event in event_handler.process(event):
                     yield new_event
             else:
                 yield event
+
+    def _check_is_long_tool(self, adk_event: Event) -> None:
+        if adk_event.is_final_response() and adk_event.type == EventType.TOOL_CALL_END:
+            self.is_long_running_tool = True
 
     async def _run_async_translator_adk_to_agui(
         self, adk_event: Event
@@ -93,18 +85,26 @@ class RunningHandler:
         Yields:
             AGUI BaseEvent objects translated from the ADK event
         """
-        if not adk_event.is_final_response():
-            async for agui_event in self.event_translator.translate(adk_event):
-                yield agui_event
-        else:
-            async for agui_event in self.event_translator.translate_lro_function_calls(
-                adk_event
-            ):
-                yield agui_event
-                if adk_event.type == EventType.TOOL_CALL_END:
-                    self.is_long_running_tool = True
+        if self.handler_context.translate_handler:
+            async for (
+                translate_event
+            ) in self.handler_context.translate_handler.translate(adk_event):
+                if translate_event.agui_event is not None:
+                    yield translate_event.agui_event
+                self._check_is_long_tool(adk_event)
+                if translate_event.is_retune:
+                    return
 
-    def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent, None]:
+        if adk_event.is_final_response():
+            func = self.event_translator.translate_lro_function_calls
+        else:
+            func = self.event_translator.translate
+
+        async for agui_event in func(adk_event):
+            yield agui_event
+            self._check_is_long_tool(adk_event)
+
+    def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent]:
         """Force close any active streaming message in the event translator.
 
         Delegates to the event translator to handle cleanup of unclosed
@@ -129,13 +129,15 @@ class RunningHandler:
         Returns:
             StateSnapshotEvent containing the processed state
         """
-        if self.agui_state_snapshot_handler is not None:
-            final_state = await self.agui_state_snapshot_handler(final_state)
+        if self.handler_context.agui_state_snapshot_handler is not None:
+            final_state = (
+                await self.handler_context.agui_state_snapshot_handler.process(
+                    final_state
+                )
+            )
         return self.event_translator.create_state_snapshot_event(final_state)
 
-    def run_async_with_adk(
-        self, *args: Any, **kwargs: Any
-    ) -> AsyncGenerator[Event, None]:
+    def run_async_with_adk(self, *args: Any, **kwargs: Any) -> AsyncGenerator[Event]:
         """Execute agent with ADK and process events through ADK event handler.
 
         Runs the ADK agent asynchronously with the provided arguments and
@@ -151,7 +153,7 @@ class RunningHandler:
         return self._process_events_with_handler(
             self.runner.run_async(*args, run_config=self.run_config, **kwargs),
             record_event_raw_log,
-            self.adk_event_handler,
+            self.handler_context.adk_event_handler,
         )
 
     def run_async_with_agui(self, adk_event: Event) -> AsyncGenerator[BaseEvent]:
@@ -169,5 +171,5 @@ class RunningHandler:
         return self._process_events_with_handler(
             self._run_async_translator_adk_to_agui(adk_event),
             record_agui_raw_log,
-            self.agui_event_handler,
+            self.handler_context.agui_event_handler,
         )

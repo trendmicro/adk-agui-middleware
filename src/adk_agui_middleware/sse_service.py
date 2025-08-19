@@ -12,7 +12,7 @@ from google.adk import Runner
 from google.adk.agents import BaseAgent
 
 from .base_abc.sse_service import BaseSSEService
-from .data_model.context import ContextConfig, RunnerConfig
+from .data_model.context import ConfigContext, HandlerContext, RunnerConfig
 from .data_model.session import SessionParameter
 from .event.error_event import AGUIEncoderError
 from .handler.agui_user import AGUIUserHandler
@@ -35,14 +35,15 @@ class SSEService(BaseSSEService):
         self,
         agent: BaseAgent,
         runner_config: RunnerConfig,
-        context_config: ContextConfig,
+        config_context: ConfigContext,
+        handler_context: HandlerContext | None = None,
     ):
         """Initialize SSE service with agent and configuration.
 
         Args:
             agent: Base agent implementation for processing requests
             runner_config: Configuration for agent runners and services
-            context_config: Configuration for extracting context from requests
+            config_context: Configuration for extracting context from requests
         """
         self.agent = agent
         self.runner_config = runner_config
@@ -51,7 +52,8 @@ class SSEService(BaseSSEService):
         )
         self._runner_lock = asyncio.Lock()
         self.runner_box: dict[str, Runner] = {}
-        self.context_config = context_config
+        self.config_context = config_context
+        self.handler_context = handler_context or HandlerContext()
         self.shutdown_handler = ShutdownHandler()
 
     async def _get_config_value(
@@ -71,7 +73,7 @@ class SSEService(BaseSSEService):
             Configuration value as string, or None if not available
         """
         value: Callable[[RunAgentInput, Request], Awaitable[str]] | str = getattr(
-            self.context_config, config_attr
+            self.config_context, config_attr
         )
         if callable(value):
             return await value(agui_content, request)
@@ -209,9 +211,7 @@ class SSEService(BaseSSEService):
                 RunningHandler(
                     runner=await self._create_runner(app_name),
                     run_config=self.runner_config.run_config,
-                    adk_event_handler=self.context_config.adk_event_handler,
-                    agui_event_handler=self.context_config.agui_event_handler,
-                    agui_state_snapshot_handler=self.context_config.agui_state_snapshot_handler,
+                    handler_context=self.handler_context,
                 ),
                 user_message_handler=UserMessageHandler(
                     agui_content, request, initial_state
