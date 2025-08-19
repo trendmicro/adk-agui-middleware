@@ -122,10 +122,10 @@ class AGUIUserHandler:
         """Remove pending tool calls from session state after processing tool results.
 
         Extracts tool results from the user message and removes corresponding
-        pending tool calls from the session state.
+        pending tool calls from the session state. Logs the start of new execution.
 
         Returns:
-            RunErrorEvent if tool result processing fails, None on success
+            RunErrorEvent if no tool results found or processing fails, None on success
         """
         tool_results = await self.user_message_handler.extract_tool_results()
         if not tool_results:
@@ -140,15 +140,17 @@ class AGUIUserHandler:
             )
         except Exception as e:
             return AGUIErrorEvent.tool_result_processing_error(e)
+        return None
 
     async def _run_async(self) -> AsyncGenerator[BaseEvent]:
         """Execute the agent asynchronously and yield translated events.
 
         Runs the agent with the user message, translates ADK events to AGUI events,
-        and handles long-running tools, streaming message cleanup, and state snapshots.
+        tracks tool calls, handles long-running tools early return, forces streaming
+        message closure, and creates final state snapshot if available.
 
         Yields:
-            AGUI BaseEvent objects from agent execution
+            AGUI BaseEvent objects from agent execution and state management
         """
         async for adk_event in self.running_handler.run_async_with_adk(
             user_id=self.user_id,

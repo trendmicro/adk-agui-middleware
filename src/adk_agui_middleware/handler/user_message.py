@@ -55,7 +55,7 @@ class UserMessageHandler:
         return isinstance(self.agui_content.messages[-1], ToolMessage)
 
     @staticmethod
-    def _parse_tool_content(content: str, tool_call_id: str) -> dict[str, str | None]:
+    def _parse_tool_content(content: str, tool_call_id: str) -> dict[str, Any]:
         """Parse tool result content, handling empty content and JSON errors.
 
         Args:
@@ -63,7 +63,7 @@ class UserMessageHandler:
             tool_call_id: Identifier of the tool call for logging
 
         Returns:
-            Dictionary containing parsed tool result or error information
+            Dictionary containing parsed JSON, success result, or error information
         """
         if not content or not content.strip():
             record_warning_log(

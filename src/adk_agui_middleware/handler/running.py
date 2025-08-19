@@ -33,6 +33,7 @@ class RunningHandler:
         Args:
             runner: ADK Runner instance for executing agent operations
             run_config: Configuration for agent run behavior and streaming mode
+            handler_context: Context containing optional event handlers for processing
         """
         self.runner: Runner = runner
         self.run_config: RunConfig = run_config
@@ -68,16 +69,22 @@ class RunningHandler:
                 yield event
 
     def _check_is_long_tool(self, adk_event: Event) -> None:
+        """Check if the event indicates a long-running tool and set flag accordingly.
+
+        Args:
+            adk_event: ADK event to check for long-running tool indicators
+        """
         if adk_event.is_final_response() and adk_event.type == EventType.TOOL_CALL_END:
             self.is_long_running_tool = True
 
     async def _run_async_translator_adk_to_agui(
         self, adk_event: Event
     ) -> AsyncGenerator[BaseEvent]:
-        """Translate ADK events to AGUI events with long-running tool detection.
+        """Translate ADK events to AGUI events with custom handler and long-running tool detection.
 
-        Handles standard event translation and detects long-running tools that
-        require special processing. Sets the long-running tool flag when detected.
+        Uses custom translate handler if available, otherwise delegates to event translator.
+        Handles retune logic and selects appropriate translation function based on
+        whether the event is a final response. Detects long-running tools throughout.
 
         Args:
             adk_event: ADK event to translate

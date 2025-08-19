@@ -43,6 +43,18 @@ async def default_session_id(agui_content: RunAgentInput, request: Request) -> s
 
 
 class HandlerContext(BaseModel):
+    """Context container for optional event and state handlers.
+
+    Provides a configuration structure for customizing event processing
+    behavior by injecting custom handlers at different stages of the pipeline.
+
+    Attributes:
+        adk_event_handler: Optional handler for processing ADK events
+        agui_event_handler: Optional handler for processing AGUI events
+        agui_state_snapshot_handler: Optional handler for processing state snapshots
+        translate_handler: Optional handler for event translation logic
+    """
+
     adk_event_handler: BaseADKEventHandler | None = None
     agui_event_handler: BaseAGUIEventHandler | None = None
     agui_state_snapshot_handler: BaseAGUIStateSnapshotHandler | None = None

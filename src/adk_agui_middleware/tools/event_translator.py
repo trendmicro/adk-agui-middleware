@@ -1,3 +1,5 @@
+"""Event translation service for converting ADK events to AGUI format with streaming support."""
+
 import json
 import uuid
 from collections.abc import AsyncGenerator
@@ -279,6 +281,17 @@ class EventTranslator:
 
     @staticmethod
     def create_state_delta_event(state_delta: dict[str, Any]) -> StateDeltaEvent:
+        """Create a state delta event from a state change dictionary.
+
+        Converts state changes into JSON Patch format operations for AGUI consumption.
+        Each key-value pair becomes an "add" operation with the appropriate path.
+
+        Args:
+            state_delta: Dictionary containing state changes to apply
+
+        Returns:
+            StateDeltaEvent with JSON Patch operations
+        """
         patches = []
         for key, value in state_delta.items():
             patches.append({"op": "add", "path": f"/{key}", "value": value})
@@ -288,6 +301,16 @@ class EventTranslator:
     def create_state_snapshot_event(
         state_snapshot: dict[str, Any],
     ) -> StateSnapshotEvent:
+        """Create a state snapshot event from a complete state dictionary.
+
+        Wraps the entire state dictionary in a StateSnapshotEvent for AGUI consumption.
+
+        Args:
+            state_snapshot: Complete state dictionary to snapshot
+
+        Returns:
+            StateSnapshotEvent containing the full state
+        """
         return StateSnapshotEvent(
             type=EventType.STATE_SNAPSHOT, snapshot=state_snapshot
         )
