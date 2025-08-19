@@ -11,11 +11,12 @@ from ..pattern.singleton import Singleton
 
 class ShutdownHandler(metaclass=Singleton):
     """Singleton handler for graceful application shutdown and cleanup operations.
-    
-    Manages signal handling (SIGTERM, SIGINT, SIGHUP) and coordinates the 
+
+    Manages signal handling (SIGTERM, SIGINT, SIGHUP) and coordinates the
     execution of registered shutdown functions when termination signals are received.
     Ensures proper cleanup of resources before application termination.
     """
+
     def __init__(self):
         """Initialize the shutdown handler and set up signal handlers."""
         self._shutdown_list = []
@@ -26,7 +27,7 @@ class ShutdownHandler(metaclass=Singleton):
         self, shutdown_function: Callable[[], Awaitable]
     ) -> None:
         """Register a function to be called during graceful shutdown.
-        
+
         Args:
             shutdown_function: Async function to call during shutdown process
         """
@@ -39,7 +40,7 @@ class ShutdownHandler(metaclass=Singleton):
 
     def _signal_handler(self, signum: int, frame: Any) -> None:  # noqa: ARG002
         """Handle termination signals by initiating graceful shutdown.
-        
+
         Args:
             signum: Signal number that was received
             frame: Current stack frame (unused)
@@ -61,7 +62,7 @@ class ShutdownHandler(metaclass=Singleton):
 
     async def _graceful_shutdown(self) -> None:
         """Execute all registered shutdown functions in sequence.
-        
+
         Calls all registered shutdown functions and handles any errors that occur.
         Ensures the event loop is properly stopped after shutdown completion.
         """
@@ -79,7 +80,7 @@ class ShutdownHandler(metaclass=Singleton):
 
     async def close(self) -> None:
         """Close all registered shutdown functions with individual error handling.
-        
+
         Iterates through all registered shutdown functions and calls them,
         logging any errors that occur without stopping the shutdown process.
         """

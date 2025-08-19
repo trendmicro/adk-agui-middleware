@@ -5,19 +5,20 @@ from typing import Any
 
 class Singleton(type):
     """Metaclass that implements the Singleton design pattern.
-    
+
     Ensures that only one instance of a class can exist by caching instances
     and returning the same instance for subsequent instantiation attempts.
     """
+
     _instances = {}
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create or return the singleton instance of the class.
-        
+
         Args:
             *args: Positional arguments for class instantiation
             **kwargs: Keyword arguments for class instantiation
-            
+
         Returns:
             The singleton instance of the class
         """

@@ -113,10 +113,10 @@ def record_error_log(
 
 def record_agui_raw_log(raw_data: Any) -> None:
     """Record raw AGUI event data for debugging purposes.
-    
+
     Conditionally logs AGUI events based on LOG_AGUI configuration setting.
     Used for debugging and development to trace AGUI event flow.
-    
+
     Args:
         raw_data: Raw AGUI event data to log
     """
@@ -126,10 +126,10 @@ def record_agui_raw_log(raw_data: Any) -> None:
 
 def record_event_raw_log(raw_data: Any) -> None:
     """Record raw ADK event data for debugging purposes.
-    
+
     Conditionally logs ADK events based on LOG_EVENT configuration setting.
     Used for debugging and development to trace ADK event processing.
-    
+
     Args:
         raw_data: Raw ADK event data to log
     """

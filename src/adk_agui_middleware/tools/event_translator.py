@@ -124,13 +124,13 @@ class EventTranslator:
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Translate text content from ADK event to AGUI streaming text events.
-        
+
         Handles streaming text messages by managing message start, content chunks,
         and message end events. Tracks streaming state to ensure proper event sequencing.
-        
+
         Args:
             adk_event: ADK event containing text content to translate
-            
+
         Yields:
             AGUI text message events (start, content, end) for streaming text
         """
@@ -168,13 +168,13 @@ class EventTranslator:
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Translate long-running operation (LRO) function calls to AGUI tool events.
-        
-        Processes function calls that are marked as long-running operations and 
+
+        Processes function calls that are marked as long-running operations and
         generates appropriate AGUI tool call events without waiting for completion.
-        
+
         Args:
             adk_event: ADK event containing long-running function calls
-            
+
         Yields:
             AGUI tool call events for long-running operations
         """
@@ -214,13 +214,13 @@ class EventTranslator:
         function_calls: list[types.FunctionCall],
     ) -> AsyncGenerator[BaseEvent]:
         """Translate Google GenAI function calls to AGUI tool call events.
-        
+
         Converts function calls from Google GenAI format to AGUI tool call events,
         handling tool call IDs, arguments, and proper event sequencing.
-        
+
         Args:
             function_calls: List of Google GenAI function calls to translate
-            
+
         Yields:
             AGUI tool call events (start, args, end) for each function call
         """
@@ -253,13 +253,13 @@ class EventTranslator:
         function_response: list[types.FunctionResponse],
     ) -> AsyncGenerator[BaseEvent]:
         """Translate Google GenAI function responses to AGUI tool result events.
-        
+
         Converts function responses from Google GenAI format to AGUI tool result events,
         excluding responses from long-running tools which are handled separately.
-        
+
         Args:
             function_response: List of Google GenAI function responses to translate
-            
+
         Yields:
             AGUI tool call result events for completed function calls
         """
