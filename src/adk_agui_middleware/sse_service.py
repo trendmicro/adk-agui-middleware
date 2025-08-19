@@ -146,7 +146,7 @@ class SSEService(BaseSSEService):
             event: Base event to be encoded
 
         Returns:
-            Encoded event string, either successful encoding or error event
+            Encoded event dictionary in SSE format, either successful encoding or error event
         """
         try:
             return agui_to_sse(event)
@@ -240,7 +240,7 @@ class SSEService(BaseSSEService):
             runner: Callable that returns an async generator of events
 
         Yields:
-            Encoded event strings ready for SSE transmission
+            Encoded event dictionaries ready for SSE transmission
         """
         try:
             async for event in runner():

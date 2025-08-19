@@ -45,7 +45,7 @@ class BaseSSEService(metaclass=ABCMeta):
             runner: Callable that returns an async generator of events
 
         Yields:
-            Encoded event strings ready for SSE transmission
+            Encoded event dictionaries ready for SSE transmission
 
         Raises:
             NotImplementedError: Must be implemented by subclasses

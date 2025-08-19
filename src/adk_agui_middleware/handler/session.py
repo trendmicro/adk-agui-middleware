@@ -57,11 +57,11 @@ class SessionHandler:
         return self.session_parameter.session_id
 
     @staticmethod
-    def get_pending_tool_calls_dict(pending_calls: Any) -> dict[str, Any]:
+    def get_pending_tool_calls_dict(pending_calls: list[str]) -> dict[str, list[str]]:
         """Create a dictionary for storing pending tool calls in session state.
 
         Args:
-            pending_calls: List or collection of pending tool call IDs
+            pending_calls: List of pending tool call IDs
 
         Returns:
             Dictionary with 'pending_tool_calls' key for session state updates
@@ -157,12 +157,8 @@ class SessionHandler:
             f"Adding pending tool call {tool_call_id} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
         )
         try:
-            # Get current pending calls from session state
-            pending_calls = (
-                await self.session_manager.get_session_state(
-                    self.session_parameter,
-                )
-            ).get("pending_tool_calls", [])
+            # Get current pending calls using the dedicated method
+            pending_calls = await self.get_pending_tool_calls()
             # Add tool call ID if not already in the list
             if tool_call_id not in pending_calls:
                 pending_calls.append(tool_call_id)
@@ -180,31 +176,25 @@ class SessionHandler:
                 e,
             )
 
-    async def get_pending_tool_calls(self) -> Any | None:
+    async def get_pending_tool_calls(self) -> list[str]:
         """Retrieve the list of pending tool calls for this session.
 
         Gets the current session state and extracts the pending tool calls list.
         Handles errors and missing sessions gracefully.
 
         Returns:
-            List of pending tool call IDs, or None if session not found or error occurred
+            List of pending tool call IDs, empty list if session not found or error occurred
         """
         try:
-            # Get current session state
-            session_history = await self.session_manager.get_session_state(
+            # Get current session state dictionary
+            session_state = await self.session_manager.get_session_state(
                 self.session_parameter
             )
-            # Check if session exists in the state
-            if self.session_parameter.session_id not in session_history:
-                record_warning_log(
-                    f"Session {self.session_parameter.session_id} not found for user {self.session_parameter.user_id}."
-                )
-                return None
             # Return pending tool calls list or empty list if not found
-            return session_history.get("pending_tool_calls", [])
+            return session_state.get("pending_tool_calls", [])
         except Exception as e:
             record_error_log(
                 f"Failed to check pending tool calls for session {self.session_parameter.session_id}.",
                 e,
             )
-        return None
+            return []

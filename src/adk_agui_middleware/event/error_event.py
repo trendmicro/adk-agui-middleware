@@ -21,7 +21,7 @@ class AGUIEncoderError(Exception):
             e: Original exception that caused the encoding failure
 
         Returns:
-            Encoded error event string
+            Encoded error event dictionary in SSE format
         """
         error_event = RunErrorEvent(
             type=EventType.RUN_ERROR,
@@ -39,7 +39,7 @@ class AGUIEncoderError(Exception):
             e: Original exception that caused the agent failure
 
         Returns:
-            Encoded error event string
+            Encoded error event dictionary in SSE format
         """
         error_event = RunErrorEvent(
             type=EventType.RUN_ERROR,

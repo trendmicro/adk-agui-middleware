@@ -123,20 +123,23 @@ class EventTranslator:
     async def _translate_text_content(
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
+        """Translate text content from ADK event to AGUI streaming text events.
+        
+        Handles streaming text messages by managing message start, content chunks,
+        and message end events. Tracks streaming state to ensure proper event sequencing.
+        
+        Args:
+            adk_event: ADK event containing text content to translate
+            
+        Yields:
+            AGUI text message events (start, content, end) for streaming text
+        """
         text_parts = [part.text for part in adk_event.content.parts if part.text]
         if not text_parts:
             return
-        if adk_event.is_final_response():
-            if not (self._is_streaming and self._streaming_message_id):
-                return
-            yield TextMessageEndEvent(
-                type=EventType.TEXT_MESSAGE_END, message_id=self._streaming_message_id
-            )
-            self._streaming_message_id = None
-            self._is_streaming = False
-            return
 
-        if not self._is_streaming:
+        # Start streaming if not already streaming and not a final response
+        if not self._is_streaming and not adk_event.is_final_response():
             self._streaming_message_id = str(uuid.uuid4())
             self._is_streaming = True
             yield TextMessageStartEvent(
@@ -145,14 +148,16 @@ class EventTranslator:
                 role="assistant",
             )
 
-        if combined_text := "".join(text_parts):
+        # Yield content if there's text and we're streaming
+        if self._is_streaming and (combined_text := "".join(text_parts)):
             yield TextMessageContentEvent(
                 type=EventType.TEXT_MESSAGE_CONTENT,
                 message_id=self._streaming_message_id,
                 delta=combined_text,
             )
 
-        if adk_event.is_final_response() and not adk_event.partial:
+        # End streaming on final response
+        if adk_event.is_final_response() and self._is_streaming:
             yield TextMessageEndEvent(
                 type=EventType.TEXT_MESSAGE_END, message_id=self._streaming_message_id
             )
@@ -162,6 +167,17 @@ class EventTranslator:
     async def translate_lro_function_calls(
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
+        """Translate long-running operation (LRO) function calls to AGUI tool events.
+        
+        Processes function calls that are marked as long-running operations and 
+        generates appropriate AGUI tool call events without waiting for completion.
+        
+        Args:
+            adk_event: ADK event containing long-running function calls
+            
+        Yields:
+            AGUI tool call events for long-running operations
+        """
         if not (adk_event.content and adk_event.content.parts):
             return
         for part in adk_event.content.parts:
@@ -197,6 +213,17 @@ class EventTranslator:
         self,
         function_calls: list[types.FunctionCall],
     ) -> AsyncGenerator[BaseEvent]:
+        """Translate Google GenAI function calls to AGUI tool call events.
+        
+        Converts function calls from Google GenAI format to AGUI tool call events,
+        handling tool call IDs, arguments, and proper event sequencing.
+        
+        Args:
+            function_calls: List of Google GenAI function calls to translate
+            
+        Yields:
+            AGUI tool call events (start, args, end) for each function call
+        """
         for func_call in function_calls:
             tool_call_id = func_call.id or str(uuid.uuid4())
             self._active_tool_calls[tool_call_id] = tool_call_id
@@ -225,6 +252,17 @@ class EventTranslator:
         self,
         function_response: list[types.FunctionResponse],
     ) -> AsyncGenerator[BaseEvent]:
+        """Translate Google GenAI function responses to AGUI tool result events.
+        
+        Converts function responses from Google GenAI format to AGUI tool result events,
+        excluding responses from long-running tools which are handled separately.
+        
+        Args:
+            function_response: List of Google GenAI function responses to translate
+            
+        Yields:
+            AGUI tool call result events for completed function calls
+        """
         for func_response in function_response:
             tool_call_id = func_response.id or str(uuid.uuid4())
             if tool_call_id not in self.long_running_tool_ids:
