@@ -65,11 +65,11 @@ class RunningHandler:
     def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent, None]:
         return self.event_translator.force_close_streaming_message()
 
-    def create_state_snapshot_event(
+    async def create_state_snapshot_event(
         self, final_state: dict[str, Any]
     ) -> StateSnapshotEvent:
         if self.agui_state_snapshot_handler is not None:
-            final_state = self.agui_state_snapshot_handler(final_state)
+            final_state = await self.agui_state_snapshot_handler(final_state)
         return self.event_translator.create_state_snapshot_event(final_state)
 
     def run_async_with_adk(

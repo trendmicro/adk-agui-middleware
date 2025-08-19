@@ -60,7 +60,7 @@ class ContextConfig(BaseModel):
     ) = None
     agui_state_snapshot_handler: (
         Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None
-    ) = (None,)
+    ) = None
 
 
 class RunnerConfig(BaseModel):

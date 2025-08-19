@@ -1,9 +1,9 @@
 """Error event classes for handling encoding and execution errors in AGUI middleware."""
 
 from ag_ui.core import EventType, RunErrorEvent
-from tools.convert import agui_to_sse
 
 from ..loggers.record_log import record_error_log
+from ..tools.convert import agui_to_sse
 
 
 class AGUIEncoderError(Exception):
