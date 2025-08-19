@@ -3,7 +3,7 @@ name = "adk-agui-py-middleware"
 version = "0.1.4"
 description = "Python middleware bridging Google ADK agents with AGUI protocol via Server-Sent Events for real-time agent interactions"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.13"
 license = {file = "LICENSE"}
 authors = [
     {name = "DennySORA", email = "dennysora.main@gmail.com"},
@@ -74,7 +74,7 @@ include = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py313"
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
@@ -137,7 +137,7 @@ max-complexity = 10
 # ---------------- mypy ----------------
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.13"
 strict = true
 plugins = ["pydantic.mypy"]
 disallow_untyped_defs = true
