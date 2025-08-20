@@ -7,7 +7,7 @@ from ag_ui.encoder import EventEncoder
 
 from adk_agui_middleware.event.error_event import AGUIEncoderError, AGUIErrorEvent
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestErrorEventCoverage(BaseTestCase):
@@ -15,22 +15,23 @@ class TestErrorEventCoverage(BaseTestCase):
 
     def test_agui_encoder_error_encoding_error(self):
         """Test AGUIEncoderError.encoding_error method."""
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_encoder.encode.return_value = "encoded_error_response"
-
         test_exception = RuntimeError("Encoding failed")
 
         with patch(
             "adk_agui_middleware.event.error_event.record_error_log"
-        ) as mock_log:
-            result = AGUIEncoderError.encoding_error(mock_encoder, test_exception)
+        ) as mock_log, patch(
+            "adk_agui_middleware.event.error_event.agui_to_sse"
+        ) as mock_agui_to_sse:
+            mock_agui_to_sse.return_value = {"data": "encoded_error_response"}
+            
+            result = AGUIEncoderError.encoding_error(test_exception)
 
-            assert result == "encoded_error_response"
+            assert result == {"data": "encoded_error_response"}
             mock_log.assert_called_once_with("Event encoding failed", test_exception)
 
-            # Verify encoder was called with correct event
-            mock_encoder.encode.assert_called_once()
-            call_args = mock_encoder.encode.call_args[0]
+            # Verify agui_to_sse was called with correct event
+            mock_agui_to_sse.assert_called_once()
+            call_args = mock_agui_to_sse.call_args[0]
             error_event = call_args[0]
 
             assert isinstance(error_event, RunErrorEvent)
@@ -41,22 +42,23 @@ class TestErrorEventCoverage(BaseTestCase):
 
     def test_agui_encoder_error_agent_error(self):
         """Test AGUIEncoderError.agent_error method."""
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_encoder.encode.return_value = "encoded_agent_error"
-
         test_exception = ValueError("Agent execution failed")
 
         with patch(
             "adk_agui_middleware.event.error_event.record_error_log"
-        ) as mock_log:
-            result = AGUIEncoderError.agent_error(mock_encoder, test_exception)
+        ) as mock_log, patch(
+            "adk_agui_middleware.event.error_event.agui_to_sse"
+        ) as mock_agui_to_sse:
+            mock_agui_to_sse.return_value = {"data": "encoded_agent_error"}
+            
+            result = AGUIEncoderError.agent_error(test_exception)
 
-            assert result == "encoded_agent_error"
+            assert result == {"data": "encoded_agent_error"}
             mock_log.assert_called_once_with("AGUI Agent Error Handler", test_exception)
 
-            # Verify encoder was called with correct event
-            mock_encoder.encode.assert_called_once()
-            call_args = mock_encoder.encode.call_args[0]
+            # Verify agui_to_sse was called with correct event
+            mock_agui_to_sse.assert_called_once()
+            call_args = mock_agui_to_sse.call_args[0]
             error_event = call_args[0]
 
             assert isinstance(error_event, RunErrorEvent)
@@ -123,9 +125,6 @@ class TestErrorEventCoverage(BaseTestCase):
 
     def test_encoder_error_with_complex_exception(self):
         """Test encoder error with complex exception structure."""
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_encoder.encode.return_value = "complex_error_encoded"
-
         # Create nested exception
         try:
             try:
@@ -133,14 +132,16 @@ class TestErrorEventCoverage(BaseTestCase):
             except ValueError as e:
                 raise RuntimeError("Outer error") from e
         except RuntimeError as complex_exception:
-            with patch("adk_agui_middleware.event.error_event.record_error_log"):
-                result = AGUIEncoderError.encoding_error(
-                    mock_encoder, complex_exception
-                )
+            with patch("adk_agui_middleware.event.error_event.record_error_log"), patch(
+                "adk_agui_middleware.event.error_event.agui_to_sse"
+            ) as mock_agui_to_sse:
+                mock_agui_to_sse.return_value = {"data": "complex_error_encoded"}
+                
+                result = AGUIEncoderError.encoding_error(complex_exception)
 
-                assert result == "complex_error_encoded"
+                assert result == {"data": "complex_error_encoded"}
                 # Should handle complex exception representations
-                call_args = mock_encoder.encode.call_args[0]
+                call_args = mock_agui_to_sse.call_args[0]
                 error_event = call_args[0]
                 assert "RuntimeError" in error_event.message
 
@@ -153,18 +154,19 @@ class TestErrorEventCoverage(BaseTestCase):
                 self.message = message
                 super().__init__(f"{code}: {message}")
 
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_encoder.encode.return_value = "custom_error_encoded"
-
         custom_exception = CustomAgentException(
             "AGENT_TIMEOUT", "Agent took too long to respond"
         )
 
-        with patch("adk_agui_middleware.event.error_event.record_error_log"):
-            result = AGUIEncoderError.agent_error(mock_encoder, custom_exception)
+        with patch("adk_agui_middleware.event.error_event.record_error_log"), patch(
+            "adk_agui_middleware.event.error_event.agui_to_sse"
+        ) as mock_agui_to_sse:
+            mock_agui_to_sse.return_value = {"data": "custom_error_encoded"}
+            
+            result = AGUIEncoderError.agent_error(custom_exception)
 
-            assert result == "custom_error_encoded"
-            call_args = mock_encoder.encode.call_args[0]
+            assert result == {"data": "custom_error_encoded"}
+            call_args = mock_agui_to_sse.call_args[0]
             error_event = call_args[0]
             assert "CustomAgentException" in error_event.message
             assert "AGENT_TIMEOUT" in error_event.message

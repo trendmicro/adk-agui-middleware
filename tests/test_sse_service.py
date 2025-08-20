@@ -31,7 +31,7 @@ class TestSSEService(unittest.TestCase):
         self.sse_service = SSEService(
             agent=self.mock_agent,
             runner_config=self.runner_config,
-            context_config=self.context_config,
+            config_context=self.context_config,
         )
 
         self.mock_agui_content = Mock(spec=RunAgentInput)
@@ -41,7 +41,7 @@ class TestSSEService(unittest.TestCase):
         """Test SSEService initialization."""
         self.assertEqual(self.sse_service.agent, self.mock_agent)
         self.assertEqual(self.sse_service.runner_config, self.runner_config)
-        self.assertEqual(self.sse_service.context_config, self.context_config)
+        self.assertEqual(self.sse_service.config_context, self.context_config)
         self.assertIsNotNone(self.sse_service.session_manager)
         self.assertEqual(self.sse_service.runner_box, {})
 
@@ -109,7 +109,7 @@ class TestSSEService(unittest.TestCase):
         service = SSEService(
             agent=self.mock_agent,
             runner_config=self.runner_config,
-            context_config=context_config,
+            config_context=context_config,
         )
 
         result = await service.extract_initial_state(
@@ -119,33 +119,30 @@ class TestSSEService(unittest.TestCase):
         expected = {"custom_key": "custom_value"}
         self.assertEqual(result, expected)
 
-    def test_encoding_handler_success(self):
+    @patch("adk_agui_middleware.sse_service.agui_to_sse")
+    def test_encoding_handler_success(self, mock_agui_to_sse):
         """Test _encoding_handler with successful encoding."""
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_encoder.encode.return_value = "encoded_event_string"
-
+        mock_agui_to_sse.return_value = {"data": "encoded_event_string"}
         mock_event = Mock(spec=BaseEvent)
 
-        result = SSEService._encoding_handler(mock_encoder, mock_event)
+        result = SSEService._encoding_handler(mock_event)
 
-        self.assertEqual(result, "encoded_event_string")
-        mock_encoder.encode.assert_called_once_with(mock_event)
+        self.assertEqual(result, {"data": "encoded_event_string"})
+        mock_agui_to_sse.assert_called_once_with(mock_event)
 
     @patch("adk_agui_middleware.sse_service.AGUIEncoderError")
-    def test_encoding_handler_exception(self, mock_agui_encoder_error):
+    @patch("adk_agui_middleware.sse_service.agui_to_sse")
+    def test_encoding_handler_exception(self, mock_agui_to_sse, mock_agui_encoder_error):
         """Test _encoding_handler with encoding exception."""
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_encoder.encode.side_effect = Exception("Encoding failed")
-
+        exception_obj = Exception("Encoding failed")
+        mock_agui_to_sse.side_effect = exception_obj
         mock_event = Mock(spec=BaseEvent)
-        mock_agui_encoder_error.encoding_error.return_value = "error_event_string"
+        mock_agui_encoder_error.encoding_error.return_value = {"data": "error_event_string"}
 
-        result = SSEService._encoding_handler(mock_encoder, mock_event)
+        result = SSEService._encoding_handler(mock_event)
 
-        self.assertEqual(result, "error_event_string")
-        mock_agui_encoder_error.encoding_error.assert_called_once_with(
-            mock_encoder, mock_encoder.encode.side_effect
-        )
+        self.assertEqual(result, {"data": "error_event_string"})
+        mock_agui_encoder_error.encoding_error.assert_called_once_with(exception_obj)
 
     @patch("adk_agui_middleware.sse_service.Runner")
     async def test_create_runner_new(self, mock_runner_class):
@@ -338,11 +335,11 @@ class TestSSEService(unittest.TestCase):
         service = SSEService(
             agent=self.mock_agent,
             runner_config=self.runner_config,
-            context_config=context_config,
+            config_context=context_config,
         )
 
         # Verify service was created successfully
-        self.assertEqual(service.context_config, context_config)
+        self.assertEqual(service.config_context, context_config)
 
     async def test_runner_box_isolation(self):
         """Test that runner_box maintains separate runners per app."""
@@ -365,7 +362,7 @@ class TestSSEService(unittest.TestCase):
         service = SSEService(
             agent=self.mock_agent,
             runner_config=self.runner_config,
-            context_config=self.context_config,
+            config_context=self.context_config,
         )
 
         mock_session_manager_class.assert_called_once_with(
@@ -387,7 +384,7 @@ class TestSSEService(unittest.TestCase):
         service = SSEService(
             agent=self.mock_agent,
             runner_config=self.runner_config,
-            context_config=context_config,
+            config_context=context_config,
         )
 
         # These should handle None gracefully

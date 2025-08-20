@@ -9,7 +9,7 @@ from google.adk.sessions import BaseSessionService, Session
 from adk_agui_middleware.data_model.session import SessionParameter
 from adk_agui_middleware.manager.session import SessionManager
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestSessionManagerCoverage(BaseTestCase):

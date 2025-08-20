@@ -11,7 +11,7 @@ from adk_agui_middleware.handler.agui_user import AGUIUserHandler
 from adk_agui_middleware.handler.session import SessionHandler
 from adk_agui_middleware.handler.user_message import UserMessageHandler
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestAGUIUserHandlerCoverage(BaseTestCase):
@@ -21,22 +21,24 @@ class TestAGUIUserHandlerCoverage(BaseTestCase):
         super().setUp()
 
         # Create mocks
-        self.mock_runner = Mock(spec=Runner)
-        self.mock_run_config = Mock(spec=RunConfig)
-        self.mock_user_message = Mock(spec=UserMessageHandler)
+        self.mock_running_handler = Mock()
+        self.mock_user_message_handler = Mock(spec=UserMessageHandler)
         self.mock_session_handler = Mock(spec=SessionHandler)
 
         # Set up mock return values
         self.mock_session_handler.app_name = "test_app"
         self.mock_session_handler.user_id = "test_user"
         self.mock_session_handler.session_id = "test_session"
-        self.mock_user_message.agui_content.run_id = "test_run"
+        
+        # Set up agui_content mock properly
+        mock_agui_content = Mock()
+        mock_agui_content.run_id = "test_run"
+        self.mock_user_message_handler.agui_content = mock_agui_content
 
         # Create handler
         self.handler = AGUIUserHandler(
-            runner=self.mock_runner,
-            run_config=self.mock_run_config,
-            agui_message=self.mock_user_message,
+            running_handler=self.mock_running_handler,
+            user_message_handler=self.mock_user_message_handler,
             session_handler=self.mock_session_handler,
         )
 
@@ -51,7 +53,7 @@ class TestAGUIUserHandlerCoverage(BaseTestCase):
         """Test call start event creation."""
         event = self.handler.call_start()
 
-        assert event.type.value == "run_started"
+        assert event.type.value == "RUN_STARTED"
         assert event.thread_id == "test_session"
         assert event.run_id == "test_run"
 
@@ -59,7 +61,7 @@ class TestAGUIUserHandlerCoverage(BaseTestCase):
         """Test call finished event creation."""
         event = self.handler.call_finished()
 
-        assert event.type.value == "run_finished"
+        assert event.type.value == "RUN_FINISHED"
         assert event.thread_id == "test_session"
         assert event.run_id == "test_run"
 
@@ -360,10 +362,7 @@ class TestAGUIUserHandlerCoverage(BaseTestCase):
 
     def test_initialization_state(self):
         """Test handler initialization state."""
-        assert self.handler.runner == self.mock_runner
-        assert self.handler.run_config == self.mock_run_config
-        assert self.handler.user_message == self.mock_user_message
+        assert self.handler.running_handler == self.mock_running_handler
+        assert self.handler.user_message_handler == self.mock_user_message_handler
         assert self.handler.session_handler == self.mock_session_handler
-        assert hasattr(self.handler, "event_translator")
-        assert self.handler.is_long_running_tool is False
         assert self.handler.tool_call_ids == []

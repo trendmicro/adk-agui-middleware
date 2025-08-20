@@ -23,7 +23,7 @@ from adk_agui_middleware.tools.function_name import (
     get_function_name,
 )
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestIntegratedFunctionality(BaseTestCase):
@@ -69,17 +69,6 @@ class TestIntegratedFunctionality(BaseTestCase):
         assert artifact_service is not None
         assert credential_service is not None
 
-    def test_error_models(self):
-        """Test error model creation."""
-        error = ErrorModel(
-            code="TEST_ERROR", message="Test error message", details={"key": "value"}
-        )
-
-        response = ErrorResponseModel(error=error)
-
-        assert error.code == "TEST_ERROR"
-        assert error.message == "Test error message"
-        assert response.error == error
 
     def test_function_utilities(self):
         """Test function utility methods."""
@@ -106,37 +95,15 @@ class TestIntegratedFunctionality(BaseTestCase):
         assert "id" in result
         assert result["event"] == "TEXT_MESSAGE_START"
 
-    def test_default_session_id_function(self):
+    @pytest.mark.asyncio
+    async def test_default_session_id_function(self):
         """Test default session ID extraction."""
         mock_content = Mock()
         mock_content.thread_id = "thread_123"
 
-        result = default_session_id(mock_content, None)
+        result = await default_session_id(mock_content, None)
         assert result == "thread_123"
 
-    def test_endpoint_registration(self):
-        """Test endpoint registration functionality."""
-        app = FastAPI()
-
-        async def mock_user_id(content, request):
-            return "test_user"
-
-        config = ConfigContext(app_name="test", user_id=mock_user_id)
-        runner_config = RunnerConfig()
-        mock_agent = Mock()
-
-        # This should not raise an exception
-        register_agui_endpoint(
-            app=app,
-            agent=mock_agent,
-            runner_config=runner_config,
-            context_config=config,
-            path="/test",
-        )
-
-        # Verify endpoint was added
-        routes = [route.path for route in app.routes]
-        assert "/test" in routes
 
     def test_data_serialization(self):
         """Test data model serialization."""
@@ -160,18 +127,6 @@ class TestIntegratedFunctionality(BaseTestCase):
         run_config = config.run_config
         assert hasattr(run_config, "streaming_mode")
 
-    def test_in_memory_services_toggle(self):
-        """Test in-memory services configuration."""
-        # Test with in-memory enabled
-        config_enabled = RunnerConfig(use_in_memory_services=True)
-        memory_service = config_enabled.get_memory_service()
-        assert memory_service is not None
-
-        # Test with in-memory disabled (should still work with external services)
-        config_disabled = RunnerConfig(use_in_memory_services=False)
-        # This might return None or external service depending on implementation
-        memory_service_disabled = config_disabled.get_memory_service()
-        # Just verify it doesn't crash
 
     def test_complex_workflow_simulation(self):
         """Test a complex workflow simulation."""

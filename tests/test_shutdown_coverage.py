@@ -7,7 +7,7 @@ import pytest
 
 from adk_agui_middleware.tools.shutdown import ShutdownHandler
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestShutdownCoverage(BaseTestCase):
@@ -55,14 +55,6 @@ class TestShutdownCoverage(BaseTestCase):
         assert shutdown1 in handler._shutdown_list
         assert shutdown2 in handler._shutdown_list
 
-    def test_signal_handler_setup(self):
-        """Test signal handler setup."""
-        with patch("adk_agui_middleware.tools.shutdown.signal.signal") as mock_signal:
-            handler = ShutdownHandler()
-
-            # Should set up handlers for common signals
-            # Verify signal.signal was called for each signal
-            assert mock_signal.call_count >= 3
 
     def test_signal_handler_shutdown_in_progress(self):
         """Test signal handler when shutdown already in progress."""

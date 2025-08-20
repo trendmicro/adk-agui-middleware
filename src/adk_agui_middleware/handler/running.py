@@ -114,7 +114,7 @@ class RunningHandler:
         if self.handler_context.translate_handler:
             async for (
                 translate_event
-            ) in self.handler_context.translate_handler.translate(adk_event):
+            ) in await self.handler_context.translate_handler.translate(adk_event):
                 if translate_event.agui_event is not None:
                     yield translate_event.agui_event
                     self._check_is_long_tool(adk_event, translate_event.agui_event)

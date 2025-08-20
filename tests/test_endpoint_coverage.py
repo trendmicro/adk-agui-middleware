@@ -10,7 +10,7 @@ from starlette.responses import StreamingResponse
 from adk_agui_middleware.endpoint import register_agui_endpoint
 from adk_agui_middleware.sse_service import SSEService
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestEndpointCoverage(BaseTestCase):

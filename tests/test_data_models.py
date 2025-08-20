@@ -12,7 +12,7 @@ from adk_agui_middleware.data_model.context import (
 from adk_agui_middleware.data_model.error import ErrorModel, ErrorResponseModel
 from adk_agui_middleware.data_model.session import SessionParameter
 
-from .test_utils import TEST_CONSTANTS, BaseTestCase, parametrize_test_cases
+from test_utils import TEST_CONSTANTS, BaseTestCase, parametrize_test_cases
 
 
 class TestDataModels(BaseTestCase):

@@ -8,7 +8,6 @@ from ag_ui.core import BaseEvent
 from google.adk.events import Event
 
 from ..data_model.event import TranslateEvent
-from ..tools.event_translator import EventTranslator
 
 
 class BaseTranslateHandler(metaclass=ABCMeta):
@@ -17,16 +16,8 @@ class BaseTranslateHandler(metaclass=ABCMeta):
     Handles translation of ADK events to AGUI events using the provided event translator.
     """
 
-    def __init__(self, event_translator: EventTranslator):
-        """Initialize the translate handler with an event translator.
-
-        Args:
-            event_translator: Service for translating between event formats
-        """
-        self.event_translator = event_translator
-
     @abstractmethod
-    def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
+    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
         """Translate an ADK event to AGUI event format.
 
         Args:

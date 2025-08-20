@@ -3,12 +3,12 @@
 from unittest.mock import Mock
 
 import pytest
-from ag_ui.core import EventType, RunFinishedEvent, RunStartedEvent
+from ag_ui.core import EventType, RunFinishedEvent, RunStartedEvent, StateDeltaEvent, StateSnapshotEvent
 from google.adk.events import Event as ADKEvent
 
 from adk_agui_middleware.tools.event_translator import EventTranslator
 
-from .test_utils import BaseTestCase
+from test_utils import BaseTestCase
 
 
 class TestEventTranslatorCoverage(BaseTestCase):
@@ -23,8 +23,10 @@ class TestEventTranslatorCoverage(BaseTestCase):
         translator = EventTranslator()
         assert translator is not None
         # Check internal state initialization
-        assert hasattr(translator, "streaming_message_content")
-        assert hasattr(translator, "tool_calls")
+        assert hasattr(translator, "_streaming_message_id")
+        assert hasattr(translator, "_active_tool_calls")
+        assert hasattr(translator, "_is_streaming")
+        assert hasattr(translator, "long_running_tool_ids")
 
     @pytest.mark.asyncio
     async def test_translate_with_mock_event(self):
@@ -43,23 +45,26 @@ class TestEventTranslatorCoverage(BaseTestCase):
         # Should handle empty parts gracefully
         assert isinstance(result_list, list)
 
-    def test_create_run_started_event(self):
-        """Test creating run started event."""
-        result = self.translator.create_run_started_event("thread123", "run456")
+    def test_create_state_delta_event(self):
+        """Test creating state delta event."""
+        state_delta = {"key": "value", "number": 42}
+        result = EventTranslator.create_state_delta_event(state_delta)
 
-        assert isinstance(result, RunStartedEvent)
-        assert result.type == EventType.RUN_STARTED
-        assert result.thread_id == "thread123"
-        assert result.run_id == "run456"
+        assert isinstance(result, StateDeltaEvent)
+        assert result.type == EventType.STATE_DELTA
+        # Check that delta contains correct JSON patch operations
+        assert len(result.delta) == 2
+        assert {"op": "add", "path": "/key", "value": "value"} in result.delta
+        assert {"op": "add", "path": "/number", "value": 42} in result.delta
 
-    def test_create_run_finished_event(self):
-        """Test creating run finished event."""
-        result = self.translator.create_run_finished_event("thread123", "run456")
+    def test_create_state_snapshot_event(self):
+        """Test creating state snapshot event."""
+        state_snapshot = {"snapshot": "data", "key": "value"}
+        result = EventTranslator.create_state_snapshot_event(state_snapshot)
 
-        assert isinstance(result, RunFinishedEvent)
-        assert result.type == EventType.RUN_FINISHED
-        assert result.thread_id == "thread123"
-        assert result.run_id == "run456"
+        assert isinstance(result, StateSnapshotEvent)
+        assert result.type == EventType.STATE_SNAPSHOT
+        assert result.snapshot == state_snapshot
 
     def test_create_state_snapshot_event(self):
         """Test creating state snapshot event."""
@@ -185,14 +190,16 @@ class TestEventTranslatorCoverage(BaseTestCase):
         translator = EventTranslator()
 
         # Test initial state
-        assert translator.streaming_message_content is None or isinstance(
-            translator.streaming_message_content, str
+        assert translator._streaming_message_id is None or isinstance(
+            translator._streaming_message_id, str
         )
-        assert hasattr(translator, "tool_calls")
+        assert hasattr(translator, "_active_tool_calls")
+        assert hasattr(translator, "_is_streaming")
+        assert hasattr(translator, "long_running_tool_ids")
 
         # Test state modification
-        translator.streaming_message_content = "Test content"
-        assert translator.streaming_message_content == "Test content"
+        translator._streaming_message_id = "test_message_id"
+        assert translator._streaming_message_id == "test_message_id"
 
     @pytest.mark.asyncio
     async def test_handle_empty_event(self):
