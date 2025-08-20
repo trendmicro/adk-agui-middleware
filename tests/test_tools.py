@@ -138,29 +138,29 @@ class TestConvertFunctions(BaseTestCase):
     def setUp(self):
         super().setUp()
 
-    @patch('time.time')
+    @patch("time.time")
     def test_agui_to_sse_conversion(self, mock_time):
         """Test converting AGUI event to SSE format."""
         mock_time.return_value = 1234567890.123
-        
+
         # Create a mock BaseEvent
         mock_event = Mock(spec=BaseEvent)
         mock_event.type = Mock()
         mock_event.type.value = "test_event_type"
         mock_event.model_dump_json.return_value = '{"test": "data"}'
-        
+
         result = agui_to_sse(mock_event)
-        
+
         assert isinstance(result, dict)
         assert "data" in result
         assert "event" in result
         assert "id" in result
         assert result["event"] == "test_event_type"
         assert result["data"] == '{"test": "data"}'
-        
+
         # Verify timestamp was set
         mock_event.__setattr__.assert_called_with("timestamp", 1234567890123)
-        
+
         # Verify model_dump_json was called with correct parameters
         mock_event.model_dump_json.assert_called_once_with(
             by_alias=True, exclude_none=True, exclude={"type"}
@@ -171,7 +171,7 @@ class TestConvertFunctions(BaseTestCase):
         mock_event = Mock(spec=BaseEvent)
         mock_event.type = EventType.TEXT_MESSAGE_START
         mock_event.model_dump_json.return_value = '{"message": "hello"}'
-        
+
         result = agui_to_sse(mock_event)
-        
+
         assert result["event"] == "text.message.start"
