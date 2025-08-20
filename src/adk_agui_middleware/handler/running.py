@@ -1,5 +1,6 @@
 """Handler for managing agent execution and event translation between ADK and AGUI formats."""
 
+import asyncio
 from collections.abc import AsyncGenerator
 from typing import Any
 
@@ -41,8 +42,8 @@ class RunningHandler:
         self.event_translator = EventTranslator()
         self.is_long_running_tool = False
 
-    @staticmethod
     async def _process_events_with_handler(
+        self,
         event_stream: AsyncGenerator,
         log_func: Any,
         event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None = None,
@@ -60,13 +61,27 @@ class RunningHandler:
         Yields:
             Events from the stream, potentially modified by the event handler
         """
-        async for event in event_stream:
-            log_func(event)
-            if event_handler:
-                async for new_event in event_handler.process(event):
-                    yield new_event
-            else:
-                yield event
+        timeout = (
+            await self.handler_context.adk_event_timeout_handler.get_timeout()
+            if self.handler_context.adk_event_timeout_handler
+            else None
+        )
+        try:
+            async with asyncio.timeout(timeout):
+                async for event in event_stream:
+                    log_func(event)
+                    if event_handler:
+                        async for new_event in event_handler.process(event):
+                            yield new_event
+                    else:
+                        yield event
+        except TimeoutError:
+            async for new_event in (
+                self.handler_context.adk_event_timeout_handler.process_timeout_fallback(
+                    event
+                )
+            ):
+                yield new_event
 
     def _check_is_long_tool(self, adk_event: Event) -> None:
         """Check if the event indicates a long-running tool and set flag accordingly.

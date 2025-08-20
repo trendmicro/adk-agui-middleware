@@ -32,15 +32,15 @@ jobs:
 
     - name: Lint with ruff (check)
       run: |
-        uv run ruff check . --output-format=github
+        uv run ruff check src/ --output-format=github
 
     - name: Format check with ruff
       run: |
-        uv run ruff format --check .
+        uv run ruff format --check src/
 
     - name: Type check with mypy
       run: |
-        uv run mypy src/adk_agui_middleware --strict --show-error-codes
+        uv run mypy src/ --strict --show-error-codes
 
   test:
     runs-on: ubuntu-latest

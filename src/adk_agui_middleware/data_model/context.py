@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ..base_abc.handler import (
     BaseADKEventHandler,
+    BaseADKEventTimeoutHandler,
     BaseAGUIEventHandler,
     BaseAGUIStateSnapshotHandler,
     BaseTranslateHandler,
@@ -58,6 +59,7 @@ class HandlerContext(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     adk_event_handler: BaseADKEventHandler | None = None
+    adk_event_timeout_handler: BaseADKEventTimeoutHandler | None = None
     agui_event_handler: BaseAGUIEventHandler | None = None
     agui_state_snapshot_handler: BaseAGUIStateSnapshotHandler | None = None
     translate_handler: BaseTranslateHandler | None = None

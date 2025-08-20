@@ -64,6 +64,41 @@ class BaseADKEventHandler(metaclass=ABCMeta):
         raise NotImplementedError("This method should be implemented by subclasses.")
 
 
+class BaseADKEventTimeoutHandler(metaclass=ABCMeta):
+    """Abstract base class for handling ADK event timeouts and fallback processing.
+
+    Defines the interface for handlers that manage timeout behavior in event processing,
+    including timeout duration configuration and fallback event generation when timeouts occur.
+    """
+
+    @abstractmethod
+    async def get_timeout(self) -> int:
+        """Get the timeout duration in seconds for event processing.
+
+        Returns:
+            Timeout duration in seconds
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
+    async def process_timeout_fallback(self) -> AsyncGenerator[Event]:
+        """Process timeout fallback and generate appropriate events.
+
+        Called when event processing exceeds the configured timeout duration.
+        Should generate fallback events to handle the timeout gracefully.
+
+        Yields:
+            Event objects to be processed as timeout fallback
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+
 class BaseAGUIEventHandler(metaclass=ABCMeta):
     """Abstract base class for AGUI event processing handlers.
 
