@@ -44,6 +44,7 @@ class SSEService(BaseSSEService):
             agent: Base agent implementation for processing requests
             runner_config: Configuration for agent runners and services
             config_context: Configuration for extracting context from requests
+            handler_context: Optional context containing event handlers for processing
         """
         self.agent = agent
         self.runner_config = runner_config
