@@ -169,11 +169,11 @@ class TestSimpleCoverage(BaseTestCase):
         assert error.error_description["code"] == "DICT_ERROR"
 
     def test_context_config_edge_cases(self):
-        """Test ContextConfig with edge cases."""
-        from adk_agui_middleware.data_model.context import ContextConfig
+        """Test ConfigContext with edge cases."""
+        from adk_agui_middleware.data_model.context import ConfigContext
 
         # Test with static string values for all fields
-        config = ContextConfig(
+        config = ConfigContext(
             app_name="static_app", user_id="static_user", session_id="static_session"
         )
 
@@ -247,13 +247,13 @@ class TestSimpleCoverage(BaseTestCase):
         # Test creating a complete workflow
         import json
 
-        from adk_agui_middleware.data_model.context import ContextConfig, RunnerConfig
+        from adk_agui_middleware.data_model.context import ConfigContext, RunnerConfig
         from adk_agui_middleware.data_model.error import ErrorModel, ErrorResponseModel
         from adk_agui_middleware.data_model.session import SessionParameter
 
         # 1. Create configuration
         runner_config = RunnerConfig(use_in_memory_services=True)
-        context_config = ContextConfig(app_name="integration", user_id="test_user")
+        context_config = ConfigContext(app_name="integration", user_id="test_user")
 
         # 2. Create session parameter
         session_param = SessionParameter(

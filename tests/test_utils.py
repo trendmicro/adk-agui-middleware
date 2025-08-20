@@ -16,7 +16,7 @@ from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
 from google.adk.sessions import Session
 
-from adk_agui_middleware.data_model.context import ContextConfig, RunnerConfig
+from adk_agui_middleware.data_model.context import ConfigContext, RunnerConfig
 from adk_agui_middleware.data_model.session import SessionParameter
 
 
@@ -98,13 +98,13 @@ class TestDataFactory:
     @staticmethod
     def create_context_config(
         app_name: str = "test_app", user_id_func: Any | None = None
-    ) -> ContextConfig:
-        """Create a test ContextConfig instance."""
+    ) -> ConfigContext:
+        """Create a test ConfigContext instance."""
 
         async def default_user_id(content, request):
             return "test_user"
 
-        return ContextConfig(app_name=app_name, user_id=user_id_func or default_user_id)
+        return ConfigContext(app_name=app_name, user_id=user_id_func or default_user_id)
 
     @staticmethod
     def create_runner_config(

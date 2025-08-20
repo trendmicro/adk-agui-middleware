@@ -5,7 +5,7 @@ from google.adk.agents.run_config import StreamingMode
 from google.adk.artifacts import InMemoryArtifactService
 
 from adk_agui_middleware.data_model.context import (
-    ContextConfig,
+    ConfigContext,
     RunnerConfig,
     default_session_id,
 )
@@ -123,8 +123,8 @@ class TestDataModels(BaseTestCase):
 
     @pytest.mark.asyncio
     async def test_context_config_with_static_values(self):
-        """Test ContextConfig with static string values."""
-        config = ContextConfig(
+        """Test ConfigContext with static string values."""
+        config = ConfigContext(
             app_name="static_app", user_id="static_user", session_id="static_session"
         )
 
@@ -134,7 +134,7 @@ class TestDataModels(BaseTestCase):
 
     @pytest.mark.asyncio
     async def test_context_config_with_callables(self):
-        """Test ContextConfig with callable functions."""
+        """Test ConfigContext with callable functions."""
 
         async def custom_user_id(content, request):
             return "custom_user"
@@ -142,7 +142,7 @@ class TestDataModels(BaseTestCase):
         async def custom_initial_state(content, request):
             return {"custom": "state"}
 
-        config = ContextConfig(
+        config = ConfigContext(
             user_id=custom_user_id, extract_initial_state=custom_initial_state
         )
 
@@ -266,12 +266,12 @@ class TestDataModels(BaseTestCase):
         assert len(error.error_description) == expected_length
 
     def test_context_config_minimal_setup(self):
-        """Test ContextConfig with minimal required configuration."""
+        """Test ConfigContext with minimal required configuration."""
 
         async def user_func(content, request):
             return "minimal_user"
 
-        config = ContextConfig(user_id=user_func)
+        config = ConfigContext(user_id=user_func)
 
         assert config.app_name == "default"
         assert config.user_id == user_func

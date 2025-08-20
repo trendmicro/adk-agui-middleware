@@ -9,7 +9,7 @@ from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
 
 from adk_agui_middleware.data_model.context import (
-    ContextConfig,
+    ConfigContext,
     RunnerConfig,
     default_session_id,
 )
@@ -37,16 +37,16 @@ class TestDefaultSessionId(unittest.TestCase):
         self.assertEqual(result, "another_thread_456")
 
 
-class TestContextConfig(unittest.TestCase):
-    """Test cases for ContextConfig class."""
+class TestConfigContext(unittest.TestCase):
+    """Test cases for ConfigContext class."""
 
     def test_context_config_creation_minimal(self):
-        """Test ContextConfig creation with minimal required fields."""
+        """Test ConfigContext creation with minimal required fields."""
 
         async def mock_user_id(content, request):
             return "test_user"
 
-        config = ContextConfig(user_id=mock_user_id)
+        config = ConfigContext(user_id=mock_user_id)
 
         self.assertEqual(config.app_name, "default")
         self.assertEqual(config.user_id, mock_user_id)
@@ -54,7 +54,7 @@ class TestContextConfig(unittest.TestCase):
         self.assertIsNone(config.extract_initial_state)
 
     def test_context_config_creation_all_fields(self):
-        """Test ContextConfig creation with all fields specified."""
+        """Test ConfigContext creation with all fields specified."""
 
         async def mock_app_name(content, request):
             return "custom_app"
@@ -68,7 +68,7 @@ class TestContextConfig(unittest.TestCase):
         async def mock_initial_state(content, request):
             return {"key": "value"}
 
-        config = ContextConfig(
+        config = ConfigContext(
             app_name=mock_app_name,
             user_id=mock_user_id,
             session_id=mock_session_id,
@@ -81,8 +81,8 @@ class TestContextConfig(unittest.TestCase):
         self.assertEqual(config.extract_initial_state, mock_initial_state)
 
     def test_context_config_static_values(self):
-        """Test ContextConfig with static string values."""
-        config = ContextConfig(
+        """Test ConfigContext with static string values."""
+        config = ConfigContext(
             app_name="static_app",
             user_id="static_user",
             session_id="static_session",

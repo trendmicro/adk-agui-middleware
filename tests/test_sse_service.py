@@ -9,7 +9,7 @@ from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
 
-from adk_agui_middleware.data_model.context import ContextConfig, RunnerConfig
+from adk_agui_middleware.data_model.context import ConfigContext, RunnerConfig
 from adk_agui_middleware.data_model.session import SessionParameter
 from adk_agui_middleware.sse_service import SSEService
 
@@ -26,7 +26,7 @@ class TestSSEService(unittest.TestCase):
         async def mock_user_id(content, request):
             return "test_user"
 
-        self.context_config = ContextConfig(app_name="test_app", user_id=mock_user_id)
+        self.context_config = ConfigContext(app_name="test_app", user_id=mock_user_id)
 
         self.sse_service = SSEService(
             agent=self.mock_agent,
@@ -102,7 +102,7 @@ class TestSSEService(unittest.TestCase):
             return {"custom_key": "custom_value"}
 
         # Create new service with custom state extractor
-        context_config = ContextConfig(
+        context_config = ConfigContext(
             user_id="test_user", extract_initial_state=custom_extract_state
         )
 
@@ -331,7 +331,7 @@ class TestSSEService(unittest.TestCase):
         async def dynamic_user_id(content, request):
             return request.headers.get("user-id", "default_user")
 
-        context_config = ContextConfig(
+        context_config = ConfigContext(
             app_name=dynamic_app_name, user_id=dynamic_user_id
         )
 
@@ -380,7 +380,7 @@ class TestSSEService(unittest.TestCase):
         async def nullable_extractor(content, request):
             return None
 
-        context_config = ContextConfig(
+        context_config = ConfigContext(
             user_id=nullable_extractor, extract_initial_state=nullable_extractor
         )
 

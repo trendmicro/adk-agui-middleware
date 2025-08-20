@@ -55,6 +55,8 @@ class HandlerContext(BaseModel):
         translate_handler: Optional handler for event translation logic
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     adk_event_handler: BaseADKEventHandler | None = None
     agui_event_handler: BaseAGUIEventHandler | None = None
     agui_state_snapshot_handler: BaseAGUIStateSnapshotHandler | None = None
