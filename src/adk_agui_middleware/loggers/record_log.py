@@ -4,8 +4,8 @@ import json
 import traceback
 from typing import Any
 
+from ..config.log import log_config
 from ..data_model.log import LogMessage
-from ..loggers.logger import log_config
 from ..tools.function_name import get_function_name
 from ..tools.json_encoder import DataclassesEncoder
 from . import logger

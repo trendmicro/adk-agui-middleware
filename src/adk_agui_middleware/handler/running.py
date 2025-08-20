@@ -14,7 +14,11 @@ from ..base_abc.handler import (
     BaseAGUIEventHandler,
 )
 from ..data_model.context import HandlerContext
-from ..loggers.record_log import record_agui_raw_log, record_event_raw_log
+from ..loggers.record_log import (
+    record_agui_raw_log,
+    record_event_raw_log,
+    record_warning_log,
+)
 from ..tools.event_translator import EventTranslator
 
 
@@ -44,11 +48,11 @@ class RunningHandler:
 
     async def _process_events_with_handler(
         self,
-        event_stream: AsyncGenerator,
+        event_stream: AsyncGenerator,  # type: ignore[type-arg]
         log_func: Any,
         event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None = None,
         enable_timeout: bool = False,
-    ) -> AsyncGenerator:
+    ) -> AsyncGenerator:  # type: ignore[type-arg]
         """Process an event stream with optional event handler and logging.
 
         Applies logging to all events and optionally processes them through
@@ -72,21 +76,24 @@ class RunningHandler:
                 async for event in event_stream:
                     log_func(event)
                     if event_handler:
-                        async for new_event in event_handler.process(event):
+                        async for new_event in await event_handler.process(event):
                             yield new_event
                     else:
                         yield event
         except TimeoutError:
-            async for new_event in self.handler_context.adk_event_timeout_handler.process_timeout_fallback():
+            record_warning_log("Timeout occurred while processing events.")
+            if self.handler_context.adk_event_timeout_handler is None:
+                return
+            async for new_event in await self.handler_context.adk_event_timeout_handler.process_timeout_fallback():
                 yield new_event
 
-    def _check_is_long_tool(self, adk_event: Event) -> None:
+    def _check_is_long_tool(self, adk_event: Event, agui_event: BaseEvent) -> None:
         """Check if the event indicates a long-running tool and set flag accordingly.
 
         Args:
             adk_event: ADK event to check for long-running tool indicators
         """
-        if adk_event.is_final_response() and adk_event.type == EventType.TOOL_CALL_END:
+        if adk_event.is_final_response() and agui_event.type == EventType.TOOL_CALL_END:
             self.is_long_running_tool = True
 
     async def _run_async_translator_adk_to_agui(
@@ -110,7 +117,7 @@ class RunningHandler:
             ) in self.handler_context.translate_handler.translate(adk_event):
                 if translate_event.agui_event is not None:
                     yield translate_event.agui_event
-                self._check_is_long_tool(adk_event)
+                    self._check_is_long_tool(adk_event, translate_event.agui_event)
                 if translate_event.is_retune:
                     return
 
@@ -121,7 +128,7 @@ class RunningHandler:
 
         async for agui_event in func(adk_event):
             yield agui_event
-            self._check_is_long_tool(adk_event)
+            self._check_is_long_tool(adk_event, agui_event)
 
     def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent]:
         """Force close any active streaming message in the event translator.

@@ -123,7 +123,7 @@ class RunnerConfig(BaseModel):
                 raise ValueError(
                     f"{service_attr.replace('_', ' ').title()} is not set."
                 )
-        return service
+        return service  # type: ignore[no-any-return]
 
     def get_artifact_service(self) -> BaseArtifactService:
         """Get or create artifact service.

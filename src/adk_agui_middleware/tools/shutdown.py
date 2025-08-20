@@ -17,14 +17,15 @@ class ShutdownHandler(metaclass=Singleton):
     Ensures proper cleanup of resources before application termination.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the shutdown handler and set up signal handlers."""
-        self._shutdown_list = []
+        self._shutdown_list: list[Callable[[], Awaitable[None]]] = []
         self._shutdown_in_progress = False
         self._setup_signal_handlers()
 
     def register_shutdown_function(
-        self, shutdown_function: Callable[[], Awaitable]
+        self,
+        shutdown_function: Callable[[], Awaitable[None]],
     ) -> None:
         """Register a function to be called during graceful shutdown.
 

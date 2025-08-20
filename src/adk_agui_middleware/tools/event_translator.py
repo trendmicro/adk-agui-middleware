@@ -37,7 +37,7 @@ class EventTranslator:
     for streaming operations and long-running tool executions.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the event translator with empty state containers."""
         self._active_tool_calls: dict[str, str] = {}  # Track active tool call IDs
         self._streaming_message_id: str | None = None  # Current streaming message ID
@@ -136,6 +136,8 @@ class EventTranslator:
         Yields:
             AGUI text message events (start, content, end) for streaming text
         """
+        if adk_event.content is None or adk_event.content.parts is None:
+            return
         text_parts = [part.text for part in adk_event.content.parts if part.text]
         if not text_parts:
             return
@@ -185,8 +187,8 @@ class EventTranslator:
         for part in adk_event.content.parts:
             if (
                 (not part.function_call)
-                or part.function_call.id not in adk_event.long_running_tool_ids
-                or []
+                or part.function_call.id is None
+                or part.function_call.id not in (adk_event.long_running_tool_ids or [])
             ):
                 continue
             self.long_running_tool_ids.append(part.function_call.id)

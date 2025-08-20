@@ -1,6 +1,6 @@
 """Session handler for managing user session state and tool call lifecycle."""
 
-from typing import Any
+from typing import Any, cast
 
 from google.adk.sessions import Session
 
@@ -191,7 +191,7 @@ class SessionHandler:
                 self.session_parameter
             )
             # Return pending tool calls list or empty list if not found
-            return session_state.get("pending_tool_calls", [])
+            return cast(list[str], session_state.get("pending_tool_calls", []))
         except Exception as e:
             record_error_log(
                 f"Failed to check pending tool calls for session {self.session_parameter.session_id}.",

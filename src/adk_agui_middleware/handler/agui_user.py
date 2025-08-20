@@ -43,7 +43,7 @@ class AGUIUserHandler:
         self.user_message_handler = user_message_handler
         self.session_handler = session_handler
 
-        self.tool_call_ids = []
+        self.tool_call_ids: list[str] = []
 
     @property
     def app_name(self) -> str:

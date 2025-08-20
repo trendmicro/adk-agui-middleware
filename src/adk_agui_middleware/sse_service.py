@@ -59,7 +59,7 @@ class SSEService(BaseSSEService):
 
     async def _get_config_value(
         self, config_attr: str, agui_content: RunAgentInput, request: Request
-    ) -> str | None:
+    ) -> str:
         """Extract configuration value from context config.
 
         Handles both static string values and dynamic callable configurations
@@ -134,9 +134,10 @@ class SSEService(BaseSSEService):
         Returns:
             Dictionary containing initial state key-value pairs, or None
         """
-        return await self._get_config_value(
-            "extract_initial_state", agui_content, request
-        )
+        value = self.config_context.extract_initial_state
+        if callable(value):
+            return await value(agui_content, request)
+        return value
 
     @staticmethod
     def _encoding_handler(event: BaseEvent) -> dict[str, str]:
@@ -243,15 +244,19 @@ class SSEService(BaseSSEService):
         Yields:
             Encoded event dictionaries ready for SSE transmission
         """
-        try:
-            async for event in runner():
-                yield self._encoding_handler(event)
-        except Exception as e:
-            yield AGUIEncoderError.agent_error(e)
+
+        async def _generate() -> AsyncGenerator[dict[str, str]]:
+            try:
+                async for event in runner():
+                    yield self._encoding_handler(event)
+            except Exception as e:
+                yield AGUIEncoderError.agent_error(e)
+
+        return _generate()
 
     async def close(self) -> None:
         """Close all cached Runner instances."""
         async with self._runner_lock:
             for runner in self.runner_box.values():
-                await runner.close()
+                await runner.close()  # type: ignore[no-untyped-call]
             self.runner_box.clear()

@@ -10,7 +10,7 @@ class Singleton(type):
     and returning the same instance for subsequent instantiation attempts.
     """
 
-    _instances = {}
+    _instances: dict[Any, Any] = {}
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Any:
         """Create or return the singleton instance of the class.

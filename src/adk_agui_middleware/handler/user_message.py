@@ -1,7 +1,7 @@
 """Handler for processing user messages and tool results in AGUI middleware."""
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from ag_ui.core import AssistantMessage, RunAgentInput, ToolMessage
 from fastapi import Request
@@ -71,7 +71,7 @@ class UserMessageHandler:
             )
             return {"success": True, "result": None}
         try:
-            return json.loads(content)
+            return cast(dict[str, Any], json.loads(content))
         except json.JSONDecodeError as e:
             record_error_log("Invalid JSON in tool result", e)
             return {
