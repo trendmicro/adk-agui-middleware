@@ -39,9 +39,6 @@ dev = [
     "bandit[toml]>=1.7.0",
 ]
 test = [
-    "pytest>=8.0.0",
-    "pytest-cov>=4.0.0",
-    "pytest-asyncio>=0.21.0",
     "coverage>=7.0.0",
 ]
 
@@ -103,7 +100,6 @@ select = [
     "RET", # flake8-return – ensure explicit and consistent return patterns
     "ICN", # flake8-import-conventions – enforce import aliasing rules (e.g., `import numpy as np`)
     "PIE", # flake8-pie – miscellaneous correctness & readability improvements
-    "PT", # flake8-pytest-style – enforce idiomatic pytest usage and best practices
     "PL", # Pylint subset – broader code-quality checks (convention, error, refactor, warning)
     "TRY", # tryceratops – encourage explicit, focused exception handling
     "FLY", # flynt – suggest converting old string formatting to f-strings
@@ -147,21 +143,9 @@ warn_redundant_casts = true
 files = ["src"]
 exclude = ["tests"]
 
-# ---------------- pytest ----------------
+# ---------------- unittest ----------------
 
-[tool.pytest.ini_options]
-minversion = "8.0"
-addopts = [
-    "--strict-markers",
-    "--strict-config",
-    "--disable-warnings",
-    "-ra",
-]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-asyncio_mode = "auto"
+# Standard library unittest is used - no additional configuration needed
 
 # ---------------- coverage ----------------
 

@@ -42,7 +42,7 @@ jobs:
     - name: Run core tests only
       run: |
         # Only run the most stable core tests for quick feedback
-        uv run pytest tests/test_data_model_session.py tests/test_tools_json_encoder.py tests/test_tools_function_name.py -v --tb=short
+        PYTHONPATH=$PWD/src uv run python -m unittest tests.test_data_model_session tests.test_tools_json_encoder tests.test_tools_function_name -v
       continue-on-error: false
 
     - name: Basic import test

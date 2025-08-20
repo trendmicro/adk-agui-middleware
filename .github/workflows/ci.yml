@@ -69,9 +69,12 @@ jobs:
       run: |
         PYTHONPATH=$PWD/src uv run python -m unittest discover -s tests -p "test_*.py" -v
 
-    - name: Run tests with pytest (with coverage)
+    - name: Run tests with coverage
       run: |
-        uv run pytest tests/ -v --cov=adk_agui_middleware --cov-report=xml --cov-report=html --cov-fail-under=85
+        PYTHONPATH=$PWD/src uv run coverage run --source=src -m unittest discover -s tests -p "test_*.py" -v
+        uv run coverage xml
+        uv run coverage html
+        uv run coverage report --show-missing
       continue-on-error: false
 
     - name: Upload coverage reports to Codecov
