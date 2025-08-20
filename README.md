@@ -26,8 +26,7 @@ The middleware follows a modular architecture with clear separation of concerns:
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        WEB[Web Client]
-        API[API Client]
+        CLIENT[Client Applications<br/>Web/Mobile/API]
     end
     
     subgraph "FastAPI Layer"
@@ -46,35 +45,25 @@ graph TB
         MH[User Message Handler<br/>handler/user_message.py]
     end
     
-    subgraph "Manager Layer"
+    subgraph "Core Services"
         SM[Session Manager<br/>manager/session.py]
-    end
-    
-    subgraph "Google ADK Layer"
         RUNNER[ADK Runner]
         AGENT[Base Agent]
-        SERVICES[ADK Services<br/>Session/Memory/Artifact/Credential]
     end
     
-    subgraph "Data Models"
+    subgraph "Data & Configuration"
         CTX[Context Config<br/>data_model/context.py]
-        ERR[Error Models<br/>data_model/error.py]
-        SES[Session Models<br/>data_model/session.py]
+        RCONFIG[Runner Config<br/>data_model/context.py]
+        SESSION[Session Parameter<br/>data_model/session.py]
     end
     
-    subgraph "Tools & Utilities"
+    subgraph "Tools & Processing"
         CONV[Event Converter<br/>tools/convert.py]
         TRANS[Event Translator<br/>tools/event_translator.py]
-        JSON[JSON Encoder<br/>tools/json_encoder.py]
+        SHUT[Shutdown Handler<br/>tools/shutdown.py]
     end
     
-    subgraph "Logging & Events"
-        LOG[Logging System<br/>loggers/]
-        EVT[Error Events<br/>event/error_event.py]
-    end
-    
-    WEB --> EP
-    API --> EP
+    CLIENT --> EP
     EP --> SSE
     SSE -.-> BASE
     SSE --> UH
@@ -84,34 +73,28 @@ graph TB
     SH --> SM
     RH --> RUNNER
     RUNNER --> AGENT
-    RUNNER --> SERVICES
     SSE --> CTX
-    UH --> ERR
+    SSE --> RCONFIG
+    SH --> SESSION
     RH --> CONV
     RH --> TRANS
-    SSE --> JSON
-    UH --> LOG
-    UH --> EVT
+    SSE --> SHUT
     
     classDef clientLayer fill:#e1f5fe
     classDef apiLayer fill:#f3e5f5
     classDef serviceLayer fill:#e8f5e8
     classDef handlerLayer fill:#fff3e0
-    classDef managerLayer fill:#fce4ec
-    classDef adkLayer fill:#f1f8e9
+    classDef coreLayer fill:#fce4ec
     classDef dataLayer fill:#e0f2f1
     classDef toolsLayer fill:#e8eaf6
-    classDef loggingLayer fill:#fff8e1
     
-    class WEB,API clientLayer
+    class CLIENT clientLayer
     class EP apiLayer
     class SSE,BASE serviceLayer
     class UH,RH,SH,MH handlerLayer
-    class SM managerLayer
-    class RUNNER,AGENT,SERVICES adkLayer
-    class CTX,ERR,SES dataLayer
-    class CONV,TRANS,JSON toolsLayer
-    class LOG,EVT loggingLayer
+    class SM,RUNNER,AGENT coreLayer
+    class CTX,RCONFIG,SESSION dataLayer
+    class CONV,TRANS,SHUT toolsLayer
 ```
 
 ### Request Processing Flow
@@ -119,63 +102,61 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant Client
-    participant FastAPI
+    participant Endpoint
     participant SSEService
-    participant AGUIUserHandler
+    participant UserHandler
     participant RunningHandler
     participant SessionHandler
     participant ADKRunner
-    participant SessionManager
     
-    Client->>+FastAPI: POST /agui (RunAgentInput)
-    FastAPI->>+SSEService: get_runner(agui_content, request)
+    Client->>+Endpoint: POST /agui (RunAgentInput)
+    Endpoint->>+SSEService: get_runner(agui_content, request)
     
-    Note over SSEService: Extract context (app_name, user_id, session_id)
+    Note over SSEService: Extract context configuration
     SSEService->>SSEService: extract_app_name()
     SSEService->>SSEService: extract_user_id()
     SSEService->>SSEService: extract_session_id()
+    SSEService->>SSEService: extract_initial_state()
     
-    SSEService->>+SessionManager: Create session if needed
-    SessionManager-->>-SSEService: Session ready
-    
-    SSEService->>+ADKRunner: Create/get runner instance
+    SSEService->>+ADKRunner: Create/get cached runner
     ADKRunner-->>-SSEService: Runner instance
     
-    SSEService->>+AGUIUserHandler: Create handler with components
-    AGUIUserHandler->>+SessionHandler: Initialize session handler
-    SessionHandler-->>-AGUIUserHandler: Ready
-    AGUIUserHandler->>+RunningHandler: Initialize running handler
-    RunningHandler-->>-AGUIUserHandler: Ready
-    AGUIUserHandler-->>-SSEService: Handler ready
+    SSEService->>+UserHandler: Create with handlers
+    UserHandler->>+SessionHandler: Initialize
+    SessionHandler-->>-UserHandler: Ready
+    UserHandler->>+RunningHandler: Initialize
+    RunningHandler-->>-UserHandler: Ready
+    UserHandler-->>-SSEService: Handler ready
     
-    SSEService-->>-FastAPI: Runner function
-    FastAPI->>+SSEService: event_generator(runner)
+    SSEService-->>-Endpoint: Runner function
+    Endpoint->>+SSEService: event_generator(runner)
     
-    loop Event Processing
-        SSEService->>+AGUIUserHandler: run()
-        AGUIUserHandler->>AGUIUserHandler: call_start() -> RunStartedEvent
-        AGUIUserHandler->>+SessionHandler: check_and_create_session()
-        SessionHandler-->>-AGUIUserHandler: Session ready
+    loop Agent Execution
+        SSEService->>+UserHandler: run()
+        UserHandler->>UserHandler: RunStartedEvent
+        UserHandler->>+SessionHandler: check_and_create_session()
+        SessionHandler-->>-UserHandler: Session ready
         
-        AGUIUserHandler->>+RunningHandler: run_async_with_adk()
-        RunningHandler->>+ADKRunner: Execute agent
-        ADKRunner-->>-RunningHandler: ADK Events
-        RunningHandler->>RunningHandler: Translate ADK->AGUI events
-        RunningHandler-->>-AGUIUserHandler: AGUI Events
+        UserHandler->>+RunningHandler: run_async_with_adk()
+        RunningHandler->>+ADKRunner: Execute with message
+        ADKRunner-->>-RunningHandler: Stream ADK events
+        RunningHandler->>RunningHandler: Translate to AGUI events
+        RunningHandler-->>-UserHandler: AGUI events
         
-        AGUIUserHandler->>+SessionHandler: add_pending_tool_call() (if tools)
-        SessionHandler-->>-AGUIUserHandler: Updated
+        UserHandler->>UserHandler: Track tool calls
+        UserHandler->>+SessionHandler: Update pending tools
+        SessionHandler-->>-UserHandler: Updated
         
-        AGUIUserHandler->>AGUIUserHandler: call_finished() -> RunFinishedEvent
-        AGUIUserHandler-->>-SSEService: BaseEvent
+        UserHandler->>UserHandler: RunFinishedEvent
+        UserHandler-->>-SSEService: BaseEvent
         
         SSEService->>SSEService: agui_to_sse(event)
-        SSEService-->>FastAPI: SSE formatted event
-        FastAPI-->>Client: Server-Sent Event
+        SSEService-->>Endpoint: SSE data
+        Endpoint-->>Client: Server-Sent Event
     end
     
-    SSEService-->>-FastAPI: Stream completed
-    FastAPI-->>-Client: Connection closed
+    SSEService-->>-Endpoint: Stream complete
+    Endpoint-->>-Client: Connection closed
 ```
 
 ### Component Structure
@@ -229,304 +210,157 @@ pip install -r requirements.txt
 from fastapi import FastAPI
 from google.adk.agents import BaseAgent
 from adk_agui_middleware import register_agui_endpoint, SSEService
-from adk_agui_middleware.data_model.context import RunnerConfig, ContextConfig
+from adk_agui_middleware.data_model.context import RunnerConfig, ConfigContext
 
-# Create your FastAPI app
+# Create FastAPI app
 app = FastAPI(title="My Agent API", version="1.0.0")
 
-# Initialize your ADK agent
-class MyCustomAgent(BaseAgent):
-    """Custom agent implementation with specific tools and behaviors."""
-    
+# Define your custom agent
+class MyAgent(BaseAgent):
     def __init__(self):
         super().__init__()
-        # Add your custom agent configuration here
-        self.tools = []  # Define your agent tools
-        self.instructions = "You are a helpful assistant..."
+        self.instructions = "You are a helpful assistant."
 
-agent = MyCustomAgent()
-
-# Configure context extraction
-context_config = ContextConfig(
-    app_name="my-agent-app",
-    user_id="user-123",  # Can be a callable for dynamic extraction
+# Initialize components
+agent = MyAgent()
+context_config = ConfigContext(
+    app_name="my-app",
+    user_id="user-123"
 )
+runner_config = RunnerConfig(use_in_memory_services=True)
 
-# Configure runner services
-runner_config = RunnerConfig(
-    use_in_memory_services=True  # Use in-memory services for development
-)
-
-# Create SSE service
-sse_service = SSEService(
-    agent=agent,
-    runner_config=runner_config,
-    context_config=context_config
-)
-
-# Register the AGUI endpoint
+# Create and register service
+sse_service = SSEService(agent, runner_config, context_config)
 register_agui_endpoint(app, sse_service, path="/agui")
 
-# Add health check endpoint
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy", "service": "adk-agui-middleware"}
+async def health():
+    return {"status": "healthy"}
 
-# Run the application
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-### Complete Example with Production Configuration
+### Production Configuration
 
 ```python
-import asyncio
 import logging
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from google.adk.agents import BaseAgent
-from google.adk.sessions import DatabaseSessionService
-from google.adk.memory import RedisMemoryService
 from ag_ui.core import RunAgentInput
 from adk_agui_middleware import register_agui_endpoint, SSEService
-from adk_agui_middleware.data_model.context import RunnerConfig, ContextConfig
-from adk_agui_middleware.config.log import setup_logging
+from adk_agui_middleware.data_model.context import RunnerConfig, ConfigContext
 
-# Configure logging
-setup_logging(level="INFO", format="json")
-logger = logging.getLogger(__name__)
-
+# Production agent
 class ProductionAgent(BaseAgent):
-    """Production-ready agent with comprehensive tool suite."""
-    
     def __init__(self):
         super().__init__()
-        # Configure your agent with tools, instructions, etc.
-        logger.info("Initializing ProductionAgent")
+        self.instructions = "Production assistant with advanced capabilities."
 
-# Context extraction functions for multi-tenant setup
+# Dynamic context extraction
 async def extract_user_id(agui_content: RunAgentInput, request: Request) -> str:
-    """Extract user ID from JWT token in Authorization header."""
     auth_header = request.headers.get("authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
-    
-    token = auth_header.split(" ")[1]
-    # Implement your JWT validation logic here
-    # For demo purposes, we'll extract from a mock token
-    try:
-        # decoded_token = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        # return decoded_token["user_id"]
-        return "demo-user-123"  # Replace with actual JWT decoding
-    except Exception as e:
-        logger.error(f"Token validation failed: {e}")
-        raise HTTPException(status_code=401, detail="Invalid token")
+        raise HTTPException(status_code=401, detail="Missing authorization")
+    # Implement JWT validation here
+    return "validated-user-id"
 
 async def extract_app_name(agui_content: RunAgentInput, request: Request) -> str:
-    """Extract app name from request headers or subdomain."""
-    # Try to get from header first
-    app_name = request.headers.get("x-app-name")
-    if app_name:
-        return app_name
-    
-    # Fallback to subdomain extraction
-    host = request.headers.get("host", "")
-    if "." in host:
-        subdomain = host.split(".")[0]
-        return subdomain if subdomain != "www" else "default"
-    
-    return "default"
+    return request.headers.get("x-app-name", "default-app")
 
-async def extract_tenant_state(agui_content: RunAgentInput, request: Request) -> dict[str, str]:
-    """Extract tenant-specific initial state."""
-    tenant_id = request.headers.get("x-tenant-id", "default")
-    return {
-        "tenant_id": tenant_id,
-        "environment": "production",
-        "feature_flags": "basic_features"
-    }
-
-# Create FastAPI app with production settings
-app = FastAPI(
-    title="ADK AGUI Production API",
-    description="Production deployment of ADK AGUI middleware",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
-
-# Add CORS middleware
+# Configure app
+app = FastAPI(title="Production ADK AGUI API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-frontend-domain.com"],
+    allow_origins=["https://your-domain.com"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
-# Initialize production services
-def create_production_services():
-    """Initialize production-grade external services."""
-    return RunnerConfig(
-        use_in_memory_services=False,
-        session_service=DatabaseSessionService(
-            connection_string="postgresql://user:pass@localhost/agents"
-        ),
-        memory_service=RedisMemoryService(
-            redis_url="redis://localhost:6379"
-        )
-    )
-
-# Configure context with dynamic extraction
-context_config = ContextConfig(
+# Initialize services
+agent = ProductionAgent()
+context_config = ConfigContext(
     app_name=extract_app_name,
     user_id=extract_user_id,
-    session_id=lambda content, req: content.thread_id,
-    extract_initial_state=extract_tenant_state
+    session_id=lambda content, req: content.thread_id
 )
+runner_config = RunnerConfig(use_in_memory_services=False)
 
-# Initialize agent and services
-agent = ProductionAgent()
-runner_config = create_production_services()
-
-# Create SSE service
-sse_service = SSEService(
-    agent=agent,
-    runner_config=runner_config,
-    context_config=context_config
-)
-
-# Register the AGUI endpoint
+sse_service = SSEService(agent, runner_config, context_config)
 register_agui_endpoint(app, sse_service, path="/api/v1/agui")
 
-@app.get("/api/v1/health")
-async def health_check():
-    """Comprehensive health check endpoint."""
-    return {
-        "status": "healthy",
-        "service": "adk-agui-middleware",
-        "version": "1.0.0",
-        "timestamp": "2024-01-01T00:00:00Z"
-    }
+@app.get("/health")
+async def health():
+    return {"status": "healthy", "version": "1.0.0"}
 
-@app.get("/api/v1/metrics")
-async def metrics():
-    """Basic metrics endpoint for monitoring."""
-    # Implement your metrics collection here
-    return {
-        "active_sessions": len(sse_service.runner_box),
-        "total_runners": len(sse_service.runner_box)
-    }
-
-# Graceful shutdown
 @app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on shutdown."""
-    logger.info("Shutting down ADK AGUI middleware")
+async def shutdown():
     await sse_service.close()
-    logger.info("Shutdown complete")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=8000,
-        log_level="info",
-        access_log=True
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-### Client-Side Usage Examples
+### Client Usage
 
-#### JavaScript/TypeScript Client
+#### JavaScript Client
 
 ```javascript
-// Example client-side implementation
-class ADKAGUIClient {
+class ADKClient {
     constructor(baseUrl, authToken) {
         this.baseUrl = baseUrl;
         this.authToken = authToken;
     }
 
-    async startAgentSession(threadId, message, tools = []) {
+    async startSession(threadId, message) {
         const response = await fetch(`${this.baseUrl}/agui`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.authToken}`,
-                'Accept': 'text/event-stream'
+                'Authorization': `Bearer ${this.authToken}`
             },
             body: JSON.stringify({
                 thread_id: threadId,
                 run_id: crypto.randomUUID(),
-                message: {
-                    role: 'user',
-                    content: message
-                },
-                tool_results: tools
+                message: { role: 'user', content: message }
             })
         });
 
-        return this.handleEventStream(response);
+        return this.handleStream(response);
     }
 
-    async *handleEventStream(response) {
+    async *handleStream(response) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
 
-        try {
-            while (true) {
-                const { value, done } = await reader.read();
-                if (done) break;
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        const eventData = line.slice(6);
-                        if (eventData === '[DONE]') return;
-                        
-                        try {
-                            const event = JSON.parse(eventData);
-                            yield event;
-                        } catch (e) {
-                            console.error('Failed to parse event:', e);
-                        }
+            const chunk = decoder.decode(value);
+            for (const line of chunk.split('\n')) {
+                if (line.startsWith('data: ')) {
+                    const data = line.slice(6);
+                    if (data === '[DONE]') return;
+                    try {
+                        yield JSON.parse(data);
+                    } catch (e) {
+                        console.error('Parse error:', e);
                     }
                 }
             }
-        } finally {
-            reader.releaseLock();
         }
     }
 }
 
-// Usage example
-const client = new ADKAGUIClient('https://api.example.com', 'your-jwt-token');
-
-async function runAgent() {
-    const threadId = 'thread-123';
-    const message = 'Hello, can you help me with data analysis?';
-    
-    for await (const event of client.startAgentSession(threadId, message)) {
-        switch (event.type) {
-            case 'run_started':
-                console.log('Agent execution started');
-                break;
-            case 'text_delta':
-                process.stdout.write(event.text);
-                break;
-            case 'tool_call_end':
-                console.log(`Tool called: ${event.tool_name}`);
-                break;
-            case 'run_finished':
-                console.log('Agent execution completed');
-                break;
-        }
-    }
+// Usage
+const client = new ADKClient('https://api.example.com', 'token');
+for await (const event of client.startSession('thread-123', 'Hello!')) {
+    console.log(event.type, event.text || '');
 }
 ```
 
@@ -537,22 +371,13 @@ import asyncio
 import aiohttp
 import json
 import uuid
-from typing import AsyncGenerator, Dict, Any
 
-class ADKAGUIClient:
-    """Python client for ADK AGUI middleware."""
-    
+class ADKClient:
     def __init__(self, base_url: str, auth_token: str):
         self.base_url = base_url
         self.auth_token = auth_token
     
-    async def start_agent_session(
-        self, 
-        thread_id: str, 
-        message: str, 
-        tool_results: list = None
-    ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Start an agent session and yield events."""
+    async def start_session(self, thread_id: str, message: str):
         headers = {
             'Authorization': f'Bearer {self.auth_token}',
             'Content-Type': 'application/json'
@@ -560,144 +385,100 @@ class ADKAGUIClient:
         
         payload = {
             'thread_id': thread_id,
-            'run_id': 'run-' + str(uuid.uuid4()),
-            'message': {
-                'role': 'user',
-                'content': message
-            },
-            'tool_results': tool_results or []
+            'run_id': str(uuid.uuid4()),
+            'message': {'role': 'user', 'content': message}
         }
         
         async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f'{self.base_url}/agui',
-                headers=headers,
-                json=payload
-            ) as response:
+            async with session.post(f'{self.base_url}/agui', headers=headers, json=payload) as response:
                 async for line in response.content:
                     line = line.decode('utf-8').strip()
                     if line.startswith('data: '):
-                        event_data = line[6:]
-                        if event_data == '[DONE]':
+                        data = line[6:]
+                        if data == '[DONE]':
                             break
                         try:
-                            event = json.loads(event_data)
-                            yield event
+                            yield json.loads(data)
                         except json.JSONDecodeError:
                             continue
 
-# Usage example
+# Usage
 async def main():
-    client = ADKAGUIClient('https://api.example.com', 'your-jwt-token')
-    
-    async for event in client.start_agent_session(
-        'thread-123',
-        'Analyze the sales data and provide insights'
-    ):
-        print(f"Event: {event['type']}")
-        if event['type'] == 'text_delta':
-            print(event['text'], end='')
-        elif event['type'] == 'tool_call_end':
-            print(f"Tool called: {event['tool_name']}")
+    client = ADKClient('https://api.example.com', 'token')
+    async for event in client.start_session('thread-123', 'Hello!'):
+        print(f"{event['type']}: {event.get('text', '')}")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
 ```
 
 
 ## Advanced Usage
 
-### Custom SSE Service
-
-Extend the base SSE service for custom behavior:
+### Custom Event Processing
 
 ```python
 from adk_agui_middleware.base_abc.sse_service import BaseSSEService
-from adk_agui_middleware.tools.convert import agui_to_sse
 
 class CustomSSEService(BaseSSEService):
-    """Custom SSE service with enhanced features."""
-    
-    async def get_runner(self, agui_content, request):
-        """Implement custom runner creation logic."""
-        # Add custom authentication, rate limiting, etc.
-        return await super().get_runner(agui_content, request)
-    
     async def event_generator(self, runner):
-        """Custom event generation with filtering."""
         async for event in runner():
-            # Apply custom event filtering or transformation
-            if self.should_include_event(event):
-                processed_event = self.process_event(event)
-                yield agui_to_sse(processed_event)
+            # Apply custom filtering or transformation
+            if self.should_process_event(event):
+                yield self.transform_event(event)
     
-    def should_include_event(self, event) -> bool:
-        """Filter events based on custom logic."""
-        return True  # Implement your filtering logic
+    def should_process_event(self, event) -> bool:
+        return True  # Custom filtering logic
     
-    def process_event(self, event):
-        """Transform events before encoding."""
-        return event  # Apply transformations
+    def transform_event(self, event):
+        return event  # Custom transformation
 ```
 
-### Error Handling & Monitoring
+### Error Handling
 
 ```python
 from adk_agui_middleware.config.log import setup_logging
-from fastapi import JSONResponse
 import logging
 
-# Configure structured logging  
 setup_logging(level="INFO", format="json")
 logger = logging.getLogger(__name__)
 
-# Error events are automatically generated for:
-# - Agent execution errors, encoding failures
-# - Tool execution errors, session management issues
-
-# Custom error handler
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    logger.error("Unhandled exception", exc_info=exc, request_id=request.headers.get("x-request-id"))
-    return JSONResponse(
-        status_code=500,
-        content={"error": "Internal server error", "request_id": request.headers.get("x-request-id")}
-    )
+async def handle_errors(request, exc):
+    logger.error("Error occurred", exc_info=exc)
+    return {"error": "Server error", "request_id": request.headers.get("x-request-id")}
 ```
 
 ## API Reference
 
 | Component | Description |
 |-----------|-------------|
-| `SSEService` | Main service for handling agent interactions via SSE |
-| `register_agui_endpoint()` | Register AGUI endpoint on FastAPI applications |
-| `ContextConfig` | Configuration for request context extraction |
+| `SSEService` | Core service for SSE-based agent interactions |
+| `register_agui_endpoint()` | Registers AGUI endpoint on FastAPI apps |
+| `ConfigContext` | Configuration for request context extraction |
 | `RunnerConfig` | Configuration for ADK runner and services |
 | `SessionParameter` | Session identification parameters |
-| `BaseEvent` | Base class for agent events |
 
 ## Development
 
 ### Setup & Testing
 
 ```bash
-# Development setup
+# Setup
 uv sync
 
 # Code quality
 ruff format && ruff check && mypy src/
 
-# Run tests
+# Testing
 pytest --cov=adk_agui_middleware
 
-# Security check
+# Security
 bandit -r src/
 ```
 
-### Environment Configuration
+### Environment Variables
 
 ```bash
-# Essential environment variables
 LOG_LEVEL=INFO
 USE_IN_MEMORY_SERVICES=true  # false for production
 SESSION_SERVICE_URL=redis://localhost:6379
@@ -705,22 +486,17 @@ SESSION_SERVICE_URL=redis://localhost:6379
 
 ## Production Checklist
 
-| Category | Requirements |
-|----------|-------------|
-| **Services** | Use Redis/PostgreSQL instead of in-memory services |
-| **Security** | JWT authentication, HTTPS, proper CORS configuration |
-| **Monitoring** | Track execution times, error rates, session lifecycle |
-| **Performance** | Connection pooling, session cleanup policies |
+- Use external services (Redis/PostgreSQL) instead of in-memory
+- Implement JWT authentication and HTTPS
+- Configure proper CORS settings
+- Monitor execution times and error rates
+- Set up connection pooling and session cleanup
 
 ## Contributing
 
-1. Follow existing code style (Google docstrings, type annotations)
-2. Write comprehensive tests for new functionality  
+1. Follow Google docstring style and type annotations
+2. Write tests for new functionality
 3. Update documentation for API changes
-
-### Acknowledgments
-
-Inspired by [@contextablemark](https://github.com/contextablemark)'s [AG-UI implementation](https://github.com/contextablemark/ag-ui) for agent-UI integration patterns.
 
 ## License
 
