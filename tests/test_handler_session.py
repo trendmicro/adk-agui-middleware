@@ -252,24 +252,24 @@ class TestSessionHandler(unittest.TestCase):
         self.assertEqual(result, ["call1", "call2"])
         mock_warning.assert_not_called()
 
-    @patch("adk_agui_middleware.handler.session.record_warning_log")
-    async def test_get_pending_tool_calls_no_session(self, mock_warning):
-        """Test get_pending_tool_calls when session not found."""
-        session_state = {"other_session": "data"}
+    @patch("adk_agui_middleware.handler.session.record_error_log")
+    async def test_get_pending_tool_calls_no_session(self, mock_error):
+        """Test get_pending_tool_calls when session state has no pending calls."""
+        session_state = {"other_key": "data"}
         self.mock_session_manager.get_session_state = AsyncMock(
             return_value=session_state
         )
 
         result = await self.session_handler.get_pending_tool_calls()
 
-        self.assertIsNone(result)
-        mock_warning.assert_called_once()
-        self.assertIn("Session test_session not found", mock_warning.call_args[0][0])
+        # Should return empty list when pending_tool_calls key is not in state
+        self.assertEqual(result, [])
+        mock_error.assert_not_called()
 
-    @patch("adk_agui_middleware.handler.session.record_warning_log")
-    async def test_get_pending_tool_calls_no_pending_calls(self, mock_warning):
+    @patch("adk_agui_middleware.handler.session.record_error_log")
+    async def test_get_pending_tool_calls_no_pending_calls(self, mock_error):
         """Test get_pending_tool_calls when no pending calls in session."""
-        session_state = {"test_session": "session_data", "other_key": "other_value"}
+        session_state = {"other_key": "other_value"}
         self.mock_session_manager.get_session_state = AsyncMock(
             return_value=session_state
         )
@@ -277,6 +277,7 @@ class TestSessionHandler(unittest.TestCase):
         result = await self.session_handler.get_pending_tool_calls()
 
         self.assertEqual(result, [])
+        mock_error.assert_not_called()
 
     @patch("adk_agui_middleware.handler.session.record_error_log")
     async def test_get_pending_tool_calls_exception(self, mock_error):
@@ -287,8 +288,97 @@ class TestSessionHandler(unittest.TestCase):
 
         result = await self.session_handler.get_pending_tool_calls()
 
-        self.assertIsNone(result)
+        self.assertEqual(result, [])  # Should return empty list, not None
         mock_error.assert_called_once()
+
+    @patch("adk_agui_middleware.handler.session.record_error_log")
+    @patch("adk_agui_middleware.handler.session.record_log")
+    async def test_add_pending_tool_call_update_failure(self, mock_log, mock_error):
+        """Test add_pending_tool_call when session state update fails."""
+        existing_state = {"pending_tool_calls": ["call1"]}
+        self.mock_session_manager.get_session_state = AsyncMock(
+            return_value=existing_state
+        )
+        self.mock_session_manager.update_session_state = AsyncMock(return_value=False)
+
+        await self.session_handler.add_pending_tool_call("call2")
+
+        # Verify session state update was attempted but failed
+        self.mock_session_manager.update_session_state.assert_called_once_with(
+            self.session_parameter,
+            state_updates={"pending_tool_calls": ["call1", "call2"]},
+        )
+        # No success log should be called when update fails
+        success_calls = [call for call in mock_log.call_args_list 
+                        if "Added tool call" in str(call)]
+        self.assertEqual(len(success_calls), 0)
+
+    @patch("adk_agui_middleware.handler.session.record_error_log")
+    @patch("adk_agui_middleware.handler.session.record_log")
+    async def test_add_pending_tool_call_get_state_exception(self, mock_log, mock_error):
+        """Test add_pending_tool_call handles get_session_state exception."""
+        self.session_handler.get_pending_tool_calls = AsyncMock(
+            side_effect=Exception("Database error")
+        )
+
+        await self.session_handler.add_pending_tool_call("call1")
+
+        mock_error.assert_called_once()
+        self.assertIn("Failed to add pending tool call", mock_error.call_args[0][0])
+
+    @patch("adk_agui_middleware.handler.session.record_error_log")
+    @patch("adk_agui_middleware.handler.session.record_log")
+    async def test_add_pending_tool_call_update_state_exception(self, mock_log, mock_error):
+        """Test add_pending_tool_call handles update_session_state exception."""
+        existing_state = {"pending_tool_calls": []}
+        self.mock_session_manager.get_session_state = AsyncMock(
+            return_value=existing_state
+        )
+        self.mock_session_manager.update_session_state = AsyncMock(
+            side_effect=Exception("Update failed")
+        )
+
+        await self.session_handler.add_pending_tool_call("call1")
+
+        mock_error.assert_called_once()
+        self.assertIn("Failed to add pending tool call", mock_error.call_args[0][0])
+
+    @patch("adk_agui_middleware.handler.session.record_log")
+    async def test_check_and_remove_pending_tool_call_update_failure(self, mock_log):
+        """Test check_and_remove_pending_tool_call when session state update fails."""
+        pending_calls = ["call1", "call2", "call3"]
+        self.session_handler.get_pending_tool_calls = AsyncMock(
+            return_value=pending_calls
+        )
+        self.mock_session_manager.update_session_state = AsyncMock(return_value=False)
+
+        await self.session_handler.check_and_remove_pending_tool_call("call2")
+
+        # Verify the call was removed from the list
+        self.assertEqual(pending_calls, ["call1", "call3"])
+
+        # Verify session state was updated
+        self.mock_session_manager.update_session_state.assert_called_once_with(
+            session_parameter=self.session_parameter,
+            state_updates={"pending_tool_calls": ["call1", "call3"]},
+        )
+        
+        # Verify final log message indicates failure
+        final_log_call = mock_log.call_args_list[-1]
+        self.assertIn("False", str(final_log_call))
+
+    @patch("adk_agui_middleware.handler.session.record_warning_log")
+    @patch("adk_agui_middleware.handler.session.record_log")
+    async def test_check_and_remove_pending_tool_call_empty_list(self, mock_log, mock_warning):
+        """Test check_and_remove_pending_tool_call with empty pending calls list."""
+        self.session_handler.get_pending_tool_calls = AsyncMock(return_value=[])
+
+        await self.session_handler.check_and_remove_pending_tool_call("call1")
+
+        mock_warning.assert_called_once()
+        self.assertIn("No pending tool calls found", mock_warning.call_args[0][0])
+        # Should not attempt to update session state
+        self.mock_session_manager.update_session_state.assert_not_called()
 
 
 if __name__ == "__main__":

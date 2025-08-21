@@ -429,6 +429,88 @@ class TestEventTranslator(unittest.TestCase):
         self.assertIsInstance(events[0], TextMessageEndEvent)
         self.assertFalse(self.translator._is_streaming)
 
+    async def test_translate_streaming_message_content_with_text_streaming(self):
+        """Test translating streaming message with text when already streaming."""
+        # Set up streaming state
+        self.translator._is_streaming = True
+        self.translator._streaming_message_id = "existing-stream"
+        
+        mock_part = Mock()
+        mock_part.text = "Additional text"
+        
+        events = []
+        async for event in self.translator.translate_streaming_message_content([mock_part]):
+            events.append(event)
+        
+        self.assertEqual(len(events), 1)
+        self.assertIsInstance(events[0], TextMessageContentEvent)
+        self.assertEqual(events[0].delta, "Additional text")
+
+    async def test_translate_message_non_streaming_pattern(self):
+        """Test translating message with non-streaming pattern."""
+        # Mock the get_default_message_translation_pattern to return non-streaming
+        with patch.object(self.translator, 'get_default_message_translation_pattern', 
+                         return_value=asyncio.coroutine(lambda: "complete")()):
+            mock_part = Mock()
+            mock_part.text = "Complete message"
+            
+            mock_message = Mock()
+            mock_message.id = "msg-456"
+            mock_message.parts = [mock_part]
+            mock_message.role = "model"
+            
+            events = []
+            async for event in self.translator.translate_message(mock_message):
+                events.append(event)
+            
+            # Should generate complete message events
+            self.assertGreater(len(events), 0)
+
+    async def test_translate_streaming_message_content_part_without_attributes(self):
+        """Test translating streaming message part with no recognized attributes."""
+        mock_part = Mock()
+        # Remove all recognized attributes
+        if hasattr(mock_part, 'text'):
+            delattr(mock_part, 'text')
+        if hasattr(mock_part, 'function_call'):
+            delattr(mock_part, 'function_call')
+        if hasattr(mock_part, 'function_response'):
+            delattr(mock_part, 'function_response')
+        
+        events = []
+        async for event in self.translator.translate_streaming_message_content([mock_part]):
+            events.append(event)
+        
+        # Should not generate any events
+        self.assertEqual(len(events), 0)
+
+    async def test_handle_additional_data_no_data(self):
+        """Test handling additional data when no data present."""
+        mock_event = Mock(spec=ADKEvent)
+        mock_event.actions = None
+        mock_event.custom_metadata = None
+        
+        events = []
+        async for event in self.translator._handle_additional_data(mock_event):
+            events.append(event)
+        
+        self.assertEqual(len(events), 0)
+
+    async def test_handle_additional_data_empty_state_delta(self):
+        """Test handling empty state delta."""
+        mock_event = Mock(spec=ADKEvent)
+        mock_event.actions = Mock()
+        mock_event.actions.state_delta = {}
+        mock_event.custom_metadata = None
+        
+        events = []
+        async for event in self.translator._handle_additional_data(mock_event):
+            events.append(event)
+        
+        self.assertEqual(len(events), 1)
+        self.assertIsInstance(events[0], StateDeltaEvent)
+        self.assertEqual(events[0].delta, [])
+
 
 if __name__ == "__main__":
     unittest.main()

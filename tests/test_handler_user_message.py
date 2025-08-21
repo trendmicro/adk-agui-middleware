@@ -235,6 +235,39 @@ class TestUserMessageHandler(unittest.TestCase):
 
         self.assertEqual(result, [])
 
+    async def test_extract_tool_results_multiple_tool_messages(self):
+        """Test extract_tool_results returns only the most recent tool message."""
+        # Create multiple tool messages
+        tool_call1 = ToolCall(
+            id="call_1", function=FunctionCall(name="function_1", arguments="{}")
+        )
+        tool_call2 = ToolCall(
+            id="call_2", function=FunctionCall(name="function_2", arguments="{}")
+        )
+        
+        assistant_msg1 = AssistantMessage(
+            id="1", role="assistant", content="First tool call", tool_calls=[tool_call1]
+        )
+        tool_msg1 = ToolMessage(
+            id="2", role="tool", tool_call_id="call_1", content='{"result": "first"}'
+        )
+        assistant_msg2 = AssistantMessage(
+            id="3", role="assistant", content="Second tool call", tool_calls=[tool_call2]
+        )
+        tool_msg2 = ToolMessage(
+            id="4", role="tool", tool_call_id="call_2", content='{"result": "second"}'
+        )
+        
+        messages = [assistant_msg1, tool_msg1, assistant_msg2, tool_msg2]
+        handler = self.create_handler(messages=messages)
+
+        result = await handler.extract_tool_results()
+
+        # Should return only the most recent tool message (tool_msg2)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["tool_name"], "function_2")
+        self.assertEqual(result[0]["message"], tool_msg2)
+
     async def test_process_tool_results_not_tool_submission(self):
         """Test process_tool_results returns None for non-tool submissions."""
         user_msg = UserMessage(id="1", role="user", content="Hello")
@@ -274,6 +307,57 @@ class TestUserMessageHandler(unittest.TestCase):
         self.assertEqual(function_response.name, "test_function")
         self.assertEqual(function_response.response["success"], True)
         self.assertEqual(function_response.response["data"], "test")
+
+    async def test_process_tool_results_with_empty_content(self):
+        """Test process_tool_results handles empty tool content."""
+        tool_call = ToolCall(
+            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
+        )
+        assistant_msg = AssistantMessage(
+            id="1", role="assistant", content="", tool_calls=[tool_call]
+        )
+        tool_msg = ToolMessage(
+            id="2",
+            role="tool",
+            tool_call_id="call_1",
+            content="",  # Empty content
+        )
+
+        messages = [assistant_msg, tool_msg]
+        handler = self.create_handler(messages=messages)
+
+        result = await handler.process_tool_results()
+
+        self.assertIsInstance(result, types.Content)
+        function_response = result.parts[0].function_response
+        self.assertEqual(function_response.response["success"], True)
+        self.assertIsNone(function_response.response["result"])
+
+    async def test_process_tool_results_with_invalid_json(self):
+        """Test process_tool_results handles invalid JSON in tool content."""
+        tool_call = ToolCall(
+            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
+        )
+        assistant_msg = AssistantMessage(
+            id="1", role="assistant", content="", tool_calls=[tool_call]
+        )
+        tool_msg = ToolMessage(
+            id="2",
+            role="tool",
+            tool_call_id="call_1",
+            content="{invalid json}",  # Invalid JSON
+        )
+
+        messages = [assistant_msg, tool_msg]
+        handler = self.create_handler(messages=messages)
+
+        result = await handler.process_tool_results()
+
+        self.assertIsInstance(result, types.Content)
+        function_response = result.parts[0].function_response
+        self.assertIn("error", function_response.response)
+        self.assertEqual(function_response.response["error_type"], "JSON_DECODE_ERROR")
+        self.assertEqual(function_response.response["raw_content"], "{invalid json}")
 
     async def test_get_message_tool_result_priority(self):
         """Test get_message returns tool results when available."""

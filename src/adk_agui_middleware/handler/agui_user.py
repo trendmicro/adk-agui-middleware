@@ -121,11 +121,24 @@ class AGUIUserHandler:
     async def remove_pending_tool_call(self) -> RunErrorEvent | None:
         """Remove pending tool calls from session state after processing tool results.
 
-        Extracts tool results from the user message and removes corresponding
-        pending tool calls from the session state. Logs the start of new execution.
+        This method completes the HITL (Human-in-the-Loop) workflow by processing
+        human-provided tool results and removing the corresponding pending tool calls
+        from session state. This allows the agent execution to resume with the
+        human-provided input.
+
+        HITL Completion Flow:
+        1. Human provides tool results via API (tool result submission)
+        2. This method extracts tool results from the user message
+        3. Removes corresponding tool_call_ids from pending_tool_calls in session
+        4. Agent execution resumes with the human-provided tool results
+        5. Workflow continues with human input incorporated
 
         Returns:
             RunErrorEvent if no tool results found or processing fails, None on success
+
+        Note:
+            This is the critical completion step in HITL workflows, transforming
+            pending human interventions back into active agent execution flow.
         """
         tool_results = await self.user_message_handler.extract_tool_results()
         if not tool_results:
@@ -185,6 +198,7 @@ class AGUIUserHandler:
         )
         async for event in self._run_async():
             yield event
+        # Add any uncompleted tool calls to pending state for HITL workflow
         for tool_call_id in self.tool_call_ids:
             await self.session_handler.add_pending_tool_call(tool_call_id)
         yield self.call_finished()
@@ -192,11 +206,23 @@ class AGUIUserHandler:
     async def run(self) -> AsyncGenerator[BaseEvent]:
         """Main entry point for running the AGUI user handler.
 
-        Handles tool result submissions by removing pending tool calls,
-        then executes the complete workflow with error handling.
+        Orchestrates the complete HITL (Human-in-the-Loop) workflow by determining
+        if the incoming request is completing a previous HITL interaction (tool result
+        submission) or starting a new agent execution. Manages the transition between
+        HITL states and agent execution flow.
+
+        HITL Workflow Logic:
+        1. Check if request contains tool results (HITL completion)
+        2. If tool results: Remove pending tool calls and resume execution
+        3. If new request: Execute agent and add any tool calls to pending state
+        4. Handle errors and state transitions throughout the process
 
         Yields:
-            AGUI BaseEvent objects from the handler execution
+            AGUI BaseEvent objects from the handler execution, including HITL state changes
+
+        Note:
+            This is the primary entry point for HITL workflow management, handling
+            both initiation and completion of human intervention cycles.
         """
         if self.user_message_handler.is_tool_result_submission and (
             error := await self.remove_pending_tool_call()

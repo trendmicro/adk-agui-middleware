@@ -47,8 +47,17 @@ class UserMessageHandler:
     def is_tool_result_submission(self) -> bool:
         """Check if the latest message is a tool result submission.
 
+        This property identifies HITL (Human-in-the-Loop) completion requests where
+        a human is providing tool results to resume a previously paused agent execution.
+        This is a key indicator for transitioning from HITL waiting state back to
+        active agent processing.
+
         Returns:
-            True if the most recent message is from a tool, False otherwise
+            True if the most recent message is from a tool (HITL completion),
+            False for new user requests (potential HITL initiation)
+
+        Note:
+            This determines the HITL workflow branch: completion vs. initiation.
         """
         if not self.agui_content.messages:
             return False
@@ -101,12 +110,23 @@ class UserMessageHandler:
     async def extract_tool_results(self) -> list[dict[str, Any]]:
         """Extract the most recent tool result from the message history.
 
-        Finds the latest tool message and maps it to its corresponding tool name
-        using the tool call history from assistant messages.
+        This method processes HITL (Human-in-the-Loop) completion data by extracting
+        tool results provided by humans and mapping them to their corresponding tool calls.
+        This enables the agent to resume execution with human-provided input.
+
+        HITL Data Processing:
+        1. Finds the latest tool message (human-provided result)
+        2. Maps tool_call_id to tool name using conversation history
+        3. Prepares tool result data for agent consumption
+        4. Enables seamless transition from HITL waiting to agent execution
 
         Returns:
             List containing tool result dictionary with tool name and message,
-            or empty list if no tool messages found
+            or empty list if no tool messages found (not a HITL completion)
+
+        Note:
+            Critical for HITL workflows where humans provide tool execution results
+            that the agent needs to process and incorporate into its reasoning.
         """
         most_recent_tool_message = next(
             (

@@ -60,11 +60,20 @@ class SessionHandler:
     def get_pending_tool_calls_dict(pending_calls: list[str]) -> dict[str, list[str]]:
         """Create a dictionary for storing pending tool calls in session state.
 
+        Formats pending tool call IDs into the standard session state structure
+        used throughout the HITL (Human-in-the-Loop) workflow. This standardized
+        format ensures consistent storage and retrieval of pending tool calls.
+
         Args:
-            pending_calls: List of pending tool call IDs
+            pending_calls: List of pending tool call IDs requiring human intervention
 
         Returns:
             Dictionary with 'pending_tool_calls' key for session state updates
+
+        Note:
+            This standardized format is crucial for HITL state persistence and
+            enables consistent querying of pending human interventions across
+            the middleware system.
         """
         return {"pending_tool_calls": pending_calls}
 
@@ -118,11 +127,24 @@ class SessionHandler:
     async def check_and_remove_pending_tool_call(self, tool_call_id: str) -> None:
         """Remove a tool call ID from the pending tool calls list.
 
-        Checks if the tool call ID exists in pending calls, removes it if found,
-        and updates the session state. Logs warnings if the tool call is not found.
+        This method implements the core HITL (Human-in-the-Loop) pattern for tool execution.
+        When an agent makes a tool call, it's added to pending_tool_calls in session state.
+        When a human/user provides the tool result, this method removes the corresponding
+        pending tool call ID, completing the HITL workflow.
+
+        HITL Process:
+        1. Agent calls tool → tool_call_id added to pending_tool_calls
+        2. Agent execution pauses, waits for human intervention
+        3. Human/user provides tool result via API
+        4. This method removes tool_call_id from pending_tool_calls
+        5. Agent execution resumes with tool result
 
         Args:
             tool_call_id: ID of the tool call to remove from pending list
+
+        Note:
+            This is essential for HITL workflows where tools require human approval
+            or input before execution can continue.
         """
         pending_calls = await self.get_pending_tool_calls()
         if tool_call_id not in pending_calls:
@@ -147,11 +169,24 @@ class SessionHandler:
     async def add_pending_tool_call(self, tool_call_id: str) -> None:
         """Add a tool call ID to the pending tool calls list.
 
-        Retrieves current pending calls, adds the new tool call ID if not already present,
-        and updates the session state. Handles errors gracefully with logging.
+        This method initiates the HITL (Human-in-the-Loop) pattern by marking a tool call
+        as pending human intervention. When an agent invokes a tool that requires human
+        input or approval, this method stores the tool call ID in session state, effectively
+        pausing agent execution until human intervention is provided.
+
+        HITL Pattern Initiation:
+        1. Agent attempts to call a tool requiring human input
+        2. This method adds tool_call_id to pending_tool_calls in session state
+        3. Agent execution flow is paused/suspended
+        4. Session persists the pending state for later retrieval
+        5. External systems can query pending_tool_calls to show humans what needs attention
 
         Args:
             tool_call_id: ID of the tool call to add to pending list
+
+        Note:
+            This enables asynchronous HITL workflows where agent execution can be
+            resumed later after human provides the necessary input or approval.
         """
         record_log(
             f"Adding pending tool call {tool_call_id} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
@@ -179,11 +214,24 @@ class SessionHandler:
     async def get_pending_tool_calls(self) -> list[str]:
         """Retrieve the list of pending tool calls for this session.
 
-        Gets the current session state and extracts the pending tool calls list.
-        Handles errors and missing sessions gracefully.
+        This method provides visibility into active HITL (Human-in-the-Loop) workflows
+        by returning all tool calls currently awaiting human intervention. External systems
+        use this to display pending actions to users and manage HITL queue states.
+
+        HITL State Query:
+        - Returns tool_call_ids that are waiting for human input/approval
+        - Used by UIs to show users what actions require their attention
+        - Enables HITL workflow management and monitoring
+        - Empty list indicates no pending human interventions
 
         Returns:
-            List of pending tool call IDs, empty list if session not found or error occurred
+            List of pending tool call IDs currently awaiting human intervention,
+            empty list if session not found or no pending calls exist
+
+        Example:
+            pending = await handler.get_pending_tool_calls()
+            if pending:
+                print(f"Pending HITL actions: {pending}")
         """
         try:
             # Get current session state dictionary

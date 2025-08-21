@@ -8,7 +8,7 @@ A professional Python 3.13+ middleware library that bridges Google's Agent Devel
 - **🔐 Session Management**: Comprehensive session handling with configurable backends  
 - **⚙️ Context Extraction**: Flexible context configuration for multi-tenant applications
 - **🛡️ Error Handling**: Robust error handling with structured logging and recovery
-- **🔧 Tool Integration**: Complete tool call lifecycle management
+- **🔧 Tool Integration**: Complete tool call lifecycle management with HITL support
 - **📊 Event Translation**: ADK ↔ AGUI event conversion with streaming support
 - **🔒 Type Safety**: Full type annotations with Pydantic models
 - **🏗️ Extensible Architecture**: Abstract base classes for custom implementations
@@ -155,6 +155,135 @@ sequenceDiagram
 
 ## 💡 Core Concepts
 
+### 🤝 Human-in-the-Loop (HITL) Workflows
+
+The middleware provides sophisticated HITL support through its `pending_tool_call` system, enabling agents to pause execution and wait for human intervention when needed.
+
+#### HITL Flow Overview
+
+```mermaid
+sequenceDiagram
+    participant A as Agent
+    participant M as Middleware
+    participant S as Session Store
+    participant H as Human/UI
+    
+    Note over A,H: Agent encounters tool requiring human input
+    A->>M: Tool Call (requires human input)
+    M->>S: Add to pending_tool_calls
+    M->>A: Pause execution
+    
+    Note over A,H: Human intervention phase
+    S-->>H: Query pending_tool_calls
+    H->>H: Review & provide input
+    H->>M: Submit tool result
+    M->>S: Remove from pending_tool_calls
+    
+    Note over A,H: Resume execution
+    M->>A: Resume with tool result
+    A->>M: Continue processing
+```
+
+#### Key HITL Components
+
+| Component | Purpose | HITL Role |
+|-----------|---------|-----------|
+| **`pending_tool_calls`** | Session state array storing tool call IDs awaiting human input | Core HITL state management |
+| **`add_pending_tool_call()`** | Adds tool call to pending state, pausing agent execution | HITL initiation |
+| **`check_and_remove_pending_tool_call()`** | Removes completed tool call, resumes execution | HITL completion |
+| **`get_pending_tool_calls()`** | Queries current pending calls for UI display | HITL monitoring |
+| **`is_tool_result_submission`** | Detects incoming tool results from humans | HITL detection |
+
+#### HITL Implementation Example
+
+```python
+# Example: Tool requiring human approval
+class ApprovalRequiredTool:
+    async def execute(self, request_data):
+        # Tool automatically triggers HITL workflow
+        # Middleware will:
+        # 1. Add tool_call_id to pending_tool_calls
+        # 2. Pause agent execution
+        # 3. Wait for human to provide approval via API
+        return {"requires_human_approval": True, "request": request_data}
+
+# External system monitors pending calls
+async def monitor_pending_approvals(session_handler):
+    pending = await session_handler.get_pending_tool_calls()
+    if pending:
+        print(f"Pending human approvals: {pending}")
+        # Display to human via UI
+        # Human provides approval/rejection
+        # System submits tool result to resume agent
+
+# Agent execution resumes seamlessly after human input
+async def process_with_human_input(agui_handler):
+    async for event in agui_handler.run():
+        # Events include both automated agent actions 
+        # and human-provided inputs processed seamlessly
+        yield event
+```
+
+#### HITL API Integration
+
+```python
+from fastapi import FastAPI, HTTPException
+from ag_ui.core import RunAgentInput, ToolMessage
+
+app = FastAPI()
+
+# Endpoint to check pending tool calls requiring human attention
+@app.get("/pending-actions/{session_id}")
+async def get_pending_actions(session_id: str):
+    """Get all pending tool calls requiring human intervention."""
+    session_param = SessionParameter(
+        app_name="my-app",
+        user_id="current-user", 
+        session_id=session_id
+    )
+    session_handler = SessionHandler(session_manager, session_param)
+    
+    pending_calls = await session_handler.get_pending_tool_calls()
+    if not pending_calls:
+        return {"pending_actions": [], "status": "no_pending_actions"}
+    
+    return {
+        "pending_actions": pending_calls,
+        "status": "awaiting_human_input",
+        "message": f"Found {len(pending_calls)} actions requiring human attention"
+    }
+
+# Endpoint to submit human-provided tool results
+@app.post("/submit-tool-result/{session_id}")
+async def submit_tool_result(session_id: str, tool_result: ToolResultRequest):
+    """Submit human-provided tool result to resume agent execution."""
+    
+    # Create AGUI input with tool result
+    agui_input = RunAgentInput(
+        thread_id=session_id,
+        run_id=str(uuid.uuid4()),
+        messages=[
+            ToolMessage(
+                role="tool",
+                tool_call_id=tool_result.tool_call_id,
+                content=json.dumps(tool_result.result)
+            )
+        ]
+    )
+    
+    # Resume agent execution with human input
+    return EventSourceResponse(
+        await sse_service.event_generator(
+            await sse_service.get_runner(agui_input, request)
+        )
+    )
+
+class ToolResultRequest(BaseModel):
+    tool_call_id: str
+    result: dict
+    human_notes: str = ""
+```
+
 ### Session-Based State Management
 
 **🔑 Key Concept**: The middleware creates **one handler instance per session** to maintain conversation state throughout the interaction.
@@ -185,6 +314,7 @@ The middleware translates between ADK and AGUI event formats:
 | Function Response | ToolCallResult | Tool execution results |
 | State Delta | StateDelta | Session state changes |
 | Custom Metadata | CustomEvent | Custom event data |
+| Pending Tool Call | Session State | HITL workflow coordination |
 
 ### Production Configuration
 
@@ -210,6 +340,192 @@ sse_service = SSEService(agent, runner_config, context_config, handler_context)
 ```
 
 ## 📚 Advanced Examples & Configuration
+
+<details>
+<summary><strong>🤝 Complete HITL (Human-in-the-Loop) Implementation (Click to expand)</strong></summary>
+
+Here's a comprehensive example demonstrating HITL workflows with approval-required tools and monitoring:
+
+```python
+import asyncio
+import json
+import uuid
+from typing import Any, AsyncGenerator
+
+from fastapi import FastAPI, Request, BackgroundTasks
+from ag_ui.core import RunAgentInput, ToolMessage, AssistantMessage, ToolCall
+from google.adk.agents import BaseAgent
+from adk_agui_middleware import SSEService, register_agui_endpoint
+from adk_agui_middleware.data_model.context import RunnerConfig, ConfigContext
+from adk_agui_middleware.handler.session import SessionHandler
+from adk_agui_middleware.data_model.session import SessionParameter
+
+app = FastAPI(title="HITL Agent API", version="1.0.0")
+
+class HITLApprovalAgent(BaseAgent):
+    """Agent that requires human approval for sensitive operations."""
+    
+    def __init__(self):
+        super().__init__()
+        self.instructions = """
+        You are an AI assistant that requires human approval for:
+        - Financial transactions over $1000
+        - Data deletion operations
+        - External API calls to sensitive services
+        - Administrative actions
+        
+        When you need to perform these actions, use the appropriate tool
+        and the system will pause execution until human approval is received.
+        """
+    
+    async def approve_financial_transaction(self, amount: float, recipient: str) -> dict:
+        """Tool requiring human approval for financial transactions."""
+        if amount > 1000:
+            # This will trigger HITL workflow - execution pauses here
+            return {
+                "requires_approval": True,
+                "transaction": {"amount": amount, "recipient": recipient},
+                "approval_reason": "Transaction exceeds $1000 limit"
+            }
+        return {"approved": True, "transaction_id": str(uuid.uuid4())}
+
+# HITL Monitoring System
+class HITLMonitor:
+    """Monitors and manages HITL workflows across all sessions."""
+    
+    def __init__(self, session_manager):
+        self.session_manager = session_manager
+        self.pending_actions = {}  # session_id -> pending_data
+    
+    async def check_pending_actions(self, session_id: str) -> dict:
+        """Check if a session has pending actions requiring human attention."""
+        session_param = SessionParameter(
+            app_name="hitl-demo",
+            user_id="demo-user",
+            session_id=session_id
+        )
+        session_handler = SessionHandler(self.session_manager, session_param)
+        
+        pending_calls = await session_handler.get_pending_tool_calls()
+        if pending_calls:
+            # Get additional context about pending actions
+            session_state = await session_handler.get_session_state()
+            return {
+                "has_pending": True,
+                "pending_tool_calls": pending_calls,
+                "session_state": session_state,
+                "requires_human_attention": True
+            }
+        
+        return {"has_pending": False, "status": "agent_active"}
+    
+    async def approve_action(self, session_id: str, tool_call_id: str, 
+                           approval_decision: dict) -> bool:
+        """Process human approval decision and resume agent execution."""
+        try:
+            # Create tool result message with human decision
+            tool_result = ToolMessage(
+                role="tool",
+                tool_call_id=tool_call_id,
+                content=json.dumps({
+                    "approved": approval_decision.get("approved", False),
+                    "human_notes": approval_decision.get("notes", ""),
+                    "approval_timestamp": approval_decision.get("timestamp"),
+                    "approver_id": approval_decision.get("approver_id")
+                })
+            )
+            
+            # This will resume the agent execution
+            agui_input = RunAgentInput(
+                thread_id=session_id,
+                run_id=str(uuid.uuid4()),
+                messages=[tool_result]
+            )
+            
+            return True
+        except Exception as e:
+            print(f"Error processing approval: {e}")
+            return False
+
+# Initialize HITL system
+agent = HITLApprovalAgent()
+context_config = ConfigContext(
+    app_name="hitl-demo",
+    user_id="demo-user"
+)
+runner_config = RunnerConfig(use_in_memory_services=True)
+sse_service = SSEService(agent, runner_config, context_config)
+hitl_monitor = HITLMonitor(sse_service.session_manager)
+
+# HITL API Endpoints
+@app.get("/sessions/{session_id}/pending")
+async def get_pending_actions(session_id: str):
+    """Get pending actions requiring human approval."""
+    return await hitl_monitor.check_pending_actions(session_id)
+
+@app.post("/sessions/{session_id}/approve/{tool_call_id}")
+async def approve_pending_action(
+    session_id: str, 
+    tool_call_id: str, 
+    approval: dict,
+    background_tasks: BackgroundTasks
+):
+    """Approve or reject a pending action."""
+    success = await hitl_monitor.approve_action(session_id, tool_call_id, approval)
+    
+    if success:
+        # Optionally trigger background processing
+        background_tasks.add_task(
+            notify_stakeholders, session_id, tool_call_id, approval
+        )
+        return {"status": "approved", "resuming_execution": True}
+    
+    return {"status": "error", "message": "Failed to process approval"}
+
+async def notify_stakeholders(session_id: str, tool_call_id: str, approval: dict):
+    """Background task to notify relevant stakeholders of approval decisions."""
+    # Implementation for audit logging, notifications, etc.
+    print(f"Action {tool_call_id} in session {session_id}: {approval}")
+
+# Register the main AGUI endpoint
+register_agui_endpoint(app, sse_service, path="/agui")
+
+# Example usage in a frontend application
+"""
+Frontend HITL Integration:
+
+1. Start conversation normally:
+   POST /agui with user message
+
+2. Monitor for pending actions:
+   GET /sessions/{session_id}/pending
+   
+3. Display approval UI when pending actions detected
+
+4. Submit human decision:
+   POST /sessions/{session_id}/approve/{tool_call_id}
+   {
+     "approved": true,
+     "notes": "Transaction approved by manager",
+     "approver_id": "manager_123"
+   }
+
+5. Agent automatically resumes execution with human input
+"""
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
+**HITL Benefits:**
+- **🛡️ Safety**: Human oversight for critical operations
+- **🎯 Accuracy**: Human validation improves decision quality  
+- **📋 Compliance**: Audit trails for regulated environments
+- **🔄 Seamless**: Agent execution resumes automatically after approval
+- **⚡ Asynchronous**: Non-blocking workflow allows concurrent sessions
+
+</details>
 
 <details>
 <summary><strong>🧠 AI-Powered Event Summarization (Click to expand)</strong></summary>
