@@ -40,7 +40,7 @@ class BaseADKEventHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def process(self, event: Event) -> AsyncGenerator[Event]:
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
         """Process an ADK event and yield resulting events.
 
         Args:
@@ -75,7 +75,7 @@ class BaseADKEventTimeoutHandler(metaclass=ABCMeta):
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
-    async def process_timeout_fallback(self) -> AsyncGenerator[Event]:
+    async def process_timeout_fallback(self) -> AsyncGenerator[Event | None]:
         """Process timeout fallback and generate appropriate events.
 
         Called when event processing exceeds the configured timeout duration.
@@ -98,7 +98,7 @@ class BaseAGUIEventHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent]:
+    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
         """Process an AGUI event and yield resulting events.
 
         Args:
