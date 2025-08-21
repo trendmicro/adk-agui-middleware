@@ -188,12 +188,13 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["src"]
 branch = true
-parallel = true
+parallel = false
 omit = [
     "tests/*",
     "*/venv/*",
     "*/__pycache__/*",
     "*/site-packages/*",
+    "*/test_*",
 ]
 
 [tool.coverage.paths]
@@ -205,6 +206,7 @@ source = [
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
+fail_under = 0
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
