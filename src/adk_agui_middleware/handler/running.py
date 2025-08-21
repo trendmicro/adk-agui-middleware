@@ -56,6 +56,14 @@ class RunningHandler:
         self._init_handler(handler_context)
 
     def _init_handler(self, handler_context: HandlerContext) -> None:
+        """Initialize optional event handlers from the provided context.
+
+        Creates instances of event handlers if they are configured in the handler context.
+        Each handler type serves a specific purpose in the event processing pipeline.
+
+        Args:
+            handler_context: Context containing handler class types to instantiate
+        """
         if handler_context.adk_event_handler:
             self.adk_event_handler = handler_context.adk_event_handler()
         if handler_context.adk_event_timeout_handler:
@@ -85,6 +93,7 @@ class RunningHandler:
             event_stream: Async generator of events to process
             log_func: Function to call for logging each event
             event_handler: Optional handler to process events before yielding
+            enable_timeout: Whether to enable timeout handling for ADK events
 
         Yields:
             Events from the stream, potentially modified by the event handler
@@ -118,6 +127,7 @@ class RunningHandler:
 
         Args:
             adk_event: ADK event to check for long-running tool indicators
+            agui_event: AGUI event to check for tool call end type
         """
         if adk_event.is_final_response() and agui_event.type == EventType.TOOL_CALL_END:
             self.is_long_running_tool = True

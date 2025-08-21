@@ -21,7 +21,7 @@ class UserMessageHandler:
         self,
         agui_content: RunAgentInput,
         request: Request,
-        initial_state: dict[str, str] | None = None,
+        initial_state: dict[str, Any] | None = None,
     ):
         """Initialize the user message handler.
 

@@ -105,7 +105,7 @@ class SessionHandler:
         """Update the session state with new values.
 
         Args:
-            initial_state: Dictionary of state updates to apply (despite the name, used for updates)
+            initial_state: Dictionary of state updates to apply
 
         Returns:
             True if update was successful, False otherwise

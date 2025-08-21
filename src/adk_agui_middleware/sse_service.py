@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
+from typing import Any
 
 from ag_ui.core import (
     BaseEvent,
@@ -71,7 +72,7 @@ class SSEService(BaseSSEService):
             request: HTTP request for context extraction
 
         Returns:
-            Configuration value as string, or None if not available
+            Configuration value as string
         """
         value: Callable[[RunAgentInput, Request], Awaitable[str]] | str = getattr(
             self.config_context, config_attr
@@ -124,7 +125,7 @@ class SSEService(BaseSSEService):
 
     async def extract_initial_state(
         self, agui_content: RunAgentInput, request: Request
-    ) -> dict[str, str] | None:
+    ) -> dict[str, Any] | None:
         """Extract initial state dictionary from the request context.
 
         Args:
@@ -255,7 +256,11 @@ class SSEService(BaseSSEService):
         return _generate()
 
     async def close(self) -> None:
-        """Close all cached Runner instances."""
+        """Close all cached Runner instances and clean up resources.
+
+        Gracefully shuts down all cached Runner instances and clears the runner cache.
+        This method is thread-safe and uses a lock to prevent race conditions during shutdown.
+        """
         async with self._runner_lock:
             for runner in self.runner_box.values():
                 await runner.close()  # type: ignore[no-untyped-call]
