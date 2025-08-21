@@ -58,11 +58,11 @@ class HandlerContext(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    adk_event_handler: BaseADKEventHandler | None = None
-    adk_event_timeout_handler: BaseADKEventTimeoutHandler | None = None
-    agui_event_handler: BaseAGUIEventHandler | None = None
-    agui_state_snapshot_handler: BaseAGUIStateSnapshotHandler | None = None
-    translate_handler: BaseTranslateHandler | None = None
+    adk_event_handler: type[BaseADKEventHandler] | None = None
+    adk_event_timeout_handler: type[BaseADKEventTimeoutHandler] | None = None
+    agui_event_handler: type[BaseAGUIEventHandler] | None = None
+    agui_state_snapshot_handler: type[BaseAGUIStateSnapshotHandler] | None = None
+    translate_handler: type[BaseTranslateHandler] | None = None
 
 
 class ConfigContext(BaseModel):

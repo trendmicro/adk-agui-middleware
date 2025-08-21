@@ -11,7 +11,10 @@ from google.adk.events import Event
 
 from ..base_abc.handler import (
     BaseADKEventHandler,
+    BaseADKEventTimeoutHandler,
     BaseAGUIEventHandler,
+    BaseAGUIStateSnapshotHandler,
+    BaseTranslateHandler,
 )
 from ..data_model.context import HandlerContext
 from ..loggers.record_log import (
@@ -42,9 +45,29 @@ class RunningHandler:
         """
         self.runner: Runner = runner
         self.run_config: RunConfig = run_config
-        self.handler_context = handler_context
         self.event_translator = EventTranslator()
         self.is_long_running_tool = False
+
+        self.adk_event_handler: BaseADKEventHandler | None = None
+        self.adk_event_timeout_handler: BaseADKEventTimeoutHandler | None = None
+        self.agui_event_handler: BaseAGUIEventHandler | None = None
+        self.agui_state_snapshot_handler: BaseAGUIStateSnapshotHandler | None = None
+        self.translate_handler: BaseTranslateHandler | None = None
+        self._init_handler(handler_context)
+
+    def _init_handler(self, handler_context: HandlerContext) -> None:
+        if handler_context.adk_event_handler:
+            self.adk_event_handler = handler_context.adk_event_handler()
+        if handler_context.adk_event_timeout_handler:
+            self.adk_event_timeout_handler = handler_context.adk_event_timeout_handler()
+        if handler_context.agui_event_handler:
+            self.agui_event_handler = handler_context.agui_event_handler()
+        if handler_context.agui_state_snapshot_handler:
+            self.agui_state_snapshot_handler = (
+                handler_context.agui_state_snapshot_handler()
+            )
+        if handler_context.translate_handler:
+            self.translate_handler = handler_context.translate_handler()
 
     async def _process_events_with_handler(
         self,
@@ -67,8 +90,8 @@ class RunningHandler:
             Events from the stream, potentially modified by the event handler
         """
         timeout = (
-            await self.handler_context.adk_event_timeout_handler.get_timeout()
-            if self.handler_context.adk_event_timeout_handler and enable_timeout
+            await self.adk_event_timeout_handler.get_timeout()
+            if self.adk_event_timeout_handler and enable_timeout
             else None
         )
         try:
@@ -82,9 +105,11 @@ class RunningHandler:
                         yield event
         except TimeoutError:
             record_warning_log("Timeout occurred while processing events.")
-            if self.handler_context.adk_event_timeout_handler is None:
+            if self.adk_event_timeout_handler is None:
                 return
-            async for new_event in await self.handler_context.adk_event_timeout_handler.process_timeout_fallback():
+            async for (
+                new_event
+            ) in await self.adk_event_timeout_handler.process_timeout_fallback():
                 yield new_event
 
     def _check_is_long_tool(self, adk_event: Event, agui_event: BaseEvent) -> None:
@@ -111,10 +136,10 @@ class RunningHandler:
         Yields:
             AGUI BaseEvent objects translated from the ADK event
         """
-        if self.handler_context.translate_handler:
-            async for (
-                translate_event
-            ) in await self.handler_context.translate_handler.translate(adk_event):
+        if self.translate_handler:
+            async for translate_event in await self.translate_handler.translate(
+                adk_event
+            ):
                 if translate_event.agui_event is not None:
                     yield translate_event.agui_event
                     self._check_is_long_tool(adk_event, translate_event.agui_event)
@@ -155,12 +180,8 @@ class RunningHandler:
         Returns:
             StateSnapshotEvent containing the processed state
         """
-        if self.handler_context.agui_state_snapshot_handler is not None:
-            final_state = (
-                await self.handler_context.agui_state_snapshot_handler.process(
-                    final_state
-                )
-            )
+        if self.agui_state_snapshot_handler is not None:
+            final_state = await self.agui_state_snapshot_handler.process(final_state)
         return self.event_translator.create_state_snapshot_event(final_state)
 
     def run_async_with_adk(self, *args: Any, **kwargs: Any) -> AsyncGenerator[Event]:
@@ -179,7 +200,7 @@ class RunningHandler:
         return self._process_events_with_handler(
             self.runner.run_async(*args, run_config=self.run_config, **kwargs),
             record_event_raw_log,
-            self.handler_context.adk_event_handler,
+            self.adk_event_handler,
             enable_timeout=True,
         )
 
@@ -198,5 +219,5 @@ class RunningHandler:
         return self._process_events_with_handler(
             self._run_async_translator_adk_to_agui(adk_event),
             record_agui_raw_log,
-            self.handler_context.agui_event_handler,
+            self.agui_event_handler,
         )

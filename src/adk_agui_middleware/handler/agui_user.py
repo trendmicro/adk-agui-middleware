@@ -39,7 +39,7 @@ class AGUIUserHandler:
             user_message_handler: Handler for processing user messages
             session_handler: Handler for session state management
         """
-        self.running_handler: RunningHandler = running_handler
+        self.running_handler = running_handler
         self.user_message_handler = user_message_handler
         self.session_handler = session_handler
 
