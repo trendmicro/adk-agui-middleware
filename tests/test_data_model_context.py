@@ -1,6 +1,6 @@
 """Unit tests for adk_agui_middleware.data_model.context module."""
 
-import unittest
+import pytest
 from unittest.mock import Mock
 
 from ag_ui.core import RunAgentInput
@@ -15,29 +15,47 @@ from adk_agui_middleware.data_model.context import (
 )
 
 
-class TestDefaultSessionId(unittest.TestCase):
+class TestDefaultSessionId:
     """Test cases for default_session_id function."""
 
+    @pytest.mark.asyncio
     async def test_default_session_id(self):
         """Test that default_session_id returns the thread_id from AGUI content."""
-        agui_content = RunAgentInput(thread_id="test_thread_123")
+        agui_content = RunAgentInput(
+            thread_id="test_thread_123",
+            run_id="test_run",
+            state={},
+            messages=[],
+            tools=[],
+            context=[],
+            forwarded_props={}
+        )
         request = Mock(spec=Request)
 
         result = await default_session_id(agui_content, request)
 
-        self.assertEqual(result, "test_thread_123")
+        assert result == "test_thread_123"
 
+    @pytest.mark.asyncio
     async def test_default_session_id_different_thread(self):
         """Test default_session_id with different thread ID."""
-        agui_content = RunAgentInput(thread_id="another_thread_456")
+        agui_content = RunAgentInput(
+            thread_id="another_thread_456",
+            run_id="test_run",
+            state={},
+            messages=[],
+            tools=[],
+            context=[],
+            forwarded_props={}
+        )
         request = Mock(spec=Request)
 
         result = await default_session_id(agui_content, request)
 
-        self.assertEqual(result, "another_thread_456")
+        assert result == "another_thread_456"
 
 
-class TestConfigContext(unittest.TestCase):
+class TestConfigContext:
     """Test cases for ConfigContext class."""
 
     def test_context_config_creation_minimal(self):
@@ -48,10 +66,10 @@ class TestConfigContext(unittest.TestCase):
 
         config = ConfigContext(user_id=mock_user_id)
 
-        self.assertEqual(config.app_name, "default")
-        self.assertEqual(config.user_id, mock_user_id)
-        self.assertEqual(config.session_id, default_session_id)
-        self.assertIsNone(config.extract_initial_state)
+        assert config.app_name == "default"
+        assert config.user_id == mock_user_id
+        assert config.session_id == default_session_id
+        assert config.extract_initial_state is None
 
     def test_context_config_creation_all_fields(self):
         """Test ConfigContext creation with all fields specified."""
@@ -75,10 +93,10 @@ class TestConfigContext(unittest.TestCase):
             extract_initial_state=mock_initial_state,
         )
 
-        self.assertEqual(config.app_name, mock_app_name)
-        self.assertEqual(config.user_id, mock_user_id)
-        self.assertEqual(config.session_id, mock_session_id)
-        self.assertEqual(config.extract_initial_state, mock_initial_state)
+        assert config.app_name == mock_app_name
+        assert config.user_id == mock_user_id
+        assert config.session_id == mock_session_id
+        assert config.extract_initial_state == mock_initial_state
 
     def test_context_config_static_values(self):
         """Test ConfigContext with static string values."""
@@ -88,25 +106,25 @@ class TestConfigContext(unittest.TestCase):
             session_id="static_session",
         )
 
-        self.assertEqual(config.app_name, "static_app")
-        self.assertEqual(config.user_id, "static_user")
-        self.assertEqual(config.session_id, "static_session")
+        assert config.app_name == "static_app"
+        assert config.user_id == "static_user"
+        assert config.session_id == "static_session"
 
 
-class TestRunnerConfig(unittest.TestCase):
+class TestRunnerConfig:
     """Test cases for RunnerConfig class."""
 
     def test_runner_config_default_values(self):
         """Test RunnerConfig creation with default values."""
         config = RunnerConfig()
 
-        self.assertTrue(config.use_in_memory_services)
-        self.assertIsInstance(config.run_config, RunConfig)
-        self.assertEqual(config.run_config.streaming_mode, StreamingMode.SSE)
-        self.assertIsNotNone(config.session_service)
-        self.assertIsNone(config.artifact_service)
-        self.assertIsNone(config.memory_service)
-        self.assertIsNone(config.credential_service)
+        assert config.use_in_memory_services is True
+        assert isinstance(config.run_config, RunConfig)
+        assert config.run_config.streaming_mode == StreamingMode.SSE
+        assert config.session_service is not None
+        assert config.artifact_service is None
+        assert config.memory_service is None
+        assert config.credential_service is None
 
     def test_runner_config_custom_values(self):
         """Test RunnerConfig creation with custom values."""
@@ -121,9 +139,9 @@ class TestRunnerConfig(unittest.TestCase):
             session_service=mock_session_service,
         )
 
-        self.assertFalse(config.use_in_memory_services)
-        self.assertEqual(config.run_config, custom_run_config)
-        self.assertEqual(config.session_service, mock_session_service)
+        assert config.use_in_memory_services is False
+        assert config.run_config == custom_run_config
+        assert config.session_service == mock_session_service
 
     def test_get_artifact_service_in_memory_enabled(self):
         """Test get_artifact_service with in-memory services enabled."""
@@ -131,17 +149,17 @@ class TestRunnerConfig(unittest.TestCase):
 
         service = config.get_artifact_service()
 
-        self.assertIsNotNone(service)
-        self.assertEqual(config.artifact_service, service)
+        assert service is not None
+        assert config.artifact_service == service
 
     def test_get_artifact_service_in_memory_disabled(self):
         """Test get_artifact_service with in-memory services disabled."""
         config = RunnerConfig(use_in_memory_services=False)
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as exc_info:
             config.get_artifact_service()
 
-        self.assertIn("Artifact Service is not set", str(cm.exception))
+        assert "Artifact Service is not set" in str(exc_info.value)
 
     def test_get_memory_service_in_memory_enabled(self):
         """Test get_memory_service with in-memory services enabled."""
@@ -149,17 +167,17 @@ class TestRunnerConfig(unittest.TestCase):
 
         service = config.get_memory_service()
 
-        self.assertIsNotNone(service)
-        self.assertEqual(config.memory_service, service)
+        assert service is not None
+        assert config.memory_service == service
 
     def test_get_memory_service_in_memory_disabled(self):
         """Test get_memory_service with in-memory services disabled."""
         config = RunnerConfig(use_in_memory_services=False)
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as exc_info:
             config.get_memory_service()
 
-        self.assertIn("Memory Service is not set", str(cm.exception))
+        assert "Memory Service is not set" in str(exc_info.value)
 
     def test_get_credential_service_in_memory_enabled(self):
         """Test get_credential_service with in-memory services enabled."""
@@ -167,17 +185,17 @@ class TestRunnerConfig(unittest.TestCase):
 
         service = config.get_credential_service()
 
-        self.assertIsNotNone(service)
-        self.assertEqual(config.credential_service, service)
+        assert service is not None
+        assert config.credential_service == service
 
     def test_get_credential_service_in_memory_disabled(self):
         """Test get_credential_service with in-memory services disabled."""
         config = RunnerConfig(use_in_memory_services=False)
 
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as exc_info:
             config.get_credential_service()
 
-        self.assertIn("Credential Service is not set", str(cm.exception))
+        assert "Credential Service is not set" in str(exc_info.value)
 
     def test_service_caching(self):
         """Test that services are cached after first creation."""
@@ -190,8 +208,8 @@ class TestRunnerConfig(unittest.TestCase):
         memory2 = config.get_memory_service()
 
         # Should be the same instances
-        self.assertIs(artifact1, artifact2)
-        self.assertIs(memory1, memory2)
+        assert artifact1 is artifact2
+        assert memory1 is memory2
 
     def test_existing_service_returned(self):
         """Test that existing services are returned without replacement."""
@@ -204,8 +222,4 @@ class TestRunnerConfig(unittest.TestCase):
 
         service = config.get_artifact_service()
 
-        self.assertIs(service, mock_artifact_service)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        assert service is mock_artifact_service
