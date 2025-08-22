@@ -17,12 +17,12 @@ from ..base_abc.handler import (
     BaseTranslateHandler,
 )
 from ..data_model.context import HandlerContext
+from ..event.event_translator import EventTranslator
 from ..loggers.record_log import (
     record_agui_raw_log,
     record_event_raw_log,
     record_warning_log,
 )
-from ..tools.event_translator import EventTranslator
 
 
 class RunningHandler:

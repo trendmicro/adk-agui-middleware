@@ -13,6 +13,7 @@ A professional Python 3.13+ middleware library that bridges Google's Agent Devel
 - **🔒 Type Safety**: Full type annotations with Pydantic models
 - **🏗️ Extensible Architecture**: Abstract base classes for custom implementations
 
+
 ## 🚀 Quick Start
 
 ### Installation
@@ -60,6 +61,8 @@ if __name__ == "__main__":
 
 ## 🏗️ Architecture Overview
 
+The middleware is organized into distinct layers with clear separation of concerns. The Event Translator has been moved to the `event` module to better reflect its role in event processing and error handling.
+
 ### System Architecture
 
 ```mermaid
@@ -82,8 +85,13 @@ graph TB
         UserMsgHandler[User Message Handler]
     end
     
-    subgraph "Translation Layer"
+    subgraph "Event Layer"
         EventTranslator[Event Translator]
+        ErrorEvent[Error Events]
+        Utils[Utils/Translate]
+    end
+    
+    subgraph "Translation Layer"
         ADKEvents[ADK Events]
         AGUIEvents[AGUI Events]
     end
@@ -108,6 +116,8 @@ graph TB
     RunningHandler --> Runner
     EventTranslator --> ADKEvents
     EventTranslator --> AGUIEvents
+    EventTranslator --> ErrorEvent
+    Utils --> AGUIEvents
     
     Runner --> Agent
     Runner --> Services
@@ -116,6 +126,7 @@ graph TB
     style Endpoint fill:#f3e5f5
     style SSEService fill:#e8f5e8
     style EventTranslator fill:#fff3e0
+    style ErrorEvent fill:#ffebee
     style Runner fill:#fce4ec
 ```
 
@@ -154,6 +165,42 @@ sequenceDiagram
 ```
 
 ## 💡 Core Concepts
+
+### 🔧 Utility Components
+
+The middleware includes a dedicated `utils` module providing specialized translation utilities for common event handling patterns:
+
+#### Translation Utilities (`utils/translate/`)
+
+The translation utilities help with generating specific event types and managing event flows:
+
+```python
+from adk_agui_middleware.utils.translate.common import translate_retune_event
+from adk_agui_middleware.utils.translate.thinking import ThinkingEventUtil
+
+# Simple retune event creation
+retune_event = translate_retune_event()
+
+# Advanced thinking event generation
+thinking_util = ThinkingEventUtil()
+
+# Generate thinking events for streaming text
+async def generate_thinking_stream(text_stream):
+    thinking_util = ThinkingEventUtil()
+    async for event in thinking_util.think_event_generator(text_stream):
+        yield event
+
+# Individual thinking events
+start_event = thinking_util.thinking_start_event()
+content_event = thinking_util.thinking_content_event("AI is thinking...")
+end_event = thinking_util.thinking_end_event()
+```
+
+**Key Utility Features:**
+- **🔄 Retune Events**: Simple creation of agent retune events
+- **🧠 Thinking Events**: Complete thinking message lifecycle management
+- **📊 Event Generators**: Async generators for streaming thinking content
+- **⚡ Type Safety**: Fully typed utilities with comprehensive docstrings
 
 ### 🤝 Human-in-the-Loop (HITL) Workflows
 
@@ -204,7 +251,7 @@ handler_context = HandlerContext(
 
 ### Event Translation Pipeline
 
-The middleware translates between ADK and AGUI event formats:
+The middleware translates between ADK and AGUI event formats using the `EventTranslator` class (located in `adk_agui_middleware.event.event_translator`):
 
 | ADK Event | AGUI Event | Description |
 |-----------|------------|-------------|
@@ -230,63 +277,143 @@ runner_config = RunnerConfig(
 
 # Custom event handlers
 class CustomEventHandler(BaseAGUIEventHandler):
-    async def process(self, event: BaseEvent):
+    @staticmethod
+    async def _handle_event(event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
         # Add custom processing logic
         yield event
+    
+    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
+        return self._handle_event(event)
 
 handler_context = HandlerContext(agui_event_handler=CustomEventHandler)
 sse_service = SSEService(agent, runner_config, context_config, handler_context)
 ```
 
+## ⚠️ Critical Implementation Notes
+
+### 🔴 Base Handler Pattern - IMPORTANT
+
+When implementing custom handlers that extend the Base handler classes, you **MUST** follow the specific async pattern used by the middleware:
+
+```python
+# ❌ WRONG - This will cause runtime errors
+class FilterADKEvent(BaseADKEventHandler):
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
+        yield event  # This won't work with the middleware's calling pattern
+
+class MyTranslateHandler(BaseTranslateHandler):
+    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
+        yield TranslateEvent(is_retune=True)  # This will also fail
+
+# ✅ CORRECT - Return the async generator, don't yield directly
+class FilterADKEvent(BaseADKEventHandler):
+    @staticmethod
+    async def filter(event: Event) -> AsyncGenerator[Event | None]:
+        has_text = (
+            event.content and
+            event.content.parts and
+            event.content.parts[0].text
+        )
+        if has_text:
+            yield event
+        elif event.actions.state_delta:
+            event.actions.state_delta = {
+                k: v for k, v in event.actions.state_delta.items()
+                if k.startswith("companion")
+            }
+            yield event
+        else:
+            yield None
+
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
+        return self.filter(event)  # Return the generator, don't yield
+
+class MyTranslateHandler(BaseTranslateHandler):
+    @staticmethod
+    async def _do_translate(adk_event: Event) -> AsyncGenerator[TranslateEvent]:
+        yield TranslateEvent(is_retune=True)  # Yield in internal method
+    
+    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
+        return self._do_translate(adk_event)  # Return the generator
+```
+
+**Why this matters:**
+- The middleware uses `async for i in await handler.process()` internally
+- The extra `await` requires that `process()` returns an async generator, not yields directly
+- Violating this pattern will cause `TypeError: 'async_generator' object is not an async iterator`
+
+**The Pattern:**
+1. Create a separate static/async method that yields events (`filter()`, `_translate_internal()`)
+2. Have the interface method return that method's generator (`return self.filter(event)`)
+3. Never yield directly in interface methods (`process()`, `translate()`, `process_timeout_fallback()`)
+
 ## 📚 Advanced Examples & Configuration
+
+<details>
+<summary><strong>🎯 Event Filtering & Processing (Click to expand)</strong></summary>
+
+This example shows how to implement sophisticated event filtering to control which ADK events get processed and translated:
+
+```python
+from adk_agui_middleware.base_abc.handler import BaseADKEventHandler
+from adk_agui_middleware.data_model.context import HandlerContext
+from google.adk.events import Event
+
+class SmartEventFilter(BaseADKEventHandler):
+    """Intelligent event filter for production environments."""
+    
+    @staticmethod
+    async def filter(event: Event) -> AsyncGenerator[Event | None]:
+        # Process text events
+        if event.content and event.content.parts and event.content.parts[0].text:
+            yield event
+            return
+            
+        # Skip function responses
+        if event.get_function_responses():
+            yield None
+            return
+            
+        # Filter state deltas (only companion data)
+        if event.actions and event.actions.state_delta:
+            companion_data = {
+                k: v for k, v in event.actions.state_delta.items()
+                if k.startswith("companion")
+            }
+            if companion_data:
+                event.actions.state_delta = companion_data
+                yield event
+            else:
+                yield None
+        else:
+            yield None
+
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
+        return self.filter(event)
+
+# Apply the filter
+context = HandlerContext(adk_event_handler=SmartEventFilter)
+sse_service = SSEService(agent, runner_config, config_context, context)
+```
+
+**Use Cases:**
+- **Performance**: Reduce processing overhead by filtering unnecessary events
+- **Security**: Remove sensitive data from state deltas  
+- **Customization**: Focus on specific event types for your application
+- **Analytics**: Filter events for targeted metrics collection
+
+</details>
 
 <details>
 <summary><strong>🤝 Complete HITL (Human-in-the-Loop) Implementation (Click to expand)</strong></summary>
 
-Here's a comprehensive example demonstrating HITL workflows with approval-required tools and monitoring:
-
 ```python
-import asyncio
-import json
-import uuid
-from typing import Any, AsyncGenerator
-
-from fastapi import FastAPI, Request, BackgroundTasks
-from ag_ui.core import RunAgentInput, ToolMessage, AssistantMessage, ToolCall
-from google.adk.agents import BaseAgent
+from fastapi import FastAPI, BackgroundTasks
 from adk_agui_middleware import SSEService, register_agui_endpoint
-from adk_agui_middleware.data_model.context import RunnerConfig, ConfigContext
 from adk_agui_middleware.handler.session import SessionHandler
 from adk_agui_middleware.data_model.session import SessionParameter
 
-app = FastAPI(title="HITL Agent API", version="1.0.0")
-
-class HITLApprovalAgent(BaseAgent):
-    """Agent that requires human approval for sensitive operations."""
-    
-    def __init__(self):
-        super().__init__()
-        self.instructions = """
-        You are an AI assistant that requires human approval for:
-        - Financial transactions over $1000
-        - Data deletion operations
-        - External API calls to sensitive services
-        - Administrative actions
-        
-        When you need to perform these actions, use the appropriate tool
-        and the system will pause execution until human approval is received.
-        """
-    
-    async def approve_financial_transaction(self, amount: float, recipient: str) -> dict:
-        """Tool requiring human approval for financial transactions."""
-        if amount > 1000:
-            # This will trigger HITL workflow - execution pauses here
-            return {
-                "requires_approval": True,
-                "transaction": {"amount": amount, "recipient": recipient},
-                "approval_reason": "Transaction exceeds $1000 limit"
-            }
-        return {"approved": True, "transaction_id": str(uuid.uuid4())}
+app = FastAPI(title="HITL Agent API")
 
 # HITL Monitoring System
 class HITLMonitor:
@@ -294,67 +421,22 @@ class HITLMonitor:
     
     def __init__(self, session_manager):
         self.session_manager = session_manager
-        self.pending_actions = {}  # session_id -> pending_data
     
     async def check_pending_actions(self, session_id: str) -> dict:
         """Check if a session has pending actions requiring human attention."""
         session_param = SessionParameter(
-            app_name="hitl-demo",
-            user_id="demo-user",
-            session_id=session_id
+            app_name="hitl-demo", user_id="demo-user", session_id=session_id
         )
         session_handler = SessionHandler(self.session_manager, session_param)
         
         pending_calls = await session_handler.get_pending_tool_calls()
         if pending_calls:
-            # Get additional context about pending actions
-            session_state = await session_handler.get_session_state()
             return {
                 "has_pending": True,
                 "pending_tool_calls": pending_calls,
-                "session_state": session_state,
                 "requires_human_attention": True
             }
-        
         return {"has_pending": False, "status": "agent_active"}
-    
-    async def approve_action(self, session_id: str, tool_call_id: str, 
-                           approval_decision: dict) -> bool:
-        """Process human approval decision and resume agent execution."""
-        try:
-            # Create tool result message with human decision
-            tool_result = ToolMessage(
-                role="tool",
-                tool_call_id=tool_call_id,
-                content=json.dumps({
-                    "approved": approval_decision.get("approved", False),
-                    "human_notes": approval_decision.get("notes", ""),
-                    "approval_timestamp": approval_decision.get("timestamp"),
-                    "approver_id": approval_decision.get("approver_id")
-                })
-            )
-            
-            # This will resume the agent execution
-            agui_input = RunAgentInput(
-                thread_id=session_id,
-                run_id=str(uuid.uuid4()),
-                messages=[tool_result]
-            )
-            
-            return True
-        except Exception as e:
-            print(f"Error processing approval: {e}")
-            return False
-
-# Initialize HITL system
-agent = HITLApprovalAgent()
-context_config = ConfigContext(
-    app_name="hitl-demo",
-    user_id="demo-user"
-)
-runner_config = RunnerConfig(use_in_memory_services=True)
-sse_service = SSEService(agent, runner_config, context_config)
-hitl_monitor = HITLMonitor(sse_service.session_manager)
 
 # HITL API Endpoints
 @app.get("/sessions/{session_id}/pending")
@@ -363,58 +445,10 @@ async def get_pending_actions(session_id: str):
     return await hitl_monitor.check_pending_actions(session_id)
 
 @app.post("/sessions/{session_id}/approve/{tool_call_id}")
-async def approve_pending_action(
-    session_id: str, 
-    tool_call_id: str, 
-    approval: dict,
-    background_tasks: BackgroundTasks
-):
+async def approve_pending_action(session_id: str, tool_call_id: str, approval: dict):
     """Approve or reject a pending action."""
-    success = await hitl_monitor.approve_action(session_id, tool_call_id, approval)
-    
-    if success:
-        # Optionally trigger background processing
-        background_tasks.add_task(
-            notify_stakeholders, session_id, tool_call_id, approval
-        )
-        return {"status": "approved", "resuming_execution": True}
-    
-    return {"status": "error", "message": "Failed to process approval"}
-
-async def notify_stakeholders(session_id: str, tool_call_id: str, approval: dict):
-    """Background task to notify relevant stakeholders of approval decisions."""
-    # Implementation for audit logging, notifications, etc.
-    print(f"Action {tool_call_id} in session {session_id}: {approval}")
-
-# Register the main AGUI endpoint
-register_agui_endpoint(app, sse_service, path="/agui")
-
-# Example usage in a frontend application
-"""
-Frontend HITL Integration:
-
-1. Start conversation normally:
-   POST /agui with user message
-
-2. Monitor for pending actions:
-   GET /sessions/{session_id}/pending
-   
-3. Display approval UI when pending actions detected
-
-4. Submit human decision:
-   POST /sessions/{session_id}/approve/{tool_call_id}
-   {
-     "approved": true,
-     "notes": "Transaction approved by manager",
-     "approver_id": "manager_123"
-   }
-
-5. Agent automatically resumes execution with human input
-"""
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Process human approval and resume agent execution
+    return {"status": "approved", "resuming_execution": True}
 ```
 
 **HITL Benefits:**
@@ -422,7 +456,6 @@ if __name__ == "__main__":
 - **🎯 Accuracy**: Human validation improves decision quality  
 - **📋 Compliance**: Audit trails for regulated environments
 - **🔄 Seamless**: Agent execution resumes automatically after approval
-- **⚡ Asynchronous**: Non-blocking workflow allows concurrent sessions
 
 </details>
 
@@ -449,7 +482,7 @@ class AIThinkingTranslateHandler(BaseTranslateHandler):
         self.event_partial: dict[str, str] = {}  # Partial event accumulation
         self.event_history: list[str] = []       # Complete event history
         
-    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
+    async def _translate_internal(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
         # Accumulate events and generate thinking summaries every 3 events
         text = self._extract_text_content(adk_event)
         if text:
@@ -461,6 +494,9 @@ class AIThinkingTranslateHandler(BaseTranslateHandler):
                 self.event_history.clear()
         
         yield TranslateEvent(is_retune=True)
+    
+    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
+        return self._translate_internal(adk_event)
     
     # ... (implementation details)
 
@@ -490,6 +526,74 @@ class ProductionAGUIEndpoint:
 
 The middleware provides three main configuration models that control different aspects of the system behavior:
 
+### Event Filtering and Processing
+
+Here's a practical example of filtering ADK events to control what gets processed and translated:
+
+```python
+from adk_agui_middleware.base_abc.handler import BaseADKEventHandler
+from google.adk.events import Event
+from typing import AsyncGenerator
+
+class FilterADKEvent(BaseADKEventHandler):
+    """Advanced event filter that selectively processes different types of ADK events.
+    
+    This filter demonstrates sophisticated event processing logic:
+    - Only processes events with text content
+    - Filters out function responses (tool results)
+    - Selectively processes state deltas (only companion-related changes)
+    - Skips all other event types
+    """
+
+    @staticmethod
+    async def filter(event: Event) -> AsyncGenerator[Event | None]:
+        # Check if event has meaningful text content
+        has_text = (
+            event.content and
+            event.content.parts and
+            event.content.parts[0].text
+        )
+        
+        if has_text:
+            # Process events with text content
+            yield event
+        elif event.get_function_responses():
+            # Skip function responses (tool execution results)
+            yield None
+        elif event.actions and event.actions.state_delta:
+            # Filter state deltas to only include companion-related changes
+            filtered_delta = {
+                k: v for k, v in event.actions.state_delta.items()
+                if k.startswith("companion")
+            }
+            
+            if filtered_delta:
+                # Create modified event with filtered state delta
+                event.actions.state_delta = filtered_delta
+                yield event
+            else:
+                # No companion-related changes, skip this event
+                yield None
+        else:
+            # Skip all other event types
+            yield None
+
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
+        return self.filter(event)
+
+# Usage in production
+handler_context = HandlerContext(
+    adk_event_handler=FilterADKEvent,  # Apply filtering before translation
+)
+```
+
+**Event Filtering Benefits:**
+- **🎯 Selective Processing**: Only process relevant events, reduce noise
+- **⚡ Performance**: Skip unnecessary event processing and translation
+- **🔧 Customization**: Tailor event flow to specific application needs
+- **🛡️ Security**: Filter out sensitive data before processing
+- **📊 Analytics**: Focus on specific event types for metrics
+
 ### HandlerContext: Event Processing Pipeline
 
 `HandlerContext` allows you to inject custom handlers at different stages of the event processing pipeline:
@@ -506,28 +610,40 @@ from adk_agui_middleware.base_abc.handler import (
 
 class MyADKEventHandler(BaseADKEventHandler):
     """Process ADK events before translation."""
-    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
+    @staticmethod
+    async def _process_event(event: Event) -> AsyncGenerator[Event | None]:
         # Add logging, filtering, or transformation
         print(f"Processing ADK event: {event.author}")
         yield event
+    
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
+        return self._process_event(event)
 
 class MyADKTimeoutHandler(BaseADKEventTimeoutHandler):
     """Handle ADK event processing timeouts."""
     async def get_timeout(self) -> int:
         return 30  # 30 seconds timeout
     
-    async def process_timeout_fallback(self) -> AsyncGenerator[Event | None]:
+    @staticmethod
+    async def _generate_fallback() -> AsyncGenerator[Event | None]:
         # Generate fallback events when timeout occurs
         yield Event(content="Timeout occurred, continuing with fallback...")
+    
+    async def process_timeout_fallback(self) -> AsyncGenerator[Event | None]:
+        return self._generate_fallback()
 
 class MyAGUIEventHandler(BaseAGUIEventHandler):
     """Process AGUI events before transmission."""
-    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
+    @staticmethod
+    async def _process_agui_event(event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
         # Add custom processing, metrics, or filtering
         if event.type == EventType.TEXT_MESSAGE_CONTENT:
             # Log message content for analytics
             print(f"Message content: {event.delta}")
         yield event
+    
+    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
+        return self._process_agui_event(event)
 
 # Configure the handler pipeline
 handler_context = HandlerContext(
