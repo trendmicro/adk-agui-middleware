@@ -1,6 +1,6 @@
 # ADK AGUI Python Middleware
 
-A professional Python 3.13+ middleware library that bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing Server-Sent Events (SSE) streaming for real-time agent interactions.
+A professional Python 3.10+ middleware library that bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing Server-Sent Events (SSE) streaming for real-time agent interactions.
 
 ## ✨ Key Features
 
@@ -19,10 +19,10 @@ A professional Python 3.13+ middleware library that bridges Google's Agent Devel
 ### Installation
 
 ```bash
-pip install adk-agui-py-middleware
+pip install adk-agui-middleware
 ```
 
-**Requirements:** Python 3.13+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0
+**Requirements:** Python 3.10+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0
 
 ### Basic Implementation
 
@@ -852,9 +852,3 @@ runner_config = create_production_runner_config(os.getenv("ENV", "development"))
 ## 📄 License
 
 Licensed under the MIT License. See [LICENSE](LICENSE) file for details.
-
-## 📞 Support
-
-- 🐛 **Issues**: [GitHub Issues](https://github.com/DennySORA/adk-agui-py-middleware/issues)  
-- 📦 **PyPI**: [adk-agui-py-middleware](https://pypi.org/project/adk-agui-py-middleware/)  
-- 📖 **Documentation**: Complete examples and configuration guides above

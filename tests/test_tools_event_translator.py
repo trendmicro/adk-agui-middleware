@@ -23,7 +23,7 @@ from ag_ui.core import (
 from google.adk.events import Event as ADKEvent
 from google.genai import types
 
-from adk_agui_middleware.tools.event_translator import EventTranslator
+from adk_agui_middleware.event.event_translator import EventTranslator
 
 
 class TestEventTranslator(unittest.TestCase):

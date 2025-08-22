@@ -7,6 +7,54 @@ on:
     branches: [ main, develop, "feat/**" ]
 
 jobs:
+  # Quick check job for fast feedback on all branches
+  quick-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+
+    - name: Quick lint check
+      run: |
+        uv run ruff check src/ --output-format=github
+
+    - name: Quick format check
+      run: |
+        uv run ruff format --check src/
+
+    - name: Quick security check with bandit
+      run: |
+        uv run bandit -r src/ -f json -o bandit-quick.json --exclude=*/.venv/*,*/venv/*,*/env/*,*/.env/*
+        uv run bandit -r src/ --severity-level medium --exclude=*/.venv/*,*/venv/*,*/env/*,*/.env/*
+
+    - name: Run core tests only
+      run: |
+        # Only run the most stable core tests for quick feedback
+        PYTHONPATH=$PWD/src uv run python -m unittest tests.test_data_model_session tests.test_tools_json_encoder tests.test_tools_function_name -v
+
+    - name: Basic import test
+      run: |
+        # Test that the main package can be imported
+        uv run python -c "import adk_agui_middleware; print('✅ Package imports successfully')"
+
+  # Full lint job with comprehensive checks
   lint:
     runs-on: ubuntu-latest
     strategy:
@@ -42,6 +90,20 @@ jobs:
       run: |
         uv run mypy src/ --strict --show-error-codes
 
+    - name: Security check with bandit
+      run: |
+        uv run bandit -r src/ -f json -o bandit-report.json --exclude=*/.venv/*,*/venv/*,*/env/*,*/.env/*
+        uv run bandit -r src/ --severity-level low --confidence-level medium --exclude=*/.venv/*,*/venv/*,*/env/*,*/.env/*
+      continue-on-error: false
+
+    - name: Upload bandit report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: bandit-report-${{ matrix.python-version }}
+        path: bandit-report.json
+
+  # Comprehensive test job
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -85,3 +147,36 @@ jobs:
         name: codecov-umbrella
         token: ${{ secrets.CODECOV_TOKEN }}
       continue-on-error: true
+
+    - name: Upload coverage HTML report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report-${{ matrix.python-version }}
+        path: htmlcov/
+
+  # Summary job to provide overall status
+  summary:
+    runs-on: ubuntu-latest
+    needs: [quick-check, lint, test]
+    if: always()
+    steps:
+    - name: Check results
+      run: |
+        echo "=== CI Results Summary ==="
+        echo "Quick Check: ${{ needs.quick-check.result }}"
+        echo "Lint: ${{ needs.lint.result }}"
+        echo "Test: ${{ needs.test.result }}"
+        
+        if [ "${{ needs.quick-check.result }}" == "success" ] || [ "${{ needs.quick-check.result }}" == "skipped" ]; then
+          if [ "${{ needs.lint.result }}" == "success" ] && [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ All checks passed!"
+            exit 0
+          else
+            echo "❌ Some checks failed. Please review the errors above."
+            exit 1
+          fi
+        else
+          echo "❌ Quick checks failed. Please fix basic issues first."
+          exit 1
+        fi
