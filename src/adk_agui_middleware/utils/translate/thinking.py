@@ -2,6 +2,8 @@ from collections.abc import AsyncGenerator
 
 from ag_ui.core import (
     EventType,
+    ThinkingEndEvent,
+    ThinkingStartEvent,
     ThinkingTextMessageContentEvent,
     ThinkingTextMessageEndEvent,
     ThinkingTextMessageStartEvent,
@@ -11,10 +13,28 @@ from ...data_model.event import TranslateEvent
 
 
 class ThinkingEventUtil:
+    @staticmethod
+    def thinking_event_start() -> TranslateEvent:
+        return TranslateEvent(
+            agui_event=ThinkingStartEvent(
+                type=EventType.THINKING_START,
+            )
+        )
+
+    @staticmethod
+    def thinking_event_end() -> TranslateEvent:
+        return TranslateEvent(
+            agui_event=ThinkingEndEvent(
+                type=EventType.THINKING_END,
+            )
+        )
+
+
+class ThinkingMessageEventUtil:
     """Utility class for handling thinking event translation and generation."""
 
     @staticmethod
-    def thinking_start_event() -> TranslateEvent:
+    def thinking_message_start_event() -> TranslateEvent:
         """Create a thinking text message start event.
 
         Returns:
@@ -27,7 +47,7 @@ class ThinkingEventUtil:
         )
 
     @staticmethod
-    def thinking_content_event(message: str) -> TranslateEvent:
+    def thinking_message_content_event(message: str) -> TranslateEvent:
         """Create a thinking text message content event with the provided message.
 
         Args:
@@ -44,7 +64,7 @@ class ThinkingEventUtil:
         )
 
     @staticmethod
-    def thinking_end_event() -> TranslateEvent:
+    def thinking_message_end_event() -> TranslateEvent:
         """Create a thinking text message end event.
 
         Returns:
@@ -56,7 +76,7 @@ class ThinkingEventUtil:
             )
         )
 
-    async def think_event_generator(
+    async def thinking_message_event_generator(
         self, message: AsyncGenerator[str]
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a sequence of thinking events from an async message stream.
@@ -69,7 +89,7 @@ class ThinkingEventUtil:
         Yields:
             TranslateEvent: Sequence of thinking events (start, content chunks, end).
         """
-        yield self.thinking_start_event()
+        yield self.thinking_message_start_event()
         async for text_chunk in message:
-            yield self.thinking_content_event(text_chunk)
-        yield self.thinking_end_event()
+            yield self.thinking_message_content_event(text_chunk)
+        yield self.thinking_message_end_event()
