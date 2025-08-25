@@ -170,6 +170,20 @@ class RunningHandler:
             yield agui_event
             self._check_is_long_tool(adk_event, agui_event)
 
+    def setting_event_translator_lrt_ids(
+        self, long_running_tool_ids: list[str]
+    ) -> None:
+        """Set long-running tool IDs in the event translator.
+
+        Configures the event translator with the list of tool call IDs that are
+        marked as long-running operations, enabling proper handling of these tools
+        during event translation.
+
+        Args:
+            long_running_tool_ids: List of tool call IDs for long-running operations
+        """
+        self.event_translator.long_running_tool_ids = long_running_tool_ids
+
     def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent]:
         """Force close any active streaming message in the event translator.
 

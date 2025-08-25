@@ -45,6 +45,14 @@ class AGUIUserHandler:
 
         self.tool_call_ids: list[str] = []
 
+    async def _async_init(self) -> None:
+        await self._setting_lrt_to_running()
+
+    async def _setting_lrt_to_running(self) -> None:
+        self.running_handler.setting_event_translator_lrt_ids(
+            await self.session_handler.get_pending_tool_calls()
+        )
+
     @property
     def app_name(self) -> str:
         """Get the application name from the session handler.
@@ -199,8 +207,7 @@ class AGUIUserHandler:
         async for event in self._run_async():
             yield event
         # Add any uncompleted tool calls to pending state for HITL workflow
-        for tool_call_id in self.tool_call_ids:
-            await self.session_handler.add_pending_tool_call(tool_call_id)
+        await self.session_handler.add_pending_tool_call(self.tool_call_ids)
         yield self.call_finished()
 
     async def run(self) -> AsyncGenerator[BaseEvent]:
@@ -224,6 +231,7 @@ class AGUIUserHandler:
             This is the primary entry point for HITL workflow management, handling
             both initiation and completion of human intervention cycles.
         """
+        await self._async_init()
         if self.user_message_handler.is_tool_result_submission and (
             error := await self.remove_pending_tool_call()
         ):

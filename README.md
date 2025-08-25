@@ -61,7 +61,61 @@ if __name__ == "__main__":
 
 ## 🏗️ Architecture Overview
 
-The middleware is organized into distinct layers with clear separation of concerns. The Event Translator has been moved to the `event` module to better reflect its role in event processing and error handling.
+The middleware is organized into distinct layers with clear separation of concerns, providing a comprehensive solution for agent-human interactions through sophisticated event processing and state management.
+
+### 📁 Module Structure
+
+The codebase follows a modular architecture with well-defined responsibilities:
+
+#### Core Service Layer (`adk_agui_middleware/`)
+- **`endpoint.py`**: FastAPI endpoint registration for agent interactions
+- **`sse_service.py`**: Main SSE service implementation with runner management
+
+#### Abstract Base Classes (`base_abc/`)
+- **`handler.py`**: Abstract base classes for event and state handlers
+- **`sse_service.py`**: Base SSE service interface definition
+
+#### Configuration Management (`config/`)
+- **`log.py`**: Logging configuration with environment variable support
+
+#### Data Models (`data_model/`)
+- **`context.py`**: Configuration models for context extraction and runner setup
+- **`error.py`**: HTTP error response models
+- **`event.py`**: Event translation data models for ADK ↔ AGUI conversion
+- **`log.py`**: Structured log message model for comprehensive logging
+- **`session.py`**: Session parameter model for session identification
+
+#### Event Processing (`event/`)
+- **`error_event.py`**: Error event classes for encoding and execution failures
+- **`event_translator.py`**: Core event translation service (ADK ↔ AGUI formats)
+
+#### Handler Layer (`handler/`)
+- **`agui_user.py`**: Main AGUI user interaction and workflow orchestration
+- **`running.py`**: Agent execution and event translation management
+- **`session.py`**: Session operations and tool call lifecycle management
+- **`user_message.py`**: User message and tool result processing
+
+#### Logging System (`loggers/`)
+- **`exception.py`**: HTTP exception handling and error response utilities
+- **`logger.py`**: JSON logging formatter and logger configuration
+- **`record_log.py`**: Structured logging functions for application events
+- **`record_request_log.py`**: Request logging utilities for HTTP tracking
+
+#### Session Management (`manager/`)
+- **`session.py`**: ADK session operations and state management
+
+#### Design Patterns (`pattern/`)
+- **`singleton.py`**: Singleton design pattern implementation
+
+#### Utility Tools (`tools/`)
+- **`convert.py`**: Event conversion utilities for SSE format
+- **`function_name.py`**: Function name extraction for debugging
+- **`json_encoder.py`**: Custom JSON encoder for Pydantic models
+- **`shutdown.py`**: Graceful shutdown handler for application cleanup
+
+#### Translation Utilities (`utils/translate/`)
+- **`common.py`**: Common translation utilities for retune events
+- **`thinking.py`**: Thinking event utilities for AI reasoning display
 
 ### System Architecture
 

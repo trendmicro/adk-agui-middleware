@@ -124,7 +124,9 @@ class SessionHandler:
             state_updates=initial_state,
         )
 
-    async def check_and_remove_pending_tool_call(self, tool_call_id: str) -> None:
+    async def check_and_remove_pending_tool_call(
+        self, tool_call_ids: list[str]
+    ) -> None:
         """Remove a tool call ID from the pending tool calls list.
 
         This method implements the core HITL (Human-in-the-Loop) pattern for tool execution.
@@ -145,69 +147,69 @@ class SessionHandler:
         Note:
             This is essential for HITL workflows where tools require human approval
             or input before execution can continue.
+            :param tool_call_ids:
         """
-        pending_calls = await self.get_pending_tool_calls()
-        if tool_call_id not in pending_calls:
+        pending_set = set(await self.get_pending_tool_calls())
+        tool_call_set = set(tool_call_ids)
+        remove_list = pending_set & tool_call_set
+        if not remove_list:
             record_warning_log(
-                f"No pending tool calls found for tool result {tool_call_id} in thread {self.session_parameter.session_id}"
+                f"No pending tool calls found for tool result {tool_call_ids} in thread {self.session_parameter.session_id}"
             )
             return
-        record_log(
-            f"Processing tool result {tool_call_id} for thread {self.session_parameter.session_id} with pending tools"
-        )
-        # Remove the tool call ID from the pending list
-        pending_calls.remove(tool_call_id)
-        # Update session state with the modified pending calls list
         success = await self.session_manager.update_session_state(
             session_parameter=self.session_parameter,
-            state_updates=self.get_pending_tool_calls_dict(pending_calls),
+            state_updates=self.get_pending_tool_calls_dict(
+                list(pending_set - tool_call_set)
+            ),
         )
         record_log(
-            f"Removed tool call {tool_call_id} from session {self.session_parameter.session_id} pending list is {success}."
+            f"Removed tool call {remove_list} from session {self.session_parameter.session_id} pending list is {success}."
         )
 
-    async def add_pending_tool_call(self, tool_call_id: str) -> None:
-        """Add a tool call ID to the pending tool calls list.
+    async def add_pending_tool_call(self, tool_call_ids: list[str]) -> None:
+        """Add tool call IDs to the pending tool calls list.
 
-        This method initiates the HITL (Human-in-the-Loop) pattern by marking a tool call
-        as pending human intervention. When an agent invokes a tool that requires human
-        input or approval, this method stores the tool call ID in session state, effectively
+        This method initiates the HITL (Human-in-the-Loop) pattern by marking tool calls
+        as pending human intervention. When an agent invokes tools that require human
+        input or approval, this method stores the tool call IDs in session state, effectively
         pausing agent execution until human intervention is provided.
 
         HITL Pattern Initiation:
-        1. Agent attempts to call a tool requiring human input
-        2. This method adds tool_call_id to pending_tool_calls in session state
+        1. Agent attempts to call tools requiring human input
+        2. This method adds tool_call_ids to pending_tool_calls in session state
         3. Agent execution flow is paused/suspended
         4. Session persists the pending state for later retrieval
         5. External systems can query pending_tool_calls to show humans what needs attention
 
         Args:
-            tool_call_id: ID of the tool call to add to pending list
+            tool_call_ids: List of tool call IDs to add to pending list
 
         Note:
             This enables asynchronous HITL workflows where agent execution can be
             resumed later after human provides the necessary input or approval.
         """
+        if not tool_call_ids:
+            return
         record_log(
-            f"Adding pending tool call {tool_call_id} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
+            f"Adding pending tool call {tool_call_ids} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
         )
         try:
             # Get current pending calls using the dedicated method
             pending_calls = await self.get_pending_tool_calls()
             # Add tool call ID if not already in the list
-            if tool_call_id not in pending_calls:
-                pending_calls.append(tool_call_id)
-                # Update session state with the new pending calls list
-                if await self.session_manager.update_session_state(
-                    self.session_parameter,
-                    state_updates=self.get_pending_tool_calls_dict(pending_calls),
-                ):
-                    record_log(
-                        f"Added tool call {tool_call_id} to session {self.session_parameter.session_id} pending list"
-                    )
+            pending_calls.extend(set(tool_call_ids) - set(pending_calls))
+            # Update session state with the new pending calls list
+            if await self.session_manager.update_session_state(
+                self.session_parameter,
+                state_updates=self.get_pending_tool_calls_dict(pending_calls),
+            ):
+                record_log(
+                    f"Added tool call {tool_call_ids} to session {self.session_parameter.session_id} pending list"
+                )
         except Exception as e:
             record_error_log(
-                f"Failed to add pending tool call {tool_call_id} to session {self.session_parameter.session_id}.",
+                f"Failed to add pending tool call {tool_call_ids} to session {self.session_parameter.session_id}.",
                 e,
             )
 

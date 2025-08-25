@@ -39,7 +39,6 @@ class EventTranslator:
 
     def __init__(self) -> None:
         """Initialize the event translator with empty state containers."""
-        self._active_tool_calls: dict[str, str] = {}  # Track active tool call IDs
         self._streaming_message_id: str | None = None  # Current streaming message ID
         self._is_streaming: bool = False  # Whether currently streaming a message
         self.long_running_tool_ids: list[str] = []  # IDs of long-running tools
@@ -211,10 +210,9 @@ class EventTranslator:
             yield ToolCallEndEvent(
                 type=EventType.TOOL_CALL_END, tool_call_id=part.function_call.id
             )
-            self._active_tool_calls.pop(part.function_call.id, None)
 
+    @staticmethod
     async def translate_function_calls(
-        self,
         function_calls: list[types.FunctionCall],
     ) -> AsyncGenerator[BaseEvent]:
         """Translate Google GenAI function calls to AGUI tool call events.
@@ -230,7 +228,6 @@ class EventTranslator:
         """
         for func_call in function_calls:
             tool_call_id = func_call.id or str(uuid.uuid4())
-            self._active_tool_calls[tool_call_id] = tool_call_id
             yield ToolCallStartEvent(
                 type=EventType.TOOL_CALL_START,
                 tool_call_id=tool_call_id,
@@ -250,7 +247,6 @@ class EventTranslator:
             yield ToolCallEndEvent(
                 type=EventType.TOOL_CALL_END, tool_call_id=tool_call_id
             )
-            self._active_tool_calls.pop(tool_call_id, None)
 
     async def translate_function_response(
         self,
