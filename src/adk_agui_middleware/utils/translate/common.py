@@ -1,7 +1,7 @@
 from ...data_model.event import TranslateEvent
 
 
-def translate_retune_event() -> TranslateEvent:
+def create_translate_retune_event() -> TranslateEvent:
     """Create a TranslateEvent with retune flag enabled.
 
     Returns:
