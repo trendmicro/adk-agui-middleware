@@ -142,12 +142,11 @@ class SessionHandler:
         5. Agent execution resumes with tool result
 
         Args:
-            tool_call_id: ID of the tool call to remove from pending list
+            tool_call_ids: List of tool call IDs to remove from pending list
 
         Note:
             This is essential for HITL workflows where tools require human approval
             or input before execution can continue.
-            :param tool_call_ids:
         """
         pending_set = set(await self.get_pending_tool_calls())
         tool_call_set = set(tool_call_ids)
