@@ -76,8 +76,13 @@ class ThinkingMessageEventUtil:
             )
         )
 
-    async def create_thinking_message_event_generator(
-        self, message: AsyncGenerator[str]
+    async def create_thinking_message_event(self, message: str) -> AsyncGenerator[TranslateEvent]:
+        yield self.create_thinking_message_start_event()
+        yield self.create_thinking_message_content_event(message)
+        yield self.create_thinking_message_end_event()
+
+    async def create_thinking_message_event_with_generator(
+            self, message: AsyncGenerator[str]
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a sequence of thinking events from an async message stream.
 
@@ -88,6 +93,7 @@ class ThinkingMessageEventUtil:
 
         Yields:
             TranslateEvent: Sequence of thinking events (start, content chunks, end).
+            :param message:
         """
         yield self.create_thinking_message_start_event()
         async for text_chunk in message:
