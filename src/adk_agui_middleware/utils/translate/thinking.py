@@ -16,14 +16,15 @@ from ...data_model.event import TranslateEvent
 
 class ThinkingEventUtil:
     """Utility class for creating thinking events that represent AI reasoning processes.
-    
+
     Provides static methods for generating AGUI thinking events that allow clients
     to display AI reasoning and thought processes to users.
     """
+
     @staticmethod
     def create_thinking_event_start() -> TranslateEvent:
         """Create a thinking start event to begin AI reasoning display.
-        
+
         Returns:
             TranslateEvent containing a ThinkingStartEvent for beginning reasoning display
         """
@@ -36,7 +37,7 @@ class ThinkingEventUtil:
     @staticmethod
     def create_thinking_event_end() -> TranslateEvent:
         """Create a thinking end event to conclude AI reasoning display.
-        
+
         Returns:
             TranslateEvent containing a ThinkingEndEvent for ending reasoning display
         """
@@ -93,15 +94,17 @@ class ThinkingMessageEventUtil:
             )
         )
 
-    async def create_thinking_message_event(self, message: str) -> AsyncGenerator[TranslateEvent]:
+    async def create_thinking_message_event(
+        self, message: str
+    ) -> AsyncGenerator[TranslateEvent]:
         """Generate a complete thinking message event sequence.
-        
+
         Creates the full sequence of thinking events: start, content, and end events
         for displaying a single thinking message to the user.
-        
+
         Args:
             message: Text content to display as thinking message
-            
+
         Yields:
             TranslateEvent objects for start, content, and end of thinking message
         """
@@ -110,7 +113,7 @@ class ThinkingMessageEventUtil:
         yield self.create_thinking_message_end_event()
 
     async def create_thinking_message_event_with_generator(
-            self, message: AsyncGenerator[str]
+        self, message: AsyncGenerator[str]
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a sequence of thinking events from an async message stream.
 
