@@ -1,14 +1,17 @@
 """Utility functions for creating thinking events and message sequences in AGUI format."""
 
+import uuid
 from collections.abc import AsyncGenerator
 
 from ag_ui.core import (
     EventType,
     ThinkingEndEvent,
     ThinkingStartEvent,
-    ThinkingTextMessageContentEvent,
-    ThinkingTextMessageEndEvent,
-    ThinkingTextMessageStartEvent,
+)
+from event.agui_event import (
+    CustomerThinkingTextMessageContentEvent,
+    CustomerThinkingTextMessageEndEvent,
+    CustomerThinkingTextMessageStartEvent,
 )
 
 from ...data_model.event import TranslateEvent
@@ -52,20 +55,23 @@ class ThinkingMessageEventUtil:
     """Utility class for handling thinking event translation and generation."""
 
     @staticmethod
-    def create_thinking_message_start_event() -> TranslateEvent:
+    def create_thinking_message_start_event(thinking_id: str) -> TranslateEvent:
         """Create a thinking text message start event.
 
         Returns:
             TranslateEvent: Event indicating the start of thinking text message.
         """
         return TranslateEvent(
-            agui_event=ThinkingTextMessageStartEvent(
+            agui_event=CustomerThinkingTextMessageStartEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_START,
+                thinking_id=thinking_id,
             )
         )
 
     @staticmethod
-    def create_thinking_message_content_event(message: str) -> TranslateEvent:
+    def create_thinking_message_content_event(
+        message: str, thinking_id: str
+    ) -> TranslateEvent:
         """Create a thinking text message content event with the provided message.
 
         Args:
@@ -73,24 +79,28 @@ class ThinkingMessageEventUtil:
 
         Returns:
             TranslateEvent: Event containing the thinking text message content.
+            :param message:
+            :param thinking_id:
         """
         return TranslateEvent(
-            agui_event=ThinkingTextMessageContentEvent(
+            agui_event=CustomerThinkingTextMessageContentEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_CONTENT,
+                thinking_id=thinking_id,
                 delta=message,
             )
         )
 
     @staticmethod
-    def create_thinking_message_end_event() -> TranslateEvent:
+    def create_thinking_message_end_event(thinking_id: str) -> TranslateEvent:
         """Create a thinking text message end event.
 
         Returns:
             TranslateEvent: Event indicating the end of thinking text message.
         """
         return TranslateEvent(
-            agui_event=ThinkingTextMessageEndEvent(
+            agui_event=CustomerThinkingTextMessageEndEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_END,
+                thinking_id=thinking_id,
             )
         )
 
@@ -108,9 +118,10 @@ class ThinkingMessageEventUtil:
         Yields:
             TranslateEvent objects for start, content, and end of thinking message
         """
-        yield self.create_thinking_message_start_event()
-        yield self.create_thinking_message_content_event(message)
-        yield self.create_thinking_message_end_event()
+        uid = str(uuid.uuid4())
+        yield self.create_thinking_message_start_event(uid)
+        yield self.create_thinking_message_content_event(message, uid)
+        yield self.create_thinking_message_end_event(uid)
 
     async def create_thinking_message_event_with_generator(
         self, message: AsyncGenerator[str]
@@ -125,7 +136,8 @@ class ThinkingMessageEventUtil:
         Yields:
             TranslateEvent: Sequence of thinking events (start, content chunks, end)
         """
-        yield self.create_thinking_message_start_event()
+        uid = str(uuid.uuid4())
+        yield self.create_thinking_message_start_event(uid)
         async for text_chunk in message:
-            yield self.create_thinking_message_content_event(text_chunk)
-        yield self.create_thinking_message_end_event()
+            yield self.create_thinking_message_content_event(text_chunk, uid)
+        yield self.create_thinking_message_end_event(uid)
