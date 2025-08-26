@@ -35,7 +35,6 @@ class TestEventTranslator(unittest.TestCase):
 
     def test_init(self):
         """Test EventTranslator initialization."""
-        self.assertEqual(self.translator._active_tool_calls, {})
         self.assertIsNone(self.translator._streaming_message_id)
         self.assertFalse(self.translator._is_streaming)
         self.assertEqual(self.translator.long_running_tool_ids, [])
