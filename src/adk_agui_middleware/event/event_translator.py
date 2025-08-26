@@ -39,8 +39,7 @@ class EventTranslator:
 
     def __init__(self) -> None:
         """Initialize the event translator with empty state containers."""
-        self._streaming_message_id: str | None = None  # Current streaming message ID
-        self._is_streaming: bool = False  # Whether currently streaming a message
+        self._streaming_message_id: dict[str, str] = {}
         self.long_running_tool_ids: list[str] = []  # IDs of long-running tools
 
     async def translate(self, adk_event: ADKEvent) -> AsyncGenerator[BaseEvent]:
@@ -154,9 +153,10 @@ class EventTranslator:
         text_parts = [part.text for part in adk_event.content.parts if part.text]
         if not text_parts:
             return
+        author_id = self._streaming_message_id.get(adk_event.author, None)
 
         if (
-            not self._is_streaming
+            not author_id
             and not adk_event.usage_metadata
             and adk_event.is_final_response()
             and not adk_event.partial
@@ -166,30 +166,29 @@ class EventTranslator:
             return
 
             # Start streaming if not already streaming and not a final response
-        if not self._is_streaming and not adk_event.is_final_response():
-            self._streaming_message_id = str(uuid.uuid4())
-            self._is_streaming = True
+        if not author_id and not adk_event.is_final_response():
+            author_id = str(uuid.uuid4())
+            self._streaming_message_id[adk_event.author] = author_id
             yield TextMessageStartEvent(
                 type=EventType.TEXT_MESSAGE_START,
-                message_id=self._streaming_message_id,
+                message_id=author_id,
                 role="assistant",
             )
 
         # Yield content if there's text and we're streaming
-        if self._is_streaming and (combined_text := "".join(text_parts)):
+        if author_id and (combined_text := "".join(text_parts)):
             yield TextMessageContentEvent(
                 type=EventType.TEXT_MESSAGE_CONTENT,
-                message_id=self._streaming_message_id,
+                message_id=author_id,
                 delta=combined_text,
             )
 
         # End streaming on final response
-        if adk_event.is_final_response() and self._is_streaming:
+        if author_id and adk_event.is_final_response():
             yield TextMessageEndEvent(
-                type=EventType.TEXT_MESSAGE_END, message_id=self._streaming_message_id
+                type=EventType.TEXT_MESSAGE_END, message_id=author_id
             )
-            self._streaming_message_id = None
-            self._is_streaming = False
+            del self._streaming_message_id[adk_event.author]
 
     async def translate_lro_function_calls(
         self, adk_event: ADKEvent
@@ -346,14 +345,13 @@ class EventTranslator:
         Yields:
             TextMessageEndEvent if there was an active streaming message
         """
-        if not (self._is_streaming and self._streaming_message_id):
+        if not self._streaming_message_id:
             return
         record_warning_log(
             f"🚨 Force-closing unterminated streaming message: {self._streaming_message_id}"
         )
-        end_event = TextMessageEndEvent(
-            type=EventType.TEXT_MESSAGE_END, message_id=self._streaming_message_id
-        )
-        yield end_event
-        self._streaming_message_id = None
-        self._is_streaming = False
+        for message_id in self._streaming_message_id.values():
+            yield TextMessageEndEvent(
+                type=EventType.TEXT_MESSAGE_END, message_id=message_id
+            )
+        self._streaming_message_id = {}

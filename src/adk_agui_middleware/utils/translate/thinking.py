@@ -8,13 +8,13 @@ from ag_ui.core import (
     ThinkingEndEvent,
     ThinkingStartEvent,
 )
-from event.agui_event import (
+
+from ...data_model.event import TranslateEvent
+from ...event.agui_event import (
     CustomerThinkingTextMessageContentEvent,
     CustomerThinkingTextMessageEndEvent,
     CustomerThinkingTextMessageStartEvent,
 )
-
-from ...data_model.event import TranslateEvent
 
 
 class ThinkingEventUtil:
