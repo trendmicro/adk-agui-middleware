@@ -70,7 +70,7 @@ class EventTranslator:
             # Handle function responses from tool execution
             if adk_event.get_function_responses():
                 async for event in self.translate_function_response(
-                        adk_event.get_function_responses()
+                    adk_event.get_function_responses()
                 ):
                     yield event
             # Handle state updates and custom metadata
@@ -80,7 +80,7 @@ class EventTranslator:
             record_error_log("Error translating ADK event.", e)
 
     async def _handle_function_calls(
-            self, adk_event: ADKEvent
+        self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Handle function calls by closing streaming messages and translating calls.
 
@@ -95,12 +95,12 @@ class EventTranslator:
             yield event
         # Translate the function calls to AGUI events
         async for event in self.translate_function_calls(
-                adk_event.get_function_calls()
+            adk_event.get_function_calls()
         ):
             yield event
 
     async def _handle_additional_data(
-            self, adk_event: ADKEvent
+        self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Handle additional data like state deltas and custom metadata.
 
@@ -122,24 +122,21 @@ class EventTranslator:
             )
 
     @staticmethod
-    async def _result_response(message_id: str, message: str) -> AsyncGenerator[BaseEvent]:
+    async def _result_response(
+        message_id: str, message: str
+    ) -> AsyncGenerator[BaseEvent]:
         yield TextMessageStartEvent(
-            type=EventType.TEXT_MESSAGE_START,
-            message_id=message_id,
-            role="assistant"
+            type=EventType.TEXT_MESSAGE_START, message_id=message_id, role="assistant"
         )
         yield TextMessageContentEvent(
-            type=EventType.TEXT_MESSAGE_CONTENT,
-            message_id=message_id,
-            delta=message
+            type=EventType.TEXT_MESSAGE_CONTENT, message_id=message_id, delta=message
         )
         yield TextMessageEndEvent(
-            type=EventType.TEXT_MESSAGE_END,
-            message_id=message_id
+            type=EventType.TEXT_MESSAGE_END, message_id=message_id
         )
 
     async def _translate_text_content(
-            self, adk_event: ADKEvent
+        self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Translate text content from ADK event to AGUI streaming text events.
 
@@ -158,7 +155,12 @@ class EventTranslator:
         if not text_parts:
             return
 
-        if not self._is_streaming and not adk_event.usage_metadata and adk_event.is_final_response() and not adk_event.partial:
+        if (
+            not self._is_streaming
+            and not adk_event.usage_metadata
+            and adk_event.is_final_response()
+            and not adk_event.partial
+        ):
             async for msg in self._result_response(adk_event.id, "".join(text_parts)):
                 yield msg
             return
@@ -190,7 +192,7 @@ class EventTranslator:
             self._is_streaming = False
 
     async def translate_lro_function_calls(
-            self, adk_event: ADKEvent
+        self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Translate long-running operation (LRO) function calls to AGUI tool events.
 
@@ -207,9 +209,9 @@ class EventTranslator:
             return
         for part in adk_event.content.parts:
             if (
-                    (not part.function_call)
-                    or part.function_call.id is None
-                    or part.function_call.id not in (adk_event.long_running_tool_ids or [])
+                (not part.function_call)
+                or part.function_call.id is None
+                or part.function_call.id not in (adk_event.long_running_tool_ids or [])
             ):
                 continue
             self.long_running_tool_ids.append(part.function_call.id)
@@ -235,7 +237,7 @@ class EventTranslator:
 
     @staticmethod
     async def translate_function_calls(
-            function_calls: list[types.FunctionCall],
+        function_calls: list[types.FunctionCall],
     ) -> AsyncGenerator[BaseEvent]:
         """Translate Google GenAI function calls to AGUI tool call events.
 
@@ -271,8 +273,8 @@ class EventTranslator:
             )
 
     async def translate_function_response(
-            self,
-            function_response: list[types.FunctionResponse],
+        self,
+        function_response: list[types.FunctionResponse],
     ) -> AsyncGenerator[BaseEvent]:
         """Translate Google GenAI function responses to AGUI tool result events.
 
@@ -319,7 +321,7 @@ class EventTranslator:
 
     @staticmethod
     def create_state_snapshot_event(
-            state_snapshot: dict[str, Any],
+        state_snapshot: dict[str, Any],
     ) -> StateSnapshotEvent:
         """Create a state snapshot event from a complete state dictionary.
 
