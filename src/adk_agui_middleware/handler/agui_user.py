@@ -154,7 +154,7 @@ class AGUIUserHandler:
         try:
             for tool_result in tool_results:
                 await self.session_handler.check_and_remove_pending_tool_call(
-                    tool_result["message"].tool_call_id
+                    [tool_result["message"].tool_call_id]
                 )
             record_log(
                 f"Starting new execution for tool result in thread {self.session_id}"

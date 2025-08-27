@@ -427,6 +427,37 @@ The middleware seamlessly converts events between ADK and AGUI formats:
 - **`RunnerConfig`**: Manages ADK services (session, memory, artifacts, credentials)  
 - **`HandlerContext`**: Injects custom event processing handlers
 
+### HITL (Human-in-the-Loop) Workflow
+
+The middleware implements a sophisticated HITL pattern for tool execution requiring human approval:
+
+#### 1. **Tool Call Initiation**
+- Agent invokes tools requiring human intervention
+- Tool call IDs are added to `pending_tool_calls` in session state  
+- Agent execution is paused, awaiting human input
+
+#### 2. **Pending State Management**
+- Session state persists pending tool calls across requests
+- External systems can query `get_pending_tool_calls()` for HITL queue management
+- Tools remain in pending state until human provides results
+
+#### 3. **HITL Completion**
+- Human submits tool results via `ToolMessage` in conversation
+- Middleware detects tool result submission using `is_tool_result_submission`
+- Corresponding pending tool calls are removed from session state
+
+#### 4. **Execution Resumption**  
+- Agent execution resumes with human-provided tool results
+- Normal event processing continues with tool results incorporated
+- Session state is updated to reflect completion
+
+#### Key Components:
+- **`SessionHandler.add_pending_tool_call()`**: Initiates HITL workflow
+- **`SessionHandler.get_pending_tool_calls()`**: Queries pending interventions  
+- **`SessionHandler.check_and_remove_pending_tool_call()`**: Completes HITL workflow
+- **`UserMessageHandler.is_tool_result_submission`**: Detects HITL completion
+- **`AGUIUserHandler.remove_pending_tool_call()`**: Orchestrates HITL completion process
+
 ## ⚠️ Implementation Notes
 
 ### Handler Pattern
@@ -450,6 +481,34 @@ class MyEventHandler(BaseADKEventHandler):
 ## 🚀 Usage Examples
 
 See the examples above for basic and advanced implementations including HITL workflows, custom event handlers, and production configurations.
+
+## 🧠 Code Quality & Documentation
+
+This codebase maintains high standards of code quality and documentation:
+
+### 📚 Comprehensive Documentation
+- **Complete API Documentation**: Every class and function is thoroughly documented with professional Python docstrings
+- **Type Annotations**: Full type hints throughout the codebase for better IDE support and runtime safety
+- **Architecture Documentation**: Detailed module structure and system architecture explanations
+- **Usage Examples**: Comprehensive examples from basic to advanced implementations
+
+### 🔍 Code Standards
+- **Python 3.13 Compatible**: Utilizes modern Python features and best practices
+- **Pydantic Models**: Structured data validation and serialization throughout
+- **Error Handling**: Comprehensive error handling with structured logging
+- **Design Patterns**: Proper implementation of patterns like Singleton and Abstract Base Classes
+
+### 🛠️ Development Best Practices
+- **HITL Workflows**: Full Human-in-the-Loop pattern implementation with proper state management
+- **Event-Driven Architecture**: Clean separation between ADK and AGUI event processing
+- **Modular Design**: Well-organized module structure with clear separation of concerns
+- **Testing Support**: Structured for comprehensive testing with clear interfaces
+
+### 📋 Code Review Features
+- **Function Tracing**: Built-in function name extraction for debugging and logging
+- **Structured Logging**: Comprehensive logging with JSON formatting and context tracking
+- **Session Management**: Robust session lifecycle management with state persistence
+- **Event Translation**: Sophisticated ADK ↔ AGUI event conversion with streaming support
 
 ## 📄 License
 

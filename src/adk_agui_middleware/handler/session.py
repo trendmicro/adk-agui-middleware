@@ -127,7 +127,7 @@ class SessionHandler:
     async def check_and_remove_pending_tool_call(
         self, tool_call_ids: list[str]
     ) -> None:
-        """Remove a tool call ID from the pending tool calls list.
+        """Remove tool call IDs from the pending tool calls list.
 
         This method implements the core HITL (Human-in-the-Loop) pattern for tool execution.
         When an agent makes a tool call, it's added to pending_tool_calls in session state.

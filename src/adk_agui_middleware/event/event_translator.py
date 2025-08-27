@@ -165,7 +165,7 @@ class EventTranslator:
                 yield msg
             return
 
-            # Start streaming if not already streaming and not a final response
+        # Start streaming if not already streaming and not a final response
         if not author_id and not adk_event.is_final_response():
             author_id = str(uuid.uuid4())
             self._streaming_message_id[adk_event.author] = author_id
