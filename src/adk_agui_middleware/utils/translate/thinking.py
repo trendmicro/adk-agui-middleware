@@ -75,12 +75,11 @@ class ThinkingMessageEventUtil:
         """Create a thinking text message content event with the provided message.
 
         Args:
-            message: Text content to include in the thinking event.
+            message: Text content to include in the thinking event
+            thinking_id: Unique identifier for correlating thinking message sequences
 
         Returns:
-            TranslateEvent: Event containing the thinking text message content.
-            :param message:
-            :param thinking_id:
+            TranslateEvent containing the thinking text message content
         """
         return TranslateEvent(
             agui_event=CustomerThinkingTextMessageContentEvent(
