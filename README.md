@@ -219,6 +219,7 @@ The codebase follows a modular architecture with well-defined responsibilities:
 - **`session.py`**: Session parameter model for session identification
 
 #### Event Processing (`event/`)
+- **`agui_event.py`**: Custom AGUI event implementations with enhanced tracking
 - **`error_event.py`**: Error event classes for encoding and execution failures
 - **`event_translator.py`**: Core event translation service (ADK ↔ AGUI formats)
 
@@ -248,6 +249,9 @@ The codebase follows a modular architecture with well-defined responsibilities:
 
 #### Translation Utilities (`utils/translate/`)
 - **`common.py`**: Common translation utilities for retune events
+- **`function_calls.py`**: Function call event utilities for tool call translation
+- **`message.py`**: Message event utilities for text message sequences
+- **`state.py`**: State event utilities for delta and snapshot operations
 - **`thinking.py`**: Thinking event utilities for AI reasoning display
 
 ### System Architecture

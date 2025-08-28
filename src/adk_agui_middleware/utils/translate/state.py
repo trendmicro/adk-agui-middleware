@@ -13,7 +13,7 @@ class StateEventUtil:
     """
 
     @staticmethod
-    def state_delta_event_with_json_patch(
+    def create_state_delta_event_with_json_patch(
         delta: list[dict[str, Any]],
     ) -> StateDeltaEvent:
         """Create a state delta event with JSON Patch operations.
@@ -27,7 +27,9 @@ class StateEventUtil:
         return StateDeltaEvent(type=EventType.STATE_DELTA, delta=delta)
 
     @staticmethod
-    def state_snapshot_event(state_snapshot: dict[str, Any]) -> StateSnapshotEvent:
+    def create_state_snapshot_event(
+        state_snapshot: dict[str, Any],
+    ) -> StateSnapshotEvent:
         """Create a state snapshot event with complete state data.
 
         Args:

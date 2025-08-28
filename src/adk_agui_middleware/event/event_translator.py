@@ -1,6 +1,5 @@
 """Event translation service for converting ADK events to AGUI format with streaming support."""
 
-import json
 import uuid
 from collections.abc import AsyncGenerator
 from typing import Any
@@ -14,10 +13,6 @@ from ag_ui.core import (
     TextMessageContentEvent,
     TextMessageEndEvent,
     TextMessageStartEvent,
-    ToolCallArgsEvent,
-    ToolCallEndEvent,
-    ToolCallResultEvent,
-    ToolCallStartEvent,
 )
 from google.adk.events import Event as ADKEvent
 from google.genai import types
@@ -27,6 +22,7 @@ from ..loggers.record_log import (
     record_error_log,
     record_warning_log,
 )
+from ..utils.translate import FunctionCallEventUtil, MessageEventUtil, StateEventUtil
 
 
 class EventTranslator:
@@ -41,6 +37,9 @@ class EventTranslator:
         """Initialize the event translator with empty state containers."""
         self._streaming_message_id: dict[str, str] = {}
         self.long_running_tool_ids: list[str] = []  # IDs of long-running tools
+        self.state_event_util = StateEventUtil()
+        self.function_call_event_util = FunctionCallEventUtil()
+        self.message_event_util = MessageEventUtil()
 
     async def translate(self, adk_event: ADKEvent) -> AsyncGenerator[BaseEvent]:
         """Translate an ADK event into corresponding AGUI events.
@@ -60,7 +59,7 @@ class EventTranslator:
                 return
             # Handle text content streaming
             if adk_event.content and adk_event.content.parts:
-                async for event in self._translate_text_content(adk_event):
+                async for event in self.translate_text_content(adk_event):
                     yield event
             # Handle function calls with proper streaming closure
             if adk_event.get_function_calls():
@@ -93,7 +92,7 @@ class EventTranslator:
         async for event in self.force_close_streaming_message():
             yield event
         # Translate the function calls to AGUI events
-        async for event in self.translate_function_calls(
+        async for event in self.function_call_event_util.generate_function_calls_event(
             adk_event.get_function_calls()
         ):
             yield event
@@ -120,21 +119,7 @@ class EventTranslator:
                 value=adk_event.custom_metadata,
             )
 
-    @staticmethod
-    async def _result_response(
-        message_id: str, message: str
-    ) -> AsyncGenerator[BaseEvent]:
-        yield TextMessageStartEvent(
-            type=EventType.TEXT_MESSAGE_START, message_id=message_id, role="assistant"
-        )
-        yield TextMessageContentEvent(
-            type=EventType.TEXT_MESSAGE_CONTENT, message_id=message_id, delta=message
-        )
-        yield TextMessageEndEvent(
-            type=EventType.TEXT_MESSAGE_END, message_id=message_id
-        )
-
-    async def _translate_text_content(
+    async def translate_text_content(
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Translate text content from ADK event to AGUI streaming text events.
@@ -161,8 +146,10 @@ class EventTranslator:
             and adk_event.is_final_response()
             and not adk_event.partial
         ):
-            async for msg in self._result_response(adk_event.id, "".join(text_parts)):
-                yield msg
+            async for agui_event in self.message_event_util.generate_message_event(
+                adk_event.id, "".join(text_parts)
+            ):
+                yield agui_event
             return
 
         # Start streaming if not already streaming and not a final response
@@ -210,66 +197,17 @@ class EventTranslator:
             if (
                 (not part.function_call)
                 or part.function_call.id is None
+                or part.function_call.name is None
                 or part.function_call.id not in (adk_event.long_running_tool_ids or [])
             ):
                 continue
             self.long_running_tool_ids.append(part.function_call.id)
-            yield ToolCallStartEvent(
-                type=EventType.TOOL_CALL_START,
-                tool_call_id=part.function_call.id,
-                tool_call_name=part.function_call.name,
-                parent_message_id=None,
-            )
-            if part.function_call.args:
-                yield ToolCallArgsEvent(
-                    type=EventType.TOOL_CALL_ARGS,
-                    tool_call_id=part.function_call.id,
-                    delta=(
-                        json.dumps(part.function_call.args)
-                        if isinstance(part.function_call.args, dict)
-                        else str(part.function_call.args)
-                    ),
-                )
-            yield ToolCallEndEvent(
-                type=EventType.TOOL_CALL_END, tool_call_id=part.function_call.id
-            )
-
-    @staticmethod
-    async def translate_function_calls(
-        function_calls: list[types.FunctionCall],
-    ) -> AsyncGenerator[BaseEvent]:
-        """Translate Google GenAI function calls to AGUI tool call events.
-
-        Converts function calls from Google GenAI format to AGUI tool call events,
-        handling tool call IDs, arguments, and proper event sequencing.
-
-        Args:
-            function_calls: List of Google GenAI function calls to translate
-
-        Yields:
-            AGUI tool call events (start, args, end) for each function call
-        """
-        for func_call in function_calls:
-            tool_call_id = func_call.id or str(uuid.uuid4())
-            yield ToolCallStartEvent(
-                type=EventType.TOOL_CALL_START,
-                tool_call_id=tool_call_id,
-                tool_call_name=func_call.name,
-            )
-            if func_call.args:
-                args_str = (
-                    json.dumps(func_call.args)
-                    if isinstance(func_call.args, dict)
-                    else str(func_call.args)
-                )
-                yield ToolCallArgsEvent(
-                    type=EventType.TOOL_CALL_ARGS,
-                    tool_call_id=tool_call_id,
-                    delta=args_str,
-                )
-            yield ToolCallEndEvent(
-                type=EventType.TOOL_CALL_END, tool_call_id=tool_call_id
-            )
+            async for (
+                agui_event
+            ) in self.function_call_event_util.generate_function_call_event(
+                part.function_call.id, part.function_call.name, part.function_call.args
+            ):
+                yield agui_event
 
     async def translate_function_response(
         self,
@@ -289,19 +227,15 @@ class EventTranslator:
         for func_response in function_response:
             tool_call_id = func_response.id or str(uuid.uuid4())
             if tool_call_id not in self.long_running_tool_ids:
-                yield ToolCallResultEvent(
-                    message_id=str(uuid.uuid4()),
-                    type=EventType.TOOL_CALL_RESULT,
-                    tool_call_id=tool_call_id,
-                    content=json.dumps(func_response.response),
+                yield self.function_call_event_util.create_function_result_event(
+                    tool_call_id=tool_call_id, content=func_response.response
                 )
             else:
                 record_debug_log(
                     f"Skipping ToolCallResultEvent for long-running tool: {tool_call_id}"
                 )
 
-    @staticmethod
-    def create_state_delta_event(state_delta: dict[str, Any]) -> StateDeltaEvent:
+    def create_state_delta_event(self, state_delta: dict[str, Any]) -> StateDeltaEvent:
         """Create a state delta event from a state change dictionary.
 
         Converts state changes into JSON Patch format operations for AGUI consumption.
@@ -316,25 +250,13 @@ class EventTranslator:
         patches = []
         for key, value in state_delta.items():
             patches.append({"op": "add", "path": f"/{key}", "value": value})
-        return StateDeltaEvent(type=EventType.STATE_DELTA, delta=patches)
+        return self.state_event_util.create_state_delta_event_with_json_patch(patches)
 
-    @staticmethod
     def create_state_snapshot_event(
+        self,
         state_snapshot: dict[str, Any],
     ) -> StateSnapshotEvent:
-        """Create a state snapshot event from a complete state dictionary.
-
-        Wraps the entire state dictionary in a StateSnapshotEvent for AGUI consumption.
-
-        Args:
-            state_snapshot: Complete state dictionary to snapshot
-
-        Returns:
-            StateSnapshotEvent containing the full state
-        """
-        return StateSnapshotEvent(
-            type=EventType.STATE_SNAPSHOT, snapshot=state_snapshot
-        )
+        return self.state_event_util.create_state_snapshot_event(state_snapshot)
 
     async def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent]:
         """Force close any active streaming message that wasn't properly terminated.

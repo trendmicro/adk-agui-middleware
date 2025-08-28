@@ -35,8 +35,7 @@ class TestEventTranslator(unittest.TestCase):
 
     def test_init(self):
         """Test EventTranslator initialization."""
-        self.assertIsNone(self.translator._streaming_message_id)
-        self.assertFalse(self.translator._is_streaming)
+        self.assertEqual(self.translator._streaming_message_id, {})
         self.assertEqual(self.translator.long_running_tool_ids, [])
 
     @patch("adk_agui_middleware.tools.event_translator.record_error_log")
@@ -359,7 +358,7 @@ class TestEventTranslator(unittest.TestCase):
     def test_create_state_delta_event(self):
         """Test creating state delta event."""
         state_delta = {"key1": "value1", "key2": "value2"}
-        event = EventTranslator.create_state_delta_event(state_delta)
+        event = self.translator.create_state_delta_event(state_delta)
         
         self.assertIsInstance(event, StateDeltaEvent)
         self.assertEqual(event.type, EventType.STATE_DELTA)
@@ -372,7 +371,7 @@ class TestEventTranslator(unittest.TestCase):
     def test_create_state_snapshot_event(self):
         """Test creating state snapshot event."""
         state_snapshot = {"complete": "state", "data": 123}
-        event = EventTranslator.create_state_snapshot_event(state_snapshot)
+        event = self.translator.create_state_snapshot_event(state_snapshot)
         
         self.assertIsInstance(event, StateSnapshotEvent)
         self.assertEqual(event.type, EventType.STATE_SNAPSHOT)

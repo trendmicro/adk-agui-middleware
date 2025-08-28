@@ -103,8 +103,8 @@ class ThinkingMessageEventUtil:
             )
         )
 
-    async def create_thinking_message_event(
-        self, message: str
+    async def generate_thinking_message_event(
+        self, message: str, uid: str | None = None
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a complete thinking message event sequence.
 
@@ -113,29 +113,31 @@ class ThinkingMessageEventUtil:
 
         Args:
             message: Text content to display as thinking message
+            uid: Optional unique identifier for the thinking sequence, generated if None
 
         Yields:
             TranslateEvent objects for start, content, and end of thinking message
         """
-        uid = str(uuid.uuid4())
+        uid = uid if uid else str(uuid.uuid4())
         yield self.create_thinking_message_start_event(uid)
         yield self.create_thinking_message_content_event(message, uid)
         yield self.create_thinking_message_end_event(uid)
 
-    async def create_thinking_message_event_with_generator(
-        self, message: AsyncGenerator[str]
+    async def generate_thinking_message_event_with_generator(
+        self, message: AsyncGenerator[str], uid: str | None = None
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a sequence of thinking events from an async message stream.
 
         Yields start event, content events for each message chunk, and end event.
 
         Args:
-            message: Async generator yielding text chunks.
+            message: Async generator yielding text chunks
+            uid: Optional unique identifier for the thinking sequence, generated if None
 
         Yields:
             TranslateEvent: Sequence of thinking events (start, content chunks, end)
         """
-        uid = str(uuid.uuid4())
+        uid = uid if uid else str(uuid.uuid4())
         yield self.create_thinking_message_start_event(uid)
         async for text_chunk in message:
             yield self.create_thinking_message_content_event(text_chunk, uid)

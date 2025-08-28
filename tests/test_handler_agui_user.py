@@ -180,8 +180,8 @@ class TestAGUIUserHandler:
             result = await agui_user_handler.remove_pending_tool_call()
         
         assert result is None
-        mock_session_handler.check_and_remove_pending_tool_call.assert_any_call("tool-1")
-        mock_session_handler.check_and_remove_pending_tool_call.assert_any_call("tool-2")
+        mock_session_handler.check_and_remove_pending_tool_call.assert_any_call(["tool-1"])
+        mock_session_handler.check_and_remove_pending_tool_call.assert_any_call(["tool-2"])
         mock_record_log.assert_called_once()
 
     @pytest.mark.asyncio
@@ -322,8 +322,7 @@ class TestAGUIUserHandler:
         # Verify session operations
         mock_session_handler.check_and_create_session.assert_called_once_with({"initial": "state"})
         mock_session_handler.update_session_state.assert_called_once_with({"initial": "state"})
-        mock_session_handler.add_pending_tool_call.assert_any_call("tool-1")
-        mock_session_handler.add_pending_tool_call.assert_any_call("tool-2")
+        mock_session_handler.add_pending_tool_call.assert_called_once_with(["tool-1", "tool-2"])
 
     @pytest.mark.asyncio
     async def test_run_with_tool_result_submission_error(self, agui_user_handler, mock_user_message_handler):

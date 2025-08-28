@@ -31,11 +31,16 @@ def _create_and_log_message(
     Returns:
         Dictionary representation of the logged message
     """
+    try:
+        log_str = json.loads(json.dumps(body, cls=DataclassesEncoder))
+    except Exception as e:
+        log_str = f"Can't convert body to json: {repr(e)}"
+
     # Create structured log message with function context
     message_data = LogMessage(
         msg=msg,
         func_name=get_function_name(full_chain=True, max_depth=5),
-        body=json.loads(json.dumps(body, cls=DataclassesEncoder)),
+        body=log_str,
     )
 
     # Add error information if exception provided
