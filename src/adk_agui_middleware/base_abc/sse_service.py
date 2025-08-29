@@ -47,13 +47,12 @@ class BaseSSEService(metaclass=ABCMeta):
 
         Args:
             runner: Callable that returns an async generator of events
+            inout_handler: Optional handler for input/output recording and transformation
 
         Yields:
             Encoded event dictionaries ready for SSE transmission
 
         Raises:
             NotImplementedError: Must be implemented by subclasses
-            :param runner:
-            :param inout_handler:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")

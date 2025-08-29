@@ -5,7 +5,7 @@ import logging as log
 from typing import Any
 
 from ..config.log import log_config
-from ..tools.json_encoder import DataclassesEncoder
+from ..tools.json_encoder import PydanticJsonEncoder
 
 
 class JsonFormatter(log.Formatter):
@@ -127,7 +127,7 @@ def create_logger(name: str, fmt_dict: dict[str, str] | None = None) -> log.Logg
     handler.setFormatter(
         JsonFormatter(
             fmt_dict=fmt_dict,
-            cls=DataclassesEncoder,
+            cls=PydanticJsonEncoder,
         )
     )
     logger.addHandler(handler)

@@ -22,7 +22,7 @@ from .handler.running import RunningHandler
 from .handler.session import SessionHandler
 from .handler.user_message import UserMessageHandler
 from .manager.session import SessionManager
-from .tools.convert import agui_to_sse
+from .tools.convert import convert_agui_event_to_sse
 from .tools.shutdown import ShutdownHandler
 
 
@@ -160,7 +160,7 @@ class SSEService(BaseSSEService):
         return value
 
     @staticmethod
-    def _encoding_handler(event: BaseEvent) -> dict[str, str]:
+    def _encode_event_to_sse(event: BaseEvent) -> dict[str, str]:
         """Handle event encoding with error recovery.
 
         Attempts to encode the event using the provided encoder, falling back
@@ -173,9 +173,9 @@ class SSEService(BaseSSEService):
             Encoded event dictionary in SSE format, either successful encoding or error event
         """
         try:
-            return agui_to_sse(event)
+            return convert_agui_event_to_sse(event)
         except Exception as e:
-            return AGUIEncoderError.encoding_error(e)
+            return AGUIEncoderError.create_encoding_error_event(e)
 
     async def _create_runner(self, app_name: str) -> Runner:
         """Create or retrieve a Runner instance for the specified application.
@@ -263,22 +263,21 @@ class SSEService(BaseSSEService):
 
         Args:
             runner: Callable that returns an async generator of events
+            inout_handler: Optional handler for input/output recording and transformation
 
         Yields:
             Encoded event dictionaries ready for SSE transmission
-            :param runner:
-            :param inout_handler:
         """
 
         async def _generate() -> AsyncGenerator[dict[str, str]]:
             try:
                 async for event in runner():
                     yield await self._record_output_message(
-                        inout_handler, self._encoding_handler(event)
+                        inout_handler, self._encode_event_to_sse(event)
                     )
             except Exception as e:
                 yield await self._record_output_message(
-                    inout_handler, AGUIEncoderError.agent_error(e)
+                    inout_handler, AGUIEncoderError.create_agent_error_event(e)
                 )
 
         return _generate()

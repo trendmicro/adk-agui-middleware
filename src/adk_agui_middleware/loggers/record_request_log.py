@@ -6,7 +6,7 @@ from typing import Any
 from starlette.requests import Request
 
 from ..data_model.log import LogMessage
-from ..tools.function_name import get_function_name
+from ..tools.function_name import extract_caller_name
 from . import logger
 
 
@@ -26,7 +26,7 @@ async def record_request_error_log(request: Request, e: Exception) -> dict[str, 
     # Create comprehensive error log with request context
     error_message = LogMessage(
         msg="record request error log",
-        func_name=get_function_name(full_chain=True, max_depth=5),
+        func_name=extract_caller_name(full_chain=True, max_depth=5),
         error_message=repr(e),
         headers=dict(request.headers),
         request_body=(await request.body()).decode(),
@@ -54,7 +54,7 @@ async def record_request_log(request: Request) -> dict[str, Any]:
     # Create request log message with basic request information
     message = LogMessage(
         msg="record request log",
-        func_name=get_function_name(full_chain=True, max_depth=5),
+        func_name=extract_caller_name(full_chain=True, max_depth=5),
         headers=dict(request.headers),
         request_body=(await request.body()).decode(),
     )

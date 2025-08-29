@@ -1,6 +1,6 @@
 # ADK AGUI Python Middleware
 
-A professional Python 3.10+ middleware library that bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing Server-Sent Events (SSE) streaming for real-time agent interactions.
+A professional Python 3.13+ middleware library that bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing Server-Sent Events (SSE) streaming for real-time agent interactions.
 
 ## ✨ Key Features
 
@@ -12,6 +12,8 @@ A professional Python 3.10+ middleware library that bridges Google's Agent Devel
 - **📊 Event Translation**: ADK ↔ AGUI event conversion with streaming support
 - **🔒 Type Safety**: Full type annotations with Pydantic models
 - **🏗️ Extensible Architecture**: Abstract base classes for custom implementations
+- **📚 Comprehensive Documentation**: Professional docstrings with Google-style format
+- **🎯 Code Quality**: Rigorous type checking and code review standards
 
 
 ## 🚀 Quick Start
@@ -22,7 +24,7 @@ A professional Python 3.10+ middleware library that bridges Google's Agent Devel
 pip install adk-agui-middleware
 ```
 
-**Requirements:** Python 3.10+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0
+**Requirements:** Python 3.13+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0
 
 ### Basic Implementation
 
@@ -485,6 +487,78 @@ class MyEventHandler(BaseADKEventHandler):
 ## 🚀 Usage Examples
 
 See the examples above for basic and advanced implementations including HITL workflows, custom event handlers, and production configurations.
+
+## 📈 Performance & Best Practices
+
+### Thread Safety
+- **Singleton Pattern**: The `ShutdownHandler` uses the Singleton pattern - ensure thread safety in production environments
+- **Session Management**: Session operations are designed for concurrent access with proper async/await patterns
+- **Event Processing**: The event pipeline supports high-throughput streaming with efficient async generators
+
+### Error Handling Patterns
+- **Graceful Degradation**: All handlers include comprehensive error recovery mechanisms
+- **Structured Logging**: JSON-formatted logs with configurable levels and context
+- **Timeout Management**: Configurable timeouts for long-running operations with fallback strategies
+
+### Production Recommendations
+```python
+# Production configuration example
+runner_config = RunnerConfig(
+    use_in_memory_services=False,  # Use persistent services in production
+    run_config=RunConfig(
+        streaming_mode=StreamingMode.SSE,
+        timeout_seconds=300  # 5-minute timeout
+    )
+)
+
+# Enable comprehensive logging
+log_config = LogConfig(
+    LOG_LEVEL="INFO",
+    LOG_EVENT=False,  # Disable debug event logging in production
+    LOG_AGUI=False    # Disable debug AGUI logging in production
+)
+```
+
+### Code Quality Standards
+- **Documentation**: All classes and functions include comprehensive Google-style docstrings
+- **Type Safety**: Full type annotations throughout the codebase with Pydantic validation
+- **Error Handling**: Robust exception handling with proper logging and recovery patterns
+- **Testing**: Comprehensive test coverage for critical paths and edge cases
+
+## 🔧 Development Guidelines
+
+### Naming Conventions
+The codebase follows strict Python naming conventions:
+- **Classes**: PascalCase (e.g., `EventTranslator`, `SessionManager`)
+- **Functions/Methods**: snake_case (e.g., `get_session_state`, `translate_event`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `DEFAULT_TIMEOUT`, `MAX_RETRIES`)
+- **Private Methods**: Leading underscore (e.g., `_process_internal_event`)
+
+### Documentation Standards
+All code includes professional documentation following Google-style docstring format:
+
+```python
+def process_event(self, event: BaseEvent, context: dict[str, Any]) -> BaseEvent:
+    """Process an event with the provided context.
+
+    Args:
+        event: The base event to process
+        context: Additional context information for processing
+
+    Returns:
+        Processed event with updated state
+
+    Raises:
+        ProcessingError: If event processing fails
+    """
+```
+
+### Extension Points
+The middleware provides several extension points for customization:
+- **Event Handlers**: Implement `BaseADKEventHandler` or `BaseAGUIEventHandler`
+- **Translation Logic**: Extend `BaseTranslateHandler` for custom event translation
+- **State Management**: Implement `BaseAGUIStateSnapshotHandler` for custom state processing
+- **I/O Recording**: Implement `BaseInOutHandler` for request/response logging
 
 ## 📄 License
 

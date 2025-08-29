@@ -32,9 +32,12 @@ class MessageEventUtil:
         TextMessageStartEvent, TextMessageContentEvent, and TextMessageEndEvent.
         This ensures proper message boundaries and consistent formatting.
 
-        :param message_id: Unique identifier for the message
-        :param message: Text content to display in the message
-        :yield: BaseEvent objects for the complete message sequence
+        Args:
+            message_id: Unique identifier for the message
+            message: Text content to display in the message
+
+        Yields:
+            BaseEvent objects for the complete message sequence
         """
         yield TextMessageStartEvent(
             type=EventType.TEXT_MESSAGE_START, message_id=message_id, role="assistant"

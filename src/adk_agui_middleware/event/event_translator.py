@@ -67,7 +67,7 @@ class EventTranslator:
                     yield event
             # Handle function responses from tool execution
             if adk_event.get_function_responses():
-                async for event in self.translate_function_response(
+                async for event in self.translate_function_responses(
                     adk_event.get_function_responses()
                 ):
                     yield event
@@ -177,7 +177,7 @@ class EventTranslator:
             )
             del self._streaming_message_id[adk_event.author]
 
-    async def translate_lro_function_calls(
+    async def translate_long_running_function_calls(
         self, adk_event: ADKEvent
     ) -> AsyncGenerator[BaseEvent]:
         """Translate long-running operation (LRO) function calls to AGUI tool events.
@@ -209,7 +209,7 @@ class EventTranslator:
             ):
                 yield agui_event
 
-    async def translate_function_response(
+    async def translate_function_responses(
         self,
         function_response: list[types.FunctionResponse],
     ) -> AsyncGenerator[BaseEvent]:
@@ -256,6 +256,17 @@ class EventTranslator:
         self,
         state_snapshot: dict[str, Any],
     ) -> StateSnapshotEvent:
+        """Create a state snapshot event with complete state data.
+
+        Delegates to the state event utility to create a properly formatted
+        StateSnapshotEvent containing the current session state.
+
+        Args:
+            state_snapshot: Dictionary containing the complete session state
+
+        Returns:
+            StateSnapshotEvent containing the full state snapshot
+        """
         return self.state_event_util.create_state_snapshot_event(state_snapshot)
 
     async def force_close_streaming_message(self) -> AsyncGenerator[BaseEvent]:

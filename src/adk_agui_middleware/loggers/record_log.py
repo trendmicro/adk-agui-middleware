@@ -6,8 +6,8 @@ from typing import Any
 
 from ..config.log import log_config
 from ..data_model.log import LogMessage
-from ..tools.function_name import get_function_name
-from ..tools.json_encoder import DataclassesEncoder
+from ..tools.function_name import extract_caller_name
+from ..tools.json_encoder import PydanticJsonEncoder
 from . import logger
 
 
@@ -32,14 +32,14 @@ def _create_and_log_message(
         Dictionary representation of the logged message
     """
     try:
-        log_str = json.loads(json.dumps(body, cls=DataclassesEncoder))
+        log_str = json.loads(json.dumps(body, cls=PydanticJsonEncoder))
     except Exception as e:
         log_str = f"Can't convert body to json: {repr(e)}"
 
     # Create structured log message with function context
     message_data = LogMessage(
         msg=msg,
-        func_name=get_function_name(full_chain=True, max_depth=5),
+        func_name=extract_caller_name(full_chain=True, max_depth=5),
         body=log_str,
     )
 
@@ -125,7 +125,7 @@ def record_agui_raw_log(raw_data: Any) -> None:
     Args:
         raw_data: Raw AGUI event data to log
     """
-    if log_config.LOG_AGUI:
+    if log_config.LOG_AGUI_EVENTS:
         _create_and_log_message("[RAW_DATA: AGUI] record AGUI raw log", body=raw_data)
 
 
@@ -138,5 +138,5 @@ def record_event_raw_log(raw_data: Any) -> None:
     Args:
         raw_data: Raw ADK event data to log
     """
-    if log_config.LOG_EVENT:
+    if log_config.LOG_ADK_EVENTS:
         _create_and_log_message("[RAW_DATA: EVENT] record EVENT raw log", body=raw_data)

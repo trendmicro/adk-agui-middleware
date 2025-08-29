@@ -5,7 +5,7 @@ from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
 
 from .base_abc.sse_service import BaseSSEService
-from .loggers.exception import exception_http_handler
+from .loggers.exception import http_exception_handler
 
 
 def register_agui_endpoint(
@@ -46,7 +46,7 @@ def register_agui_endpoint(
         Raises:
             Exception: Handled by exception_http_handler context manager
         """
-        async with exception_http_handler(request):
+        async with http_exception_handler(request):
             # Get configured runner for this specific request and content
             # Generate streaming response with encoded events
             return EventSourceResponse(

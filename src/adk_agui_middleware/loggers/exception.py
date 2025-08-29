@@ -11,7 +11,7 @@ from ..data_model.error import ErrorModel
 from ..loggers.record_request_log import record_request_error_log, record_request_log
 
 
-def get_common_http_exception(
+def create_common_http_exception(
     status_code: int,
     error_message: str,
     error_description: dict[str, Any],
@@ -39,7 +39,7 @@ def get_common_http_exception(
     )
 
 
-def get_http_internal_server_error_exception(
+def create_internal_server_error_exception(
     error_description: dict[str, Any],
 ) -> HTTPException:
     """Create a 500 Internal Server Error exception with error details.
@@ -53,7 +53,7 @@ def get_http_internal_server_error_exception(
     Returns:
         HTTPException with 500 status code and error details
     """
-    return get_common_http_exception(
+    return create_common_http_exception(
         status.HTTP_500_INTERNAL_SERVER_ERROR,
         "Internal Server Error.",
         error_description,
@@ -61,7 +61,7 @@ def get_http_internal_server_error_exception(
 
 
 @asynccontextmanager
-async def exception_http_handler(request: Request) -> AsyncGenerator[None, Any]:
+async def http_exception_handler(request: Request) -> AsyncGenerator[None, Any]:
     """Async context manager for HTTP request exception handling.
 
     Provides centralized exception handling for HTTP requests, logging all
@@ -88,6 +88,4 @@ async def exception_http_handler(request: Request) -> AsyncGenerator[None, Any]:
     except Exception as e:
         # Convert general exceptions to HTTP 500 errors
         await record_request_error_log(request, e)
-        raise get_http_internal_server_error_exception(
-            {"error_message": repr(e)}
-        ) from e
+        raise create_internal_server_error_exception({"error_message": repr(e)}) from e

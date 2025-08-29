@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import BaseModel
 
 
-class DataclassesEncoder(json.JSONEncoder):
+class PydanticJsonEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles Pydantic models and bytes objects.
 
     Extends the standard JSONEncoder to properly serialize Pydantic BaseModel

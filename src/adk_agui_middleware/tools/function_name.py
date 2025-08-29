@@ -106,7 +106,7 @@ def _collect_valid_functions(stack_frames: list[Any]) -> list[str]:
     return valid_functions
 
 
-def get_function_name(
+def extract_caller_name(
     full_chain: bool = False,
     separator: str = " -> ",
     max_depth: int | None = None,

@@ -46,10 +46,10 @@ class AGUIUserHandler:
         self.tool_call_ids: list[str] = []
 
     async def _async_init(self) -> None:
-        await self._setting_lrt_to_running()
+        await self._initialize_long_running_tools()
 
-    async def _setting_lrt_to_running(self) -> None:
-        self.running_handler.setting_event_translator_lrt_ids(
+    async def _initialize_long_running_tools(self) -> None:
+        self.running_handler.set_long_running_tool_ids(
             await self.session_handler.get_pending_tool_calls()
         )
 
@@ -150,7 +150,9 @@ class AGUIUserHandler:
         """
         tool_results = await self.user_message_handler.extract_tool_results()
         if not tool_results:
-            return AGUIErrorEvent.no_tool_results(self.user_message_handler.thread_id)
+            return AGUIErrorEvent.create_no_tool_results_error(
+                self.user_message_handler.thread_id
+            )
         try:
             for tool_result in tool_results:
                 await self.session_handler.check_and_remove_pending_tool_call(
@@ -160,7 +162,7 @@ class AGUIUserHandler:
                 f"Starting new execution for tool result in thread {self.session_id}"
             )
         except Exception as e:
-            return AGUIErrorEvent.tool_result_processing_error(e)
+            return AGUIErrorEvent.create_tool_processing_error_event(e)
         return None
 
     async def _run_async(self) -> AsyncGenerator[BaseEvent]:
@@ -241,4 +243,4 @@ class AGUIUserHandler:
             async for event in self._run_workflow():
                 yield event
         except Exception as e:
-            yield AGUIErrorEvent.execution_error(e)
+            yield AGUIErrorEvent.create_execution_error_event(e)

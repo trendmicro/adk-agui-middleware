@@ -37,9 +37,12 @@ class FunctionCallEventUtil:
         Converts function execution results into AGUI ToolCallResultEvent format,
         serializing the content as JSON and generating a unique message ID.
 
-        :param tool_call_id: Unique identifier for the tool call
-        :param content: Function response content to include in the result
-        :return: ToolCallResultEvent containing the function result
+        Args:
+            tool_call_id: Unique identifier for the tool call
+            content: Function response content to include in the result
+
+        Returns:
+            ToolCallResultEvent containing the function result
         """
         return ToolCallResultEvent(
             message_id=str(uuid.uuid4()),
@@ -59,10 +62,13 @@ class FunctionCallEventUtil:
         Creates the full sequence of AGUI events for a single tool call:
         start event, optional args event (if arguments provided), and end event.
 
-        :param tool_call_id: Unique identifier for the tool call
-        :param tool_call_name: Name of the tool being called
-        :param tool_call_args: Arguments for the tool call (dict or string)
-        :yield: BaseEvent objects representing the tool call sequence
+        Args:
+            tool_call_id: Unique identifier for the tool call
+            tool_call_name: Name of the tool being called
+            tool_call_args: Arguments for the tool call (dict or string)
+
+        Yields:
+            BaseEvent objects representing the tool call sequence
         """
         yield ToolCallStartEvent(
             type=EventType.TOOL_CALL_START,
@@ -91,8 +97,11 @@ class FunctionCallEventUtil:
         Processes a list of Google GenAI function calls and generates
         the complete sequence of AGUI tool call events for each one.
 
-        :param function_calls: List of Google GenAI function calls to process
-        :yield: BaseEvent objects for all function calls in sequence
+        Args:
+            function_calls: List of Google GenAI function calls to process
+
+        Yields:
+            BaseEvent objects for all function calls in sequence
         """
         for func_call in function_calls:
             tool_call_id = func_call.id or str(uuid.uuid4())

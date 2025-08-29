@@ -147,7 +147,7 @@ class RunningHandler:
         if adk_event.is_final_response() and agui_event.type == EventType.TOOL_CALL_END:
             self.is_long_running_tool = True
 
-    def _get_translation_function(
+    def _select_translation_function(
         self, adk_event: Event
     ) -> Callable[[Event], AsyncGenerator[BaseEvent]]:
         has_content = adk_event.content and adk_event.content.parts
@@ -156,9 +156,9 @@ class RunningHandler:
 
         if is_incomplete_response or has_content_without_metadata:
             return self.event_translator.translate
-        return self.event_translator.translate_lro_function_calls
+        return self.event_translator.translate_long_running_function_calls
 
-    async def _run_async_translator_adk_to_agui(
+    async def _translate_adk_to_agui_async(
         self, adk_event: Event
     ) -> AsyncGenerator[BaseEvent]:
         """Translate ADK events to AGUI events with custom handler and long-running tool detection.
@@ -183,14 +183,12 @@ class RunningHandler:
                 if translate_event.is_retune:
                     return
 
-        translate_func = self._get_translation_function(adk_event)
+        translate_func = self._select_translation_function(adk_event)
         async for agui_event in translate_func(adk_event):
             yield agui_event
             self._check_is_long_tool(adk_event, agui_event)
 
-    def setting_event_translator_lrt_ids(
-        self, long_running_tool_ids: list[str]
-    ) -> None:
+    def set_long_running_tool_ids(self, long_running_tool_ids: list[str]) -> None:
         """Set long-running tool IDs in the event translator.
 
         Configures the event translator with the list of tool call IDs that are
@@ -264,7 +262,7 @@ class RunningHandler:
             AsyncGenerator yielding processed AGUI BaseEvent objects
         """
         return self._process_events_with_handler(
-            self._run_async_translator_adk_to_agui(adk_event),
+            self._translate_adk_to_agui_async(adk_event),
             record_agui_raw_log,
             self.agui_event_handler,
         )

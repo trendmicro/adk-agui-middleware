@@ -3,7 +3,7 @@
 from ag_ui.core import EventType, RunErrorEvent
 
 from ..loggers.record_log import record_error_log
-from ..tools.convert import agui_to_sse
+from ..tools.convert import convert_agui_event_to_sse
 
 
 class AGUIEncoderError(Exception):
@@ -14,7 +14,7 @@ class AGUIEncoderError(Exception):
     """
 
     @staticmethod
-    def encoding_error(e: Exception) -> dict[str, str]:
+    def create_encoding_error_event(e: Exception) -> dict[str, str]:
         """Create an encoded error event for encoding failures.
 
         Args:
@@ -29,10 +29,10 @@ class AGUIEncoderError(Exception):
             code="ENCODING_ERROR",
         )
         record_error_log("Event encoding failed", e)
-        return agui_to_sse(error_event)
+        return convert_agui_event_to_sse(error_event)
 
     @staticmethod
-    def agent_error(e: Exception) -> dict[str, str]:
+    def create_agent_error_event(e: Exception) -> dict[str, str]:
         """Create an encoded error event for agent execution failures.
 
         Args:
@@ -47,7 +47,7 @@ class AGUIEncoderError(Exception):
             code="AGENT_ERROR",
         )
         record_error_log("AGUI Agent Error Handler", e)
-        return agui_to_sse(error_event)
+        return convert_agui_event_to_sse(error_event)
 
 
 class AGUIErrorEvent:
@@ -58,7 +58,7 @@ class AGUIErrorEvent:
     """
 
     @staticmethod
-    def execution_error(e: Exception) -> RunErrorEvent:
+    def create_execution_error_event(e: Exception) -> RunErrorEvent:
         """Create an error event for general execution failures.
 
         Args:
@@ -73,7 +73,7 @@ class AGUIErrorEvent:
         )
 
     @staticmethod
-    def no_tool_results(thread_id: str) -> RunErrorEvent:
+    def create_no_tool_results_error(thread_id: str) -> RunErrorEvent:
         """Create an error event when tool results are missing.
 
         Args:
@@ -92,7 +92,7 @@ class AGUIErrorEvent:
         )
 
     @staticmethod
-    def tool_result_processing_error(e: Exception) -> RunErrorEvent:
+    def create_tool_processing_error_event(e: Exception) -> RunErrorEvent:
         """Create an error event for tool result processing failures.
 
         Args:

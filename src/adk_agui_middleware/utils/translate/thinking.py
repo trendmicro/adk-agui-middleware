@@ -11,9 +11,9 @@ from ag_ui.core import (
 
 from ...data_model.event import TranslateEvent
 from ...event.agui_event import (
-    CustomerThinkingTextMessageContentEvent,
-    CustomerThinkingTextMessageEndEvent,
-    CustomerThinkingTextMessageStartEvent,
+    CustomThinkingTextMessageContentEvent,
+    CustomThinkingTextMessageEndEvent,
+    CustomThinkingTextMessageStartEvent,
 )
 
 
@@ -58,11 +58,14 @@ class ThinkingMessageEventUtil:
     def create_thinking_message_start_event(thinking_id: str) -> TranslateEvent:
         """Create a thinking text message start event.
 
+        Args:
+            thinking_id: Unique identifier for correlating thinking message sequences
+
         Returns:
-            TranslateEvent: Event indicating the start of thinking text message.
+            TranslateEvent indicating the start of thinking text message
         """
         return TranslateEvent(
-            agui_event=CustomerThinkingTextMessageStartEvent(
+            agui_event=CustomThinkingTextMessageStartEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_START,
                 thinking_id=thinking_id,
             )
@@ -82,7 +85,7 @@ class ThinkingMessageEventUtil:
             TranslateEvent containing the thinking text message content
         """
         return TranslateEvent(
-            agui_event=CustomerThinkingTextMessageContentEvent(
+            agui_event=CustomThinkingTextMessageContentEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_CONTENT,
                 thinking_id=thinking_id,
                 delta=message,
@@ -93,11 +96,14 @@ class ThinkingMessageEventUtil:
     def create_thinking_message_end_event(thinking_id: str) -> TranslateEvent:
         """Create a thinking text message end event.
 
+        Args:
+            thinking_id: Unique identifier for correlating thinking message sequences
+
         Returns:
-            TranslateEvent: Event indicating the end of thinking text message.
+            TranslateEvent indicating the end of thinking text message
         """
         return TranslateEvent(
-            agui_event=CustomerThinkingTextMessageEndEvent(
+            agui_event=CustomThinkingTextMessageEndEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_END,
                 thinking_id=thinking_id,
             )
@@ -135,7 +141,7 @@ class ThinkingMessageEventUtil:
             uid: Optional unique identifier for the thinking sequence, generated if None
 
         Yields:
-            TranslateEvent: Sequence of thinking events (start, content chunks, end)
+            TranslateEvent objects representing thinking events sequence (start, content chunks, end)
         """
         uid = uid if uid else str(uuid.uuid4())
         yield self.create_thinking_message_start_event(uid)

@@ -7,7 +7,7 @@ from ag_ui.core import (
 )
 
 
-class CustomerThinkingTextMessageStartEvent(ThinkingTextMessageStartEvent):
+class CustomThinkingTextMessageStartEvent(ThinkingTextMessageStartEvent):
     """Extended thinking text message start event with custom thinking ID tracking.
 
     Extends the base ThinkingTextMessageStartEvent to include a custom thinking_id
@@ -18,7 +18,7 @@ class CustomerThinkingTextMessageStartEvent(ThinkingTextMessageStartEvent):
     """Unique identifier for correlating thinking message sequences."""
 
 
-class CustomerThinkingTextMessageContentEvent(ThinkingTextMessageContentEvent):
+class CustomThinkingTextMessageContentEvent(ThinkingTextMessageContentEvent):
     """Extended thinking text message content event with custom thinking ID tracking.
 
     Extends the base ThinkingTextMessageContentEvent to include a custom thinking_id
@@ -29,7 +29,7 @@ class CustomerThinkingTextMessageContentEvent(ThinkingTextMessageContentEvent):
     """Unique identifier for correlating thinking message sequences."""
 
 
-class CustomerThinkingTextMessageEndEvent(ThinkingTextMessageEndEvent):
+class CustomThinkingTextMessageEndEvent(ThinkingTextMessageEndEvent):
     """Extended thinking text message end event with custom thinking ID tracking.
 
     Extends the base ThinkingTextMessageEndEvent to include a custom thinking_id
