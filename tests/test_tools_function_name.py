@@ -26,7 +26,7 @@ spec.loader.exec_module(function_name_module)
 
 _should_skip_function = function_name_module._should_skip_function
 _format_function_name = function_name_module._format_function_name
-get_function_name = function_name_module.get_function_name
+extract_caller_name = function_name_module.extract_caller_name
 
 
 class TestFunctionNameUtils(unittest.TestCase):
@@ -48,11 +48,11 @@ class TestFunctionNameUtils(unittest.TestCase):
         result = _format_function_name("test_func", {"param": "value"})
         self.assertEqual(result, "test_func")
 
-    def test_get_function_name_basic(self):
+    def test_extract_caller_name_basic(self):
         """Test basic function name extraction."""
 
         def test_function():
-            return get_function_name()
+            return extract_caller_name()
 
         result = test_function()
         # Should return some function name (may be test runner function)

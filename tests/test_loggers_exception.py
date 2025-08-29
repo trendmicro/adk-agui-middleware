@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from fastapi import HTTPException, Request
 
 from adk_agui_middleware.loggers.exception import (
-    get_common_http_exception,
-    get_http_internal_server_error_exception,
-    exception_http_handler,
+    create_common_http_exception,
+    create_internal_server_error_exception,
+    http_exception_handler,
 )
 
 
@@ -23,7 +23,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
         error_message = "Bad Request"
         error_description = {"field": "invalid_value"}
         
-        result = get_common_http_exception(status_code, error_message, error_description)
+        result = create_common_http_exception(status_code, error_message, error_description)
         
         self.assertIsInstance(result, HTTPException)
         self.assertEqual(result.status_code, status_code)
@@ -37,7 +37,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
         mock_time.return_value = 1234567890
         error_description = {"message": "Internal error"}
         
-        result = get_http_internal_server_error_exception(error_description)
+        result = create_internal_server_error_exception(error_description)
         
         self.assertIsInstance(result, HTTPException)
         self.assertEqual(result.status_code, 500)
@@ -50,7 +50,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
         mock_request = Mock(spec=Request)
         mock_record_request_log.return_value = AsyncMock()
         
-        async with exception_http_handler(mock_request):
+        async with http_exception_handler(mock_request):
             # Simulate successful operation
             pass
         
@@ -67,7 +67,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
         http_exception = HTTPException(status_code=404, detail="Not found")
         
         with self.assertRaises(HTTPException) as context:
-            async with exception_http_handler(mock_request):
+            async with http_exception_handler(mock_request):
                 raise http_exception
         
         self.assertEqual(context.exception, http_exception)
@@ -85,7 +85,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
         original_exception = ValueError("Test error")
         
         with self.assertRaises(HTTPException) as context:
-            async with exception_http_handler(mock_request):
+            async with http_exception_handler(mock_request):
                 raise original_exception
         
         # Should convert to HTTP 500 error
@@ -99,7 +99,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
     def test_error_model_structure(self):
         """Test that the error model has the correct structure."""
         error_description = {"detail": "test"}
-        exception = get_common_http_exception(400, "Test Error", error_description)
+        exception = create_common_http_exception(400, "Test Error", error_description)
         
         detail = exception.detail
         
@@ -118,7 +118,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
         status_codes = [400, 401, 403, 404, 422, 500]
         
         for status_code in status_codes:
-            exception = get_common_http_exception(
+            exception = create_common_http_exception(
                 status_code, f"Error {status_code}", {"code": status_code}
             )
             
@@ -127,7 +127,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
 
     def test_empty_error_description(self):
         """Test creating exception with empty error description."""
-        exception = get_common_http_exception(400, "Error", {})
+        exception = create_common_http_exception(400, "Error", {})
         
         self.assertEqual(exception.detail["error_description"], {})
 
@@ -142,7 +142,7 @@ class TestHTTPExceptionHandling(unittest.TestCase):
             "suggestions": ["Check email format", "Verify age value"]
         }
         
-        exception = get_common_http_exception(422, "Validation Error", complex_description)
+        exception = create_common_http_exception(422, "Validation Error", complex_description)
         
         self.assertEqual(exception.detail["error_description"], complex_description)
 

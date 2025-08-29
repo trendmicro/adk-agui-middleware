@@ -12,40 +12,40 @@ class TestAGUIEncoderError(unittest.TestCase):
     """Test cases for AGUIEncoderError class."""
 
     @patch("adk_agui_middleware.event.error_event.record_error_log")
-    @patch("adk_agui_middleware.event.error_event.agui_to_sse")
-    def test_encoding_error(self, mock_agui_to_sse, mock_record_error):
+    @patch("adk_agui_middleware.event.error_event.convert_agui_event_to_sse")
+    def test_encoding_error(self, mock_convert_agui_event_to_sse, mock_record_error):
         """Test creating encoding error event."""
         test_exception = ValueError("Test encoding error")
-        mock_agui_to_sse.return_value = {"event": "error", "data": "test"}
+        mock_convert_agui_event_to_sse.return_value = {"event": "error", "data": "test"}
         
-        result = AGUIEncoderError.encoding_error(test_exception)
+        result = AGUIEncoderError.create_encoding_error_event(test_exception)
         
         self.assertEqual(result, {"event": "error", "data": "test"})
         mock_record_error.assert_called_once_with("Event encoding failed", test_exception)
-        mock_agui_to_sse.assert_called_once()
+        mock_convert_agui_event_to_sse.assert_called_once()
         
         # Check the RunErrorEvent that was passed to agui_to_sse
-        call_args = mock_agui_to_sse.call_args[0][0]
+        call_args = mock_convert_agui_event_to_sse.call_args[0][0]
         self.assertIsInstance(call_args, RunErrorEvent)
         self.assertEqual(call_args.type, EventType.RUN_ERROR)
         self.assertIn("Event encoding failed", call_args.message)
         self.assertEqual(call_args.code, "ENCODING_ERROR")
 
     @patch("adk_agui_middleware.event.error_event.record_error_log")
-    @patch("adk_agui_middleware.event.error_event.agui_to_sse")
-    def test_agent_error(self, mock_agui_to_sse, mock_record_error):
+    @patch("adk_agui_middleware.event.error_event.convert_agui_event_to_sse")
+    def test_agent_error(self, mock_convert_agui_event_to_sse, mock_record_error):
         """Test creating agent error event."""
         test_exception = RuntimeError("Test agent error")
-        mock_agui_to_sse.return_value = {"event": "error", "data": "agent_error"}
+        mock_convert_agui_event_to_sse.return_value = {"event": "error", "data": "agent_error"}
         
-        result = AGUIEncoderError.agent_error(test_exception)
+        result = AGUIEncoderError.create_agent_error_event(test_exception)
         
         self.assertEqual(result, {"event": "error", "data": "agent_error"})
         mock_record_error.assert_called_once_with("AGUI Agent Error Handler", test_exception)
-        mock_agui_to_sse.assert_called_once()
+        mock_convert_agui_event_to_sse.assert_called_once()
         
         # Check the RunErrorEvent that was passed to agui_to_sse
-        call_args = mock_agui_to_sse.call_args[0][0]
+        call_args = mock_convert_agui_event_to_sse.call_args[0][0]
         self.assertIsInstance(call_args, RunErrorEvent)
         self.assertEqual(call_args.type, EventType.RUN_ERROR)
         self.assertIn("Agent execution failed", call_args.message)
@@ -60,7 +60,7 @@ class TestAGUIErrorEvent(unittest.TestCase):
         """Test creating execution error event."""
         test_exception = Exception("Test execution error")
         
-        result = AGUIErrorEvent.execution_error(test_exception)
+        result = AGUIErrorEvent.create_execution_error_event(test_exception)
         
         self.assertIsInstance(result, RunErrorEvent)
         self.assertEqual(result.type, EventType.RUN_ERROR)
@@ -73,7 +73,7 @@ class TestAGUIErrorEvent(unittest.TestCase):
         """Test creating no tool results error event."""
         thread_id = "test-thread-123"
         
-        result = AGUIErrorEvent.no_tool_results(thread_id)
+        result = AGUIErrorEvent.create_no_tool_results_error(thread_id)
         
         self.assertIsInstance(result, RunErrorEvent)
         self.assertEqual(result.type, EventType.RUN_ERROR)
@@ -88,7 +88,7 @@ class TestAGUIErrorEvent(unittest.TestCase):
         """Test creating tool result processing error event."""
         test_exception = ValueError("Tool processing failed")
         
-        result = AGUIErrorEvent.tool_result_processing_error(test_exception)
+        result = AGUIErrorEvent.create_tool_processing_error_event(test_exception)
         
         self.assertIsInstance(result, RunErrorEvent)
         self.assertEqual(result.type, EventType.RUN_ERROR)
@@ -103,9 +103,9 @@ class TestAGUIErrorEvent(unittest.TestCase):
         thread_id = "test-thread"
         
         events = [
-            AGUIErrorEvent.execution_error(test_exception),
-            AGUIErrorEvent.no_tool_results(thread_id),
-            AGUIErrorEvent.tool_result_processing_error(test_exception),
+            AGUIErrorEvent.create_execution_error_event(test_exception),
+            AGUIErrorEvent.create_no_tool_results_error(thread_id),
+            AGUIErrorEvent.create_tool_processing_error_event(test_exception),
         ]
         
         for event in events:

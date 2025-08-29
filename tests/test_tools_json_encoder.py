@@ -43,7 +43,7 @@ json_encoder_module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(json_encoder_module)
 
 # Get the DataclassesEncoder class
-DataclassesEncoder = json_encoder_module.DataclassesEncoder
+PydanticJsonEncoder = json_encoder_module.PydanticJsonEncoder
 
 
 class MockPydanticModel(MockBaseModel):
@@ -53,12 +53,12 @@ class MockPydanticModel(MockBaseModel):
         super().__init__(name=name, age=age, active=active)
 
 
-class TestDataclassesEncoder(unittest.TestCase):
-    """Test cases for the DataclassesEncoder class."""
+class TestPydanticJsonEncoder(unittest.TestCase):
+    """Test cases for the PydanticJsonEncoder class."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.encoder = DataclassesEncoder()
+        self.encoder = PydanticJsonEncoder()
 
     def test_encode_pydantic_model(self):
         """Test encoding a Pydantic BaseModel instance."""
@@ -105,7 +105,7 @@ class TestDataclassesEncoder(unittest.TestCase):
         model = MockPydanticModel(name="John", age=30, active=False)
         data = {"user": model, "metadata": "info"}
 
-        json_string = json.dumps(data, cls=DataclassesEncoder)
+        json_string = json.dumps(data, cls=PydanticJsonEncoder)
         parsed = json.loads(json_string)
 
         expected = {
@@ -123,7 +123,7 @@ class TestDataclassesEncoder(unittest.TestCase):
             "normal": "regular string",
         }
 
-        json_string = json.dumps(data, cls=DataclassesEncoder)
+        json_string = json.dumps(data, cls=PydanticJsonEncoder)
         parsed = json.loads(json_string)
 
         expected = {
@@ -149,7 +149,7 @@ class TestDataclassesEncoder(unittest.TestCase):
         person = PersonModel(name="Alice", address=address)
 
         # For testing nested models, we need to use JSON dumps with the encoder
-        json_string = json.dumps(person, cls=DataclassesEncoder)
+        json_string = json.dumps(person, cls=PydanticJsonEncoder)
         result = json.loads(json_string)
 
         expected = {
@@ -176,7 +176,7 @@ class TestDataclassesEncoder(unittest.TestCase):
             "simple_list": [1, 2, 3],
         }
 
-        json_string = json.dumps(complex_data, cls=DataclassesEncoder)
+        json_string = json.dumps(complex_data, cls=PydanticJsonEncoder)
         parsed = json.loads(json_string)
 
         expected = {
@@ -192,7 +192,7 @@ class TestDataclassesEncoder(unittest.TestCase):
         self.assertEqual(parsed, expected)
 
     def test_encoder_inheritance(self):
-        """Test that DataclassesEncoder properly inherits from JSONEncoder."""
+        """Test that PydanticJsonEncoder properly inherits from JSONEncoder."""
         self.assertIsInstance(self.encoder, json.JSONEncoder)
 
     def test_pydantic_model_with_optional_fields(self):

@@ -395,7 +395,7 @@ class TestRunningHandler(unittest.TestCase):
         mock_adk_event = Mock(spec=Event)
         
         with patch.object(self.handler, '_process_events_with_handler') as mock_process:
-            with patch.object(self.handler, '_run_async_translator_adk_to_agui') as mock_translate:
+            with patch.object(self.handler, '_translate_adk_to_agui_async') as mock_translate:
                 mock_translate.return_value = "mock_stream"
                 
                 result = self.handler.run_async_with_agui(mock_adk_event)

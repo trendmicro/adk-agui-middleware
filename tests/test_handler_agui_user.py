@@ -189,7 +189,7 @@ class TestAGUIUserHandler:
         """Test pending tool call removal with no tool results."""
         mock_user_message_handler.extract_tool_results.return_value = []
         
-        with patch.object(AGUIErrorEvent, "no_tool_results") as mock_error:
+        with patch.object(AGUIErrorEvent, "create_no_tool_results_error") as mock_error:
             mock_error.return_value = Mock(spec=RunErrorEvent)
             result = await agui_user_handler.remove_pending_tool_call()
         
@@ -203,7 +203,7 @@ class TestAGUIUserHandler:
         mock_user_message_handler.extract_tool_results.return_value = tool_results
         mock_session_handler.check_and_remove_pending_tool_call.side_effect = Exception("Test error")
         
-        with patch.object(AGUIErrorEvent, "tool_result_processing_error") as mock_error:
+        with patch.object(AGUIErrorEvent, "create_tool_processing_error_event") as mock_error:
             mock_error.return_value = Mock(spec=RunErrorEvent)
             result = await agui_user_handler.remove_pending_tool_call()
         
@@ -378,7 +378,7 @@ class TestAGUIUserHandler:
         
         test_exception = Exception("Test error")
         with patch.object(agui_user_handler, "_run_workflow", side_effect=test_exception):
-            with patch.object(AGUIErrorEvent, "execution_error") as mock_error:
+            with patch.object(AGUIErrorEvent, "create_execution_error_event") as mock_error:
                 mock_error.return_value = Mock(spec=RunErrorEvent)
                 
                 events = []

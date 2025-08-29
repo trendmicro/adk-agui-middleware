@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 from ag_ui.core import BaseEvent, EventType
 
-from adk_agui_middleware.tools.convert import agui_to_sse
+from adk_agui_middleware.tools.convert import convert_agui_event_to_sse
 
 
 class TestAGUIToSSE(unittest.TestCase):
@@ -22,7 +22,7 @@ class TestAGUIToSSE(unittest.TestCase):
         mock_event.type.value = "test_event_type"
         mock_event.model_dump_json.return_value = '{"test": "data"}'
 
-        result = agui_to_sse(mock_event)
+        result = convert_agui_event_to_sse(mock_event)
 
         self.assertIsInstance(result, dict)
         self.assertIn("data", result)
@@ -40,7 +40,7 @@ class TestAGUIToSSE(unittest.TestCase):
         mock_event.type = EventType.TEXT_MESSAGE_START
         mock_event.model_dump_json.return_value = '{"message": "hello"}'
 
-        result = agui_to_sse(mock_event)
+        result = convert_agui_event_to_sse(mock_event)
 
         self.assertEqual(result["event"], "TEXT_MESSAGE_START")
         self.assertEqual(result["data"], '{"message": "hello"}')
@@ -52,7 +52,7 @@ class TestAGUIToSSE(unittest.TestCase):
         mock_event.type.value = "test"
         mock_event.model_dump_json.return_value = "{}"
 
-        agui_to_sse(mock_event)
+        convert_agui_event_to_sse(mock_event)
 
         # Verify model_dump_json was called with correct parameters
         mock_event.model_dump_json.assert_called_once_with(
@@ -66,8 +66,8 @@ class TestAGUIToSSE(unittest.TestCase):
         mock_event.type.value = "test"
         mock_event.model_dump_json.return_value = "{}"
 
-        result1 = agui_to_sse(mock_event)
-        result2 = agui_to_sse(mock_event)
+        result1 = convert_agui_event_to_sse(mock_event)
+        result2 = convert_agui_event_to_sse(mock_event)
 
         self.assertNotEqual(result1["id"], result2["id"])
 

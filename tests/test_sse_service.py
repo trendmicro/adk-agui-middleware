@@ -119,30 +119,30 @@ class TestSSEService(unittest.TestCase):
         expected = {"custom_key": "custom_value"}
         self.assertEqual(result, expected)
 
-    @patch("adk_agui_middleware.sse_service.agui_to_sse")
-    def test_encoding_handler_success(self, mock_agui_to_sse):
+    @patch("adk_agui_middleware.sse_service.convert_agui_event_to_sse")
+    def test_encoding_handler_success(self, mock_convert_agui_event_to_sse):
         """Test _encoding_handler with successful encoding."""
-        mock_agui_to_sse.return_value = {"data": "encoded_event_string"}
+        mock_convert_agui_event_to_sse.return_value = {"data": "encoded_event_string"}
         mock_event = Mock(spec=BaseEvent)
 
-        result = SSEService._encoding_handler(mock_event)
+        result = SSEService._encode_event_to_sse(mock_event)
 
         self.assertEqual(result, {"data": "encoded_event_string"})
-        mock_agui_to_sse.assert_called_once_with(mock_event)
+        mock_convert_agui_event_to_sse.assert_called_once_with(mock_event)
 
     @patch("adk_agui_middleware.sse_service.AGUIEncoderError")
-    @patch("adk_agui_middleware.sse_service.agui_to_sse")
-    def test_encoding_handler_exception(self, mock_agui_to_sse, mock_agui_encoder_error):
+    @patch("adk_agui_middleware.sse_service.convert_agui_event_to_sse")
+    def test_encoding_handler_exception(self, mock_convert_agui_event_to_sse, mock_agui_encoder_error):
         """Test _encoding_handler with encoding exception."""
         exception_obj = Exception("Encoding failed")
-        mock_agui_to_sse.side_effect = exception_obj
+        mock_convert_agui_event_to_sse.side_effect = exception_obj
         mock_event = Mock(spec=BaseEvent)
-        mock_agui_encoder_error.encoding_error.return_value = {"data": "error_event_string"}
+        mock_agui_encoder_error.create_encoding_error_event.return_value = {"data": "error_event_string"}
 
-        result = SSEService._encoding_handler(mock_event)
+        result = SSEService._encode_event_to_sse(mock_event)
 
         self.assertEqual(result, {"data": "error_event_string"})
-        mock_agui_encoder_error.encoding_error.assert_called_once_with(exception_obj)
+        mock_agui_encoder_error.create_encoding_error_event.assert_called_once_with(exception_obj)
 
     @patch("adk_agui_middleware.sse_service.Runner")
     async def test_create_runner_new(self, mock_runner_class):
