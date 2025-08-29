@@ -23,6 +23,7 @@ from ..base_abc.handler import (
     BaseADKEventTimeoutHandler,
     BaseAGUIEventHandler,
     BaseAGUIStateSnapshotHandler,
+    BaseInOutHandler,
     BaseTranslateHandler,
 )
 
@@ -63,6 +64,7 @@ class HandlerContext(BaseModel):
     agui_event_handler: type[BaseAGUIEventHandler] | None = None
     agui_state_snapshot_handler: type[BaseAGUIStateSnapshotHandler] | None = None
     translate_handler: type[BaseTranslateHandler] | None = None
+    in_out_record_handler: type[BaseInOutHandler] | None = None
 
 
 class ConfigContext(BaseModel):

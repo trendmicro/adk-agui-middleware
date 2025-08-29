@@ -1,7 +1,7 @@
 """Handler for managing agent execution and event translation between ADK and AGUI formats."""
 
 import asyncio
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
 from ag_ui.core import BaseEvent, EventType, StateSnapshotEvent
@@ -64,18 +64,45 @@ class RunningHandler:
         Args:
             handler_context: Context containing handler class types to instantiate
         """
-        if handler_context.adk_event_handler:
-            self.adk_event_handler = handler_context.adk_event_handler()
-        if handler_context.adk_event_timeout_handler:
-            self.adk_event_timeout_handler = handler_context.adk_event_timeout_handler()
-        if handler_context.agui_event_handler:
-            self.agui_event_handler = handler_context.agui_event_handler()
-        if handler_context.agui_state_snapshot_handler:
-            self.agui_state_snapshot_handler = (
-                handler_context.agui_state_snapshot_handler()
-            )
-        if handler_context.translate_handler:
-            self.translate_handler = handler_context.translate_handler()
+        for attr in [
+            "adk_event_handler",
+            "adk_event_timeout_handler",
+            "agui_event_handler",
+            "agui_state_snapshot_handler",
+            "translate_handler",
+        ]:
+            if handler_class := getattr(handler_context, attr, None):
+                setattr(self, attr, handler_class())
+
+    async def _get_timeout(self, enable_timeout: bool) -> float | None:
+        """Extract timeout logic to separate method"""
+        if not (self.adk_event_timeout_handler and enable_timeout):
+            return None
+        return await self.adk_event_timeout_handler.get_timeout()
+
+    async def _handle_timeout_fallback(self) -> AsyncGenerator[Event | None, Any]:
+        """Handle timeout fallback logic"""
+        if self.adk_event_timeout_handler is None:
+            return
+        async for (
+            event
+        ) in await self.adk_event_timeout_handler.process_timeout_fallback():
+            yield event
+
+    @staticmethod
+    async def _process_single_event(
+        event: BaseEvent | Event,
+        log_func: Any,
+        event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None,
+    ) -> AsyncGenerator[BaseEvent | Event]:
+        """Process a single event with logging and optional handler"""
+        log_func(event)
+        if not event_handler:
+            yield event
+            return
+        async for new_event in await event_handler.process(event):  # type: ignore[arg-type]
+            if new_event:
+                yield new_event
 
     async def _process_events_with_handler(
         self,
@@ -98,29 +125,17 @@ class RunningHandler:
         Yields:
             Events from the stream, potentially modified by the event handler
         """
-        timeout = (
-            await self.adk_event_timeout_handler.get_timeout()
-            if self.adk_event_timeout_handler and enable_timeout
-            else None
-        )
         try:
-            async with asyncio.timeout(timeout):
+            async with asyncio.timeout(await self._get_timeout(enable_timeout)):
                 async for event in event_stream:
-                    log_func(event)
-                    if event_handler:
-                        async for new_event in await event_handler.process(event):
-                            if new_event:
-                                yield new_event
-                    else:
-                        yield event
+                    async for processed_event in self._process_single_event(
+                        event, log_func, event_handler
+                    ):
+                        yield processed_event
         except TimeoutError:
             record_warning_log("Timeout occurred while processing events.")
-            if self.adk_event_timeout_handler is None:
-                return
-            async for (
-                new_event
-            ) in await self.adk_event_timeout_handler.process_timeout_fallback():
-                yield new_event
+            async for fallback_event in self._handle_timeout_fallback():
+                yield fallback_event
 
     def _check_is_long_tool(self, adk_event: Event, agui_event: BaseEvent) -> None:
         """Check if the event indicates a long-running tool and set flag accordingly.
@@ -131,6 +146,17 @@ class RunningHandler:
         """
         if adk_event.is_final_response() and agui_event.type == EventType.TOOL_CALL_END:
             self.is_long_running_tool = True
+
+    def _get_translation_function(
+        self, adk_event: Event
+    ) -> Callable[[Event], AsyncGenerator[BaseEvent]]:
+        has_content = adk_event.content and adk_event.content.parts
+        is_incomplete_response = not adk_event.is_final_response()
+        has_content_without_metadata = not adk_event.usage_metadata and has_content
+
+        if is_incomplete_response or has_content_without_metadata:
+            return self.event_translator.translate
+        return self.event_translator.translate_lro_function_calls
 
     async def _run_async_translator_adk_to_agui(
         self, adk_event: Event
@@ -157,16 +183,8 @@ class RunningHandler:
                 if translate_event.is_retune:
                     return
 
-        has_content = adk_event.content and adk_event.content.parts
-        is_incomplete_response = not adk_event.is_final_response()
-        has_content_without_metadata = not adk_event.usage_metadata and has_content
-
-        if is_incomplete_response or has_content_without_metadata:
-            func = self.event_translator.translate
-        else:
-            func = self.event_translator.translate_lro_function_calls
-
-        async for agui_event in func(adk_event):
+        translate_func = self._get_translation_function(adk_event)
+        async for agui_event in translate_func(adk_event):
             yield agui_event
             self._check_is_long_tool(adk_event, agui_event)
 

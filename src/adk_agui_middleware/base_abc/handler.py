@@ -4,7 +4,8 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from ag_ui.core import BaseEvent
+from ag_ui.core import BaseEvent, RunAgentInput
+from fastapi import Request
 from google.adk.events import Event
 
 from ..data_model.event import TranslateEvent
@@ -129,6 +130,56 @@ class BaseAGUIStateSnapshotHandler(metaclass=ABCMeta):
 
         Returns:
             Transformed state snapshot dictionary
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+
+class BaseInOutHandler(metaclass=ABCMeta):
+    """Abstract base class for handling input/output recording and transformation.
+
+    Defines the interface for handlers that record incoming requests and outgoing responses,
+    as well as potentially modify or transform output data before transmission.
+    """
+
+    @abstractmethod
+    async def input_record(self, agui_input: RunAgentInput, request: Request) -> None:
+        """Record incoming AGUI input for logging or audit purposes.
+
+        Args:
+            agui_input: The agent input data to record
+            request: HTTP request containing client context
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
+    async def output_record(self, agui_event: dict[str, str]) -> None:
+        """Record outgoing AGUI events for logging or audit purposes.
+
+        Args:
+            agui_event: Dictionary containing event data to record
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
+    async def output_catch_and_change(
+        self, agui_event: dict[str, str]
+    ) -> dict[str, str]:
+        """Intercept and potentially modify outgoing AGUI events.
+
+        Args:
+            agui_event: Dictionary containing event data to potentially modify
+
+        Returns:
+            Modified event dictionary (may be unchanged)
 
         Raises:
             NotImplementedError: Must be implemented by subclasses

@@ -6,6 +6,8 @@ from collections.abc import AsyncGenerator, Callable
 from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
 
+from ..base_abc.handler import BaseInOutHandler
+
 
 class BaseSSEService(metaclass=ABCMeta):
     """Abstract base class defining the interface for SSE service implementations.
@@ -17,7 +19,7 @@ class BaseSSEService(metaclass=ABCMeta):
     @abstractmethod
     async def get_runner(
         self, agui_content: RunAgentInput, request: Request
-    ) -> Callable[[], AsyncGenerator[BaseEvent]]:
+    ) -> tuple[Callable[[], AsyncGenerator[BaseEvent]], BaseInOutHandler | None]:
         """Create and configure an agent runner for the given request.
 
         Args:
@@ -34,7 +36,9 @@ class BaseSSEService(metaclass=ABCMeta):
 
     @abstractmethod
     async def event_generator(
-        self, runner: Callable[[], AsyncGenerator[BaseEvent]]
+        self,
+        runner: Callable[[], AsyncGenerator[BaseEvent]],
+        inout_handler: BaseInOutHandler | None = None,
     ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.
 
@@ -49,5 +53,7 @@ class BaseSSEService(metaclass=ABCMeta):
 
         Raises:
             NotImplementedError: Must be implemented by subclasses
+            :param runner:
+            :param inout_handler:
         """
         raise NotImplementedError("This method should be implemented by subclasses.")

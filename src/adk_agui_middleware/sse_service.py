@@ -12,6 +12,7 @@ from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
 
+from .base_abc.handler import BaseInOutHandler
 from .base_abc.sse_service import BaseSSEService
 from .data_model.context import ConfigContext, HandlerContext, RunnerConfig
 from .data_model.session import SessionParameter
@@ -80,6 +81,24 @@ class SSEService(BaseSSEService):
         if callable(value):
             return await value(agui_content, request)
         return value
+
+    async def _create_and_record_message(
+        self, agui_content: RunAgentInput, request: Request
+    ) -> BaseInOutHandler | None:
+        if self.handler_context.in_out_record_handler:
+            in_out_record = self.handler_context.in_out_record_handler()
+            await in_out_record.input_record(agui_content, request)
+            return in_out_record
+        return None
+
+    @staticmethod
+    async def _record_output_message(
+        inout_handler: BaseInOutHandler | None, output_data: dict[str, str]
+    ) -> dict[str, str]:
+        if inout_handler:
+            await inout_handler.output_record(output_data)
+            return await inout_handler.output_catch_and_change(output_data)
+        return output_data
 
     async def extract_app_name(
         self, agui_content: RunAgentInput, request: Request
@@ -186,7 +205,7 @@ class SSEService(BaseSSEService):
 
     async def get_runner(
         self, agui_content: RunAgentInput, request: Request
-    ) -> Callable[[], AsyncGenerator[BaseEvent]]:
+    ) -> tuple[Callable[[], AsyncGenerator[BaseEvent]], BaseInOutHandler | None]:
         """Create a configured runner function for the given request.
 
         Extracts context from the request, creates necessary handlers and managers,
@@ -229,10 +248,13 @@ class SSEService(BaseSSEService):
             async for event in user_handler.run():
                 yield event
 
-        return runner
+        in_out_record = await self._create_and_record_message(agui_content, request)
+        return runner, in_out_record
 
     async def event_generator(
-        self, runner: Callable[[], AsyncGenerator[BaseEvent]]
+        self,
+        runner: Callable[[], AsyncGenerator[BaseEvent]],
+        inout_handler: BaseInOutHandler | None = None,
     ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.
 
@@ -244,14 +266,20 @@ class SSEService(BaseSSEService):
 
         Yields:
             Encoded event dictionaries ready for SSE transmission
+            :param runner:
+            :param inout_handler:
         """
 
         async def _generate() -> AsyncGenerator[dict[str, str]]:
             try:
                 async for event in runner():
-                    yield self._encoding_handler(event)
+                    yield await self._record_output_message(
+                        inout_handler, self._encoding_handler(event)
+                    )
             except Exception as e:
-                yield AGUIEncoderError.agent_error(e)
+                yield await self._record_output_message(
+                    inout_handler, AGUIEncoderError.agent_error(e)
+                )
 
         return _generate()
 
