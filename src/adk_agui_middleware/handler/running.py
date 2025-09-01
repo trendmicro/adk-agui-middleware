@@ -213,7 +213,7 @@ class RunningHandler:
 
     async def create_state_snapshot_event(
         self, final_state: dict[str, Any]
-    ) -> StateSnapshotEvent:
+    ) -> StateSnapshotEvent | None:
         """Create a state snapshot event with optional state processing.
 
         Processes the final state through the configured state snapshot handler
@@ -226,8 +226,12 @@ class RunningHandler:
             StateSnapshotEvent containing the processed state
         """
         if self.agui_state_snapshot_handler is not None:
-            final_state = await self.agui_state_snapshot_handler.process(final_state)
-        return self.event_translator.create_state_snapshot_event(final_state)
+            final_state = await self.agui_state_snapshot_handler.process(final_state)  # type: ignore[assignment]
+        return (
+            None
+            if final_state is None
+            else self.event_translator.create_state_snapshot_event(final_state)
+        )
 
     def run_async_with_adk(self, *args: Any, **kwargs: Any) -> AsyncGenerator[Event]:
         """Execute agent with ADK and process events through ADK event handler.

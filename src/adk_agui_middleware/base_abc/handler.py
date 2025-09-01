@@ -122,7 +122,7 @@ class BaseAGUIStateSnapshotHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def process(self, state_snapshot: dict[str, Any]) -> dict[str, Any]:
+    async def process(self, state_snapshot: dict[str, Any]) -> dict[str, Any] | None:
         """Process a state snapshot and return the transformed state.
 
         Args:

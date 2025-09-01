@@ -187,8 +187,13 @@ class AGUIUserHandler:
             return
         async for ag_ui_event in self.running_handler.force_close_streaming_message():
             yield ag_ui_event
-        if final_state := await self.session_handler.get_session_state():
-            yield await self.running_handler.create_state_snapshot_event(final_state)
+        final_state = await self.session_handler.get_session_state()
+        if (
+            event_final_state := await self.running_handler.create_state_snapshot_event(
+                final_state
+            )
+        ) is not None:
+            yield event_final_state
 
     async def _run_workflow(self) -> AsyncGenerator[BaseEvent]:
         """Execute the complete agent workflow with session management.
