@@ -34,7 +34,10 @@ class RunningHandler:
     """
 
     def __init__(
-        self, runner: Runner, run_config: RunConfig, handler_context: HandlerContext
+        self,
+        runner: Runner | None = None,
+        run_config: RunConfig | None = None,
+        handler_context: HandlerContext | None = None,
     ):
         """Initialize the running handler with agent runner and configuration.
 
@@ -55,7 +58,7 @@ class RunningHandler:
         self.translate_handler: BaseTranslateHandler | None = None
         self._init_handler(handler_context)
 
-    def _init_handler(self, handler_context: HandlerContext) -> None:
+    def _init_handler(self, handler_context: HandlerContext | None) -> None:
         """Initialize optional event handlers from the provided context.
 
         Creates instances of event handlers if they are configured in the handler context.
@@ -64,6 +67,8 @@ class RunningHandler:
         Args:
             handler_context: Context containing handler class types to instantiate
         """
+        if handler_context is None:
+            return
         for attr in [
             "adk_event_handler",
             "adk_event_timeout_handler",
@@ -246,11 +251,33 @@ class RunningHandler:
         Returns:
             AsyncGenerator yielding processed ADK Event objects
         """
+        if not self.runner or not self.run_config:
+            raise ValueError("Runner and RunConfig must be provided to run the agent.")
         return self._process_events_with_handler(
             self.runner.run_async(*args, run_config=self.run_config, **kwargs),
             record_event_raw_log,
             self.adk_event_handler,
             enable_timeout=True,
+        )
+
+    def run_async_with_history(self, runner: AsyncGenerator) -> AsyncGenerator[Event]:
+        """Execute agent with ADK and process events through ADK event handler.
+
+        Runs the ADK agent asynchronously with the provided arguments and
+        processes the resulting events through the configured ADK event handler.
+
+        Args:
+            *args: Positional arguments to pass to the runner
+            **kwargs: Keyword arguments to pass to the runner
+            :param runner:
+
+        Returns:
+            AsyncGenerator yielding processed ADK Event objects
+        """
+        return self._process_events_with_handler(
+            runner,
+            record_event_raw_log,
+            self.adk_event_handler,
         )
 
     def run_async_with_agui(self, adk_event: Event) -> AsyncGenerator[BaseEvent]:

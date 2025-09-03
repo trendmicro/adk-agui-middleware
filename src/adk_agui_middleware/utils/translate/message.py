@@ -9,10 +9,12 @@ from collections.abc import AsyncGenerator
 from ag_ui.core import (
     BaseEvent,
     EventType,
+    MessagesSnapshotEvent,
     TextMessageContentEvent,
     TextMessageEndEvent,
     TextMessageStartEvent,
 )
+from ag_ui.core.types import Message
 
 
 class MessageEventUtil:
@@ -47,4 +49,12 @@ class MessageEventUtil:
         )
         yield TextMessageEndEvent(
             type=EventType.TEXT_MESSAGE_END, message_id=message_id
+        )
+
+    @staticmethod
+    def create_message_snapshot(
+        message_list: list[Message] | None,
+    ) -> MessagesSnapshotEvent:
+        return MessagesSnapshotEvent(
+            type=EventType.MESSAGES_SNAPSHOT, messages=message_list or []
         )

@@ -15,7 +15,7 @@ from google.adk.auth.credential_service.in_memory_credential_service import (
     InMemoryCredentialService,
 )
 from google.adk.memory import BaseMemoryService, InMemoryMemoryService
-from google.adk.sessions import BaseSessionService, InMemorySessionService
+from google.adk.sessions import BaseSessionService, InMemorySessionService, Session
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..base_abc.handler import (
@@ -87,6 +87,12 @@ class ConfigContext(BaseModel):
     ) = None
 
 
+class PathConfig(BaseModel):
+    agui_main_path: str = "/"
+    agui_chat_list_path: str = "/list"
+    agui_history_path: str = "/history/{session_id}"
+
+
 class RunnerConfig(BaseModel):
     """Configuration for ADK runner setup and services.
 
@@ -152,3 +158,14 @@ class RunnerConfig(BaseModel):
         return self._get_or_create_service(
             "credential_service", InMemoryCredentialService
         )
+
+
+class HistoryConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    app_name: str | Callable[[Request], Awaitable[str]] = "default"
+    user_id: str | Callable[[Request], Awaitable[str]]
+    session_id: str | Callable[[Request], Awaitable[str]]
+    get_chat_list: Callable[[list[Session]], Awaitable[dict[str, str]]] | None = None
+
+    session_service: BaseSessionService = Field(default_factory=InMemorySessionService)

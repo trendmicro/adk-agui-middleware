@@ -26,6 +26,20 @@ class SessionManager:
         """
         self.session_service = session_service
 
+    async def list_sessions(self, app_name: str, user_id: str) -> list[Session]:
+        """List all sessions for a given app and user.
+
+        Args:
+            app_name: Name of the application
+            user_id: Identifier for the user
+
+        Returns:
+            List of Session objects
+        """
+        return (
+            await self.session_service.list_sessions(app_name=app_name, user_id=user_id)
+        ).sessions
+
     async def get_session(self, session_parameter: SessionParameter) -> Session | None:
         """Retrieve a session using the provided session parameters.
 
