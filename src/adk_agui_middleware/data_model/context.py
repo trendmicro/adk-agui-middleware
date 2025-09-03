@@ -88,6 +88,17 @@ class ConfigContext(BaseModel):
 
 
 class PathConfig(BaseModel):
+    """Configuration for AGUI endpoint paths.
+
+    Defines the URL paths for different AGUI endpoints including
+    main agent interaction, conversation listing, and history retrieval.
+
+    Attributes:
+        agui_main_path: Path for the main agent interaction endpoint
+        agui_chat_list_path: Path for listing available conversations
+        agui_history_path: Path template for retrieving conversation history
+    """
+
     agui_main_path: str = "/"
     agui_chat_list_path: str = "/list"
     agui_history_path: str = "/history/{session_id}"
@@ -161,11 +172,26 @@ class RunnerConfig(BaseModel):
 
 
 class HistoryConfig(BaseModel):
+    """Configuration for history service context extraction and session management.
+
+    Defines how to extract context information from requests for history operations
+    and manages session service configuration for conversation retrieval.
+
+    Attributes:
+        app_name: Static app name or callable to extract from request
+        user_id: Static user ID or callable to extract from request
+        session_id: Static session ID or callable to extract from request
+        get_chat_list: Optional callable to transform session list format
+        session_service: Session service implementation for history retrieval
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     app_name: str | Callable[[Request], Awaitable[str]] = "default"
     user_id: str | Callable[[Request], Awaitable[str]]
     session_id: str | Callable[[Request], Awaitable[str]]
-    get_chat_list: Callable[[list[Session]], Awaitable[dict[str, str]]] | None = None
+    get_chat_list: Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None = (
+        None
+    )
 
     session_service: BaseSessionService = Field(default_factory=InMemorySessionService)

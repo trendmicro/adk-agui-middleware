@@ -1,5 +1,7 @@
 """FastAPI endpoint registration for AGUI middleware service."""
 
+from http.client import InvalidURL
+
 from ag_ui.core import MessagesSnapshotEvent, RunAgentInput
 from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
@@ -25,6 +27,8 @@ def register_agui_endpoint(
     Args:
         app: FastAPI application instance to register the endpoint on
         sse_service: Service implementing BaseSSEService for handling SSE streams
+        path_config: Configuration for endpoint paths (main, chat list, history)
+        history_service: Optional service for handling conversation history endpoints
 
     Raises:
         Exception: Various exceptions are handled by exception_http_handler
@@ -61,10 +65,44 @@ def register_agui_endpoint(
 
     @app.get(path_config.agui_chat_list_path)
     async def get_chat_list(request: Request) -> list[dict[str, str]]:
+        """Get list of available conversation threads for the user.
+
+        Retrieves all available conversation threads/sessions for the requesting
+        user based on context extracted from the request.
+
+        Args:
+            request: FastAPI request object containing user context
+
+        Returns:
+            List of dictionaries containing thread information
+
+        Raises:
+            HTTPException: If history service is not configured or other errors occur
+        """
         async with http_exception_handler(request):
+            if history_service is None:
+                raise InvalidURL(
+                    "History service not configured for chat list endpoint"
+                )
             return await history_service.list_threads(request)
 
     @app.get(path_config.agui_history_path)
     async def get_history(request: Request) -> MessagesSnapshotEvent:
+        """Get conversation history for a specific session.
+
+        Retrieves the complete conversation history for a session specified
+        in the request path, returning it as an AGUI messages snapshot.
+
+        Args:
+            request: FastAPI request object containing session context in path
+
+        Returns:
+            MessagesSnapshotEvent containing the conversation history
+
+        Raises:
+            HTTPException: If history service is not configured or session not found
+        """
         async with http_exception_handler(request):
+            if history_service is None:
+                raise InvalidURL("History service not configured for history endpoint")
             return await history_service.get_history(request)

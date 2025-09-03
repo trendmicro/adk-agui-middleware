@@ -270,6 +270,11 @@ class SSEService(BaseSSEService):
         """
 
         async def _generate() -> AsyncGenerator[dict[str, str]]:
+            """Internal generator for processing events with error handling.
+
+            Yields:
+                Encoded event dictionaries or error events if exceptions occur
+            """
             try:
                 async for event in runner():
                     yield await self._record_output_message(

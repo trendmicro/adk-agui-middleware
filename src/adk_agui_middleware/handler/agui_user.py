@@ -46,9 +46,18 @@ class AGUIUserHandler:
         self.tool_call_ids: list[str] = []
 
     async def _async_init(self) -> None:
+        """Initialize asynchronous components of the handler.
+
+        Sets up long-running tool IDs from pending tool calls in session state.
+        """
         await self._initialize_long_running_tools()
 
     async def _initialize_long_running_tools(self) -> None:
+        """Initialize long-running tool IDs from session state.
+
+        Retrieves pending tool calls from session and configures the running
+        handler to properly handle these long-running operations.
+        """
         self.running_handler.set_long_running_tool_ids(
             await self.session_handler.get_pending_tool_calls()
         )

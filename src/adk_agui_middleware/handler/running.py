@@ -46,8 +46,8 @@ class RunningHandler:
             run_config: Configuration for agent run behavior and streaming mode
             handler_context: Context containing optional event handlers for processing
         """
-        self.runner: Runner = runner
-        self.run_config: RunConfig = run_config
+        self.runner: Runner | None = runner
+        self.run_config: RunConfig | None = run_config
         self.event_translator = EventTranslator()
         self.is_long_running_tool = False
 
@@ -80,13 +80,24 @@ class RunningHandler:
                 setattr(self, attr, handler_class())
 
     async def _get_timeout(self, enable_timeout: bool) -> float | None:
-        """Extract timeout logic to separate method"""
+        """Get timeout duration for event processing if timeout is enabled.
+
+        Args:
+            enable_timeout: Whether timeout handling is enabled
+
+        Returns:
+            Timeout duration in seconds, or None if timeout is disabled
+        """
         if not (self.adk_event_timeout_handler and enable_timeout):
             return None
         return await self.adk_event_timeout_handler.get_timeout()
 
     async def _handle_timeout_fallback(self) -> AsyncGenerator[Event | None, Any]:
-        """Handle timeout fallback logic"""
+        """Handle timeout fallback when event processing exceeds time limit.
+
+        Yields:
+            Fallback events to process when timeout occurs, or None if no handler
+        """
         if self.adk_event_timeout_handler is None:
             return
         async for (
@@ -100,7 +111,16 @@ class RunningHandler:
         log_func: Any,
         event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None,
     ) -> AsyncGenerator[BaseEvent | Event]:
-        """Process a single event with logging and optional handler"""
+        """Process a single event with logging and optional custom event handler.
+
+        Args:
+            event: Event to process (ADK or AGUI format)
+            log_func: Logging function to record the event
+            event_handler: Optional custom handler to process the event
+
+        Yields:
+            Processed events (original or modified by handler)
+        """
         log_func(event)
         if not event_handler:
             yield event
@@ -155,6 +175,17 @@ class RunningHandler:
     def _select_translation_function(
         self, adk_event: Event
     ) -> Callable[[Event], AsyncGenerator[BaseEvent]]:
+        """Select appropriate translation function based on event characteristics.
+
+        Determines whether to use standard translation or long-running function
+        call translation based on event content and completion status.
+
+        Args:
+            adk_event: ADK event to analyze for translation method selection
+
+        Returns:
+            Translation function appropriate for the event type
+        """
         has_content = adk_event.content and adk_event.content.parts
         is_incomplete_response = not adk_event.is_final_response()
         has_content_without_metadata = not adk_event.usage_metadata and has_content
@@ -260,7 +291,9 @@ class RunningHandler:
             enable_timeout=True,
         )
 
-    def run_async_with_history(self, runner: AsyncGenerator) -> AsyncGenerator[Event]:
+    def run_async_with_history(
+        self, runner: AsyncGenerator[Event]
+    ) -> AsyncGenerator[Event]:
         """Execute agent with ADK and process events through ADK event handler.
 
         Runs the ADK agent asynchronously with the provided arguments and

@@ -55,6 +55,17 @@ class MessageEventUtil:
     def create_message_snapshot(
         message_list: list[Message] | None,
     ) -> MessagesSnapshotEvent:
+        """Create a message snapshot event from a list of messages.
+
+        Converts a list of Message objects into a MessagesSnapshotEvent
+        for sending conversation history to clients.
+
+        Args:
+            message_list: List of Message objects to include in snapshot, or None
+
+        Returns:
+            MessagesSnapshotEvent containing the messages (empty if None provided)
+        """
         return MessagesSnapshotEvent(
             type=EventType.MESSAGES_SNAPSHOT, messages=message_list or []
         )
