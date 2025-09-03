@@ -17,6 +17,11 @@ class ThinkingMessage(BaseMessage):
 
 
 Message = Annotated[
-    ThinkingMessage | DeveloperMessage | SystemMessage | AssistantMessage | UserMessage | ToolMessage,
+    ThinkingMessage
+    | DeveloperMessage
+    | SystemMessage
+    | AssistantMessage
+    | UserMessage
+    | ToolMessage,
     Field(discriminator="role"),
 ]
