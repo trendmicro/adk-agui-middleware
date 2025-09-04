@@ -294,18 +294,14 @@ class RunningHandler:
     def run_async_with_history(
         self, runner: AsyncGenerator[Event]
     ) -> AsyncGenerator[Event]:
-        """Execute agent with ADK and process events through ADK event handler.
+        """Process historical events through the ADK event handler pipeline.
 
-        Runs the ADK agent asynchronously with the provided arguments and
-        processes the resulting events through the configured ADK event handler.
+        Takes a pre-generated stream of ADK events (e.g., from conversation history)
+        and processes them through the configured ADK event handler without timeout.
+        This is typically used for replaying or reprocessing stored events.
 
-        Args:
-            *args: Positional arguments to pass to the runner
-            **kwargs: Keyword arguments to pass to the runner
-            :param runner:
-
-        Returns:
-            AsyncGenerator yielding processed ADK Event objects
+        :param runner: AsyncGenerator yielding ADK Event objects to process
+        :return: AsyncGenerator yielding processed ADK Event objects
         """
         return self._process_events_with_handler(
             runner,

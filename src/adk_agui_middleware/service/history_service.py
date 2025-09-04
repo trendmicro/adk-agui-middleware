@@ -2,13 +2,14 @@
 
 from collections.abc import Awaitable, Callable
 
-from ag_ui.core import MessagesSnapshotEvent
+from ag_ui.core import MessagesSnapshotEvent, StateSnapshotEvent
 from fastapi import Request
 
 from ..data_model.context import HandlerContext, HistoryConfig
 from ..handler.history import HistoryHandler
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
+from ..utils.translate import StateEventUtil
 
 
 class HistoryService:
@@ -31,6 +32,7 @@ class HistoryService:
             session_service=self.history_config.session_service
         )
         self.handler_context = handler_context
+        self.state_event_util = StateEventUtil()
 
     def _create_history_handler(self, app_name: str, user_id: str) -> HistoryHandler:
         """Create a history handler for the specified app and user.
@@ -85,11 +87,11 @@ class HistoryService:
             await self._get_config_value("app_name", request),
             await self._get_config_value("user_id", request),
         ).list_sessions()
-        if self.history_config.get_chat_list:
-            return await self.history_config.get_chat_list(session_list)
-        return [{"session_id": session.id} for session in session_list]
+        if self.history_config.get_thread_list:
+            return await self.history_config.get_thread_list(session_list)
+        return [{"thread_id": session.id} for session in session_list]
 
-    async def get_history(self, request: Request) -> MessagesSnapshotEvent:
+    async def get_message_snapshot(self, request: Request) -> MessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
         Extracts session context from the request and returns the complete
@@ -105,3 +107,23 @@ class HistoryService:
             await self._get_config_value("app_name", request),
             await self._get_config_value("user_id", request),
         ).get_message_snapshot(await self._get_config_value("session_id", request))
+
+    async def get_state_snapshot(self, request: Request) -> StateSnapshotEvent:
+        """Get current state snapshot for a specific session.
+
+        Extracts session context from the request and returns the current
+        state snapshot as a dictionary.
+
+        Args:
+            request: HTTP request containing session context
+
+        Returns:
+            Dictionary containing the current state snapshot
+        """
+        state = await self._create_history_handler(
+            await self._get_config_value("app_name", request),
+            await self._get_config_value("user_id", request),
+        ).get_state_snapshot(await self._get_config_value("session_id", request))
+        if self.history_config.get_state:
+            state = await self.history_config.get_state(state)
+        return self.state_event_util.create_state_snapshot_event(state)

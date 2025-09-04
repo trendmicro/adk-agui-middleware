@@ -182,7 +182,7 @@ class HistoryConfig(BaseModel):
         app_name: Static app name or callable to extract from request
         user_id: Static user ID or callable to extract from request
         session_id: Static session ID or callable to extract from request
-        get_chat_list: Optional callable to transform session list format
+        get_thread_list: Optional callable to transform session list format
         session_service: Session service implementation for history retrieval
     """
 
@@ -191,8 +191,9 @@ class HistoryConfig(BaseModel):
     app_name: str | Callable[[Request], Awaitable[str]] = "default"
     user_id: str | Callable[[Request], Awaitable[str]]
     session_id: str | Callable[[Request], Awaitable[str]]
-    get_chat_list: Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None = (
-        None
-    )
+    get_thread_list: (
+        Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
+    ) = None
+    get_state: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None
 
     session_service: BaseSessionService = Field(default_factory=InMemorySessionService)

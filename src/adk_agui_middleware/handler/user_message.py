@@ -23,12 +23,14 @@ class UserMessageHandler:
         request: Request,
         initial_state: dict[str, Any] | None = None,
     ):
-        """Initialize the user message handler.
+        """Initialize the user message handler with AGUI content and request context.
 
-        Args:
-            agui_content: Input containing agent execution parameters and messages
-            request: HTTP request for additional context
-            initial_state: Optional initial state dictionary
+        Sets up the handler for processing user messages, tool results, and managing
+        the HITL (Human-in-the-Loop) workflow state transitions.
+
+        :param agui_content: Input containing agent execution parameters and messages
+        :param request: HTTP request for additional context and client information
+        :param initial_state: Optional initial state dictionary for session initialization
         """
         self.agui_content = agui_content
         self.request = request
@@ -67,12 +69,12 @@ class UserMessageHandler:
     def _parse_tool_content(content: str, tool_call_id: str) -> dict[str, Any]:
         """Parse tool result content, handling empty content and JSON errors.
 
-        Args:
-            content: Raw tool result content string
-            tool_call_id: Identifier of the tool call for logging
+        Safely parses tool result content from human input in HITL workflows,
+        providing robust error handling for malformed JSON and empty responses.
 
-        Returns:
-            Dictionary containing parsed JSON, success result, or error information
+        :param content: Raw tool result content string from human input
+        :param tool_call_id: Identifier of the tool call for error logging and tracking
+        :return: Dictionary containing parsed JSON, success result, or error information
         """
         if not content or not content.strip():
             record_warning_log(

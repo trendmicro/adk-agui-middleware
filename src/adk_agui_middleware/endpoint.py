@@ -2,7 +2,7 @@
 
 from http.client import InvalidURL
 
-from ag_ui.core import MessagesSnapshotEvent, RunAgentInput
+from ag_ui.core import MessagesSnapshotEvent, RunAgentInput, StateSnapshotEvent
 from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
 
@@ -105,4 +105,25 @@ def register_agui_endpoint(
         async with http_exception_handler(request):
             if history_service is None:
                 raise InvalidURL("History service not configured for history endpoint")
-            return await history_service.get_history(request)
+            return await history_service.get_message_snapshot(request)
+
+    @app.get(path_config.agui_state_snapshot_path)
+    async def get_agui_state_snapshot_path(request: Request) -> StateSnapshotEvent:
+        """Get current state snapshot for a specific session.
+
+        Retrieves the current state snapshot for a session specified
+        in the request path, returning it as a dictionary.
+
+        Args:
+            request: FastAPI request object containing session context in path
+
+        Returns:
+            Dictionary containing the current state snapshot
+
+        Raises:
+            HTTPException: If history service is not configured or session not found
+        """
+        async with http_exception_handler(request):
+            if history_service is None:
+                raise InvalidURL("History service not configured for state endpoint")
+            return await history_service.get_state_snapshot(request)

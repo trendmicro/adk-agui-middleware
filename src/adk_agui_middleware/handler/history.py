@@ -1,9 +1,8 @@
 from collections.abc import AsyncGenerator
+from typing import Any
 
 from ag_ui.core import BaseEvent, MessagesSnapshotEvent
-from ag_ui.core.types import (
-    UserMessage,
-)
+from ag_ui.core.types import UserMessage
 from google.adk.events import Event
 from google.adk.sessions import Session
 
@@ -112,4 +111,11 @@ class HistoryHandler:
                 agui_event_box.append(agui_event)  # noqa: PERF401
         return self.message_event_util.create_message_snapshot(
             ADKEventToAGUIMessageConverter().convert(agui_event_box)
+        )
+
+    async def get_state_snapshot(self, session_id: str) -> dict[str, Any]:
+        return (
+            session.state
+            if (session := await self.get_session(session_id=session_id))
+            else {}
         )

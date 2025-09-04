@@ -85,6 +85,15 @@ class SSEService(BaseSSEService):
     async def _create_and_record_message(
         self, agui_content: RunAgentInput, request: Request
     ) -> BaseInOutHandler | None:
+        """Create and record incoming message for audit and logging purposes.
+
+        Creates an input/output record handler if configured and records the
+        incoming AGUI content and request for audit trails and logging.
+
+        :param agui_content: Input containing agent execution parameters to record
+        :param request: HTTP request containing client context to record
+        :return: BaseInOutHandler instance if configured, None otherwise
+        """
         if self.handler_context.in_out_record_handler:
             in_out_record = self.handler_context.in_out_record_handler()
             await in_out_record.input_record(agui_content, request)
@@ -95,6 +104,15 @@ class SSEService(BaseSSEService):
     async def _record_output_message(
         inout_handler: BaseInOutHandler | None, output_data: dict[str, str]
     ) -> dict[str, str]:
+        """Record and potentially transform outgoing message data.
+
+        Records the output data through the configured handler and applies any
+        transformations or modifications before sending to the client.
+
+        :param inout_handler: Optional handler for recording and transforming output
+        :param output_data: Dictionary containing SSE event data to process
+        :return: Processed output data (potentially modified by handler)
+        """
         if inout_handler:
             await inout_handler.output_record(output_data)
             return await inout_handler.output_catch_and_change(output_data)

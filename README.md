@@ -24,7 +24,7 @@ A professional Python 3.13+ middleware library that bridges Google's Agent Devel
 pip install adk-agui-middleware
 ```
 
-**Requirements:** Python 3.13+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0
+**Requirements:** Python 3.13+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0 • Pydantic ≥2.0
 
 ### Basic Implementation
 
@@ -504,6 +504,38 @@ The middleware provides several extension points for customization:
 - **Translation Logic**: Extend `BaseTranslateHandler` for custom event translation
 - **State Management**: Implement `BaseAGUIStateSnapshotHandler` for custom state processing
 - **I/O Recording**: Implement `BaseInOutHandler` for request/response logging
+
+## 🧪 Testing
+
+The project includes comprehensive test coverage for all core components:
+
+```bash
+# Run tests with coverage
+pytest --cov=src/adk_agui_middleware --cov-report=html
+
+# Run specific test categories
+pytest tests/test_handler_*  # Handler tests
+pytest tests/test_event_*    # Event translation tests
+pytest tests/test_data_*     # Data model tests
+```
+
+## 🔧 Development
+
+### Code Quality Standards
+
+This project maintains high code quality standards:
+
+- **Type Safety**: Full type annotations with Python 3.13+ compatibility
+- **Documentation**: Comprehensive docstrings following Google-style format
+- **Testing**: Extensive test coverage for all components
+- **Code Review**: Professional code review standards with detailed analysis
+
+### Contributing Guidelines
+
+1. Follow PEP 8 and use type hints throughout
+2. Add comprehensive docstrings to all classes and functions
+3. Include tests for new functionality
+4. Update documentation as needed
 
 ## 📄 License
 
