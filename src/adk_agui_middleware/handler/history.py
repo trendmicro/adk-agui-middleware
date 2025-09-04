@@ -10,7 +10,7 @@ from google.adk.sessions import Session
 from ..data_model.session import SessionParameter
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
-from ..utils.convert import ConvertADKEventToAGUIMessage
+from ..utils.convert import ADKEventToAGUIMessageConverter
 from ..utils.translate import MessageEventUtil
 
 
@@ -100,6 +100,7 @@ class HistoryHandler:
             if adk_event.author == "user":
                 agui_event_box.append(
                     UserMessage(
+                        role="user",
                         id=adk_event.id,
                         content=adk_event.content.parts[0].text
                         if adk_event.content and adk_event.content.parts
@@ -110,5 +111,5 @@ class HistoryHandler:
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 agui_event_box.append(agui_event)  # noqa: PERF401
         return self.message_event_util.create_message_snapshot(
-            ConvertADKEventToAGUIMessage().convert(agui_event_box)
+            ADKEventToAGUIMessageConverter().convert(agui_event_box)
         )

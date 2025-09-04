@@ -35,7 +35,7 @@ def register_agui_endpoint(
     """
 
     @app.post(path_config.agui_main_path)
-    async def agui_endpoint(
+    async def run_agui_main(
         agui_content: RunAgentInput, request: Request
     ) -> EventSourceResponse:
         """Handle AGUI agent execution requests.
@@ -63,8 +63,8 @@ def register_agui_endpoint(
                 ),
             )
 
-    @app.get(path_config.agui_chat_list_path)
-    async def get_chat_list(request: Request) -> list[dict[str, str]]:
+    @app.get(path_config.agui_thread_list_path)
+    async def get_agui_thread_list_path(request: Request) -> list[dict[str, str]]:
         """Get list of available conversation threads for the user.
 
         Retrieves all available conversation threads/sessions for the requesting
@@ -86,8 +86,8 @@ def register_agui_endpoint(
                 )
             return await history_service.list_threads(request)
 
-    @app.get(path_config.agui_history_path)
-    async def get_history(request: Request) -> MessagesSnapshotEvent:
+    @app.get(path_config.agui_message_snapshot_path)
+    async def get_agui_message_snapshot_path(request: Request) -> MessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
         Retrieves the complete conversation history for a session specified

@@ -95,13 +95,14 @@ class PathConfig(BaseModel):
 
     Attributes:
         agui_main_path: Path for the main agent interaction endpoint
-        agui_chat_list_path: Path for listing available conversations
-        agui_history_path: Path template for retrieving conversation history
+        agui_thread_list_path: Path for listing available conversations
+        agui_message_snapshot_path: Path template for retrieving conversation history
     """
 
-    agui_main_path: str = "/"
-    agui_chat_list_path: str = "/list"
-    agui_history_path: str = "/history/{session_id}"
+    agui_main_path: str = ""
+    agui_thread_list_path: str = "/thread/list"
+    agui_state_snapshot_path: str = "/state_snapshot/{thread_id}"
+    agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
 
 
 class RunnerConfig(BaseModel):
