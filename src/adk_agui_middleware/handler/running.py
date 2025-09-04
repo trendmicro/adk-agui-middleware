@@ -122,7 +122,7 @@ class RunningHandler:
             Processed events (original or modified by handler)
         """
         log_func(event)
-        if not event_handler:
+        if not event_handler or (isinstance(event, Event) and event.author == "user"):
             yield event
             return
         async for new_event in await event_handler.process(event):  # type: ignore[arg-type]

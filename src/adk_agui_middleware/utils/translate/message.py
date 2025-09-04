@@ -14,7 +14,8 @@ from ag_ui.core import (
     TextMessageEndEvent,
     TextMessageStartEvent,
 )
-from ag_ui.core.types import Message
+
+from ...event.agui_type import Message
 
 
 class MessageEventUtil:

@@ -1,14 +1,16 @@
 from collections.abc import AsyncGenerator
 
-from ag_ui.core import MessagesSnapshotEvent
+from ag_ui.core import BaseEvent, MessagesSnapshotEvent
+from ag_ui.core.types import (
+    UserMessage,
+)
 from google.adk.events import Event
 from google.adk.sessions import Session
-from rich.pretty import pprint
 
 from ..data_model.session import SessionParameter
-from ..event.agui_type import Message
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
+from ..utils.convert import ConvertADKEventToAGUIMessage
 from ..utils.translate import MessageEventUtil
 
 
@@ -25,7 +27,7 @@ class HistoryHandler:
         running_handler: RunningHandler,
         app_name: str,
         user_id: str,
-    ):
+    ) -> None:
         """Initialize the history handler.
 
         Args:
@@ -80,6 +82,9 @@ class HistoryHandler:
         Returns:
             MessagesSnapshotEvent containing the conversation history
         """
+        session = await self.get_session(session_id=session_id)
+        if session is None:
+            return MessagesSnapshotEvent(messages=[])
 
         async def running() -> AsyncGenerator[Event]:
             """Internal generator for session events.
@@ -87,15 +92,23 @@ class HistoryHandler:
             Yields:
                 Session events for the specified session
             """
+            for event in session.events:
+                yield event
 
-            if session := await self.get_session(session_id=session_id):
-                for event in session.events:
-                    yield event
-
-        agui_event_box = []
+        agui_event_box: list[BaseEvent | UserMessage] = []
         async for adk_event in self.running_handler.run_async_with_history(running()):
+            if adk_event.author == "user":
+                agui_event_box.append(
+                    UserMessage(
+                        id=adk_event.id,
+                        content=adk_event.content.parts[0].text
+                        if adk_event.content and adk_event.content.parts
+                        else "",
+                    )
+                )
+                continue
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
-                pprint(agui_event)
-                if isinstance(agui_event, Message):
-                    agui_event_box.append(agui_event)
-        return self.message_event_util.create_message_snapshot(agui_event_box)
+                agui_event_box.append(agui_event)  # noqa: PERF401
+        return self.message_event_util.create_message_snapshot(
+            ConvertADKEventToAGUIMessage().convert(agui_event_box)
+        )
