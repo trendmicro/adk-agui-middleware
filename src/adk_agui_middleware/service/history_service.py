@@ -2,10 +2,11 @@
 
 from collections.abc import Awaitable, Callable
 
-from ag_ui.core import MessagesSnapshotEvent, StateSnapshotEvent
+from ag_ui.core import StateSnapshotEvent
 from fastapi import Request
 
 from ..data_model.context import HandlerContext, HistoryConfig
+from ..event.agui_event import CustomMessagesSnapshotEvent
 from ..handler.history import HistoryHandler
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
@@ -91,7 +92,9 @@ class HistoryService:
             return await self.history_config.get_thread_list(session_list)
         return [{"thread_id": session.id} for session in session_list]
 
-    async def get_message_snapshot(self, request: Request) -> MessagesSnapshotEvent:
+    async def get_message_snapshot(
+        self, request: Request
+    ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
         Extracts session context from the request and returns the complete

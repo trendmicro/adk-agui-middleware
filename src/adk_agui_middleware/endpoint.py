@@ -2,12 +2,13 @@
 
 from http.client import InvalidURL
 
-from ag_ui.core import MessagesSnapshotEvent, RunAgentInput, StateSnapshotEvent
+from ag_ui.core import RunAgentInput, StateSnapshotEvent
 from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
 
 from .base_abc.sse_service import BaseSSEService
 from .data_model.context import PathConfig
+from .event.agui_event import CustomMessagesSnapshotEvent
 from .loggers.exception import http_exception_handler
 from .service.history_service import HistoryService
 
@@ -87,7 +88,9 @@ def register_agui_endpoint(
             return await history_service.list_threads(request)
 
     @app.get(path_config.agui_message_snapshot_path)
-    async def get_agui_message_snapshot_path(request: Request) -> MessagesSnapshotEvent:
+    async def get_agui_message_snapshot_path(
+        request: Request,
+    ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
         Retrieves the complete conversation history for a session specified

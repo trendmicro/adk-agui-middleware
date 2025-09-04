@@ -1,10 +1,16 @@
 """Custom AGUI thinking event implementations with enhanced tracking capabilities."""
 
+from typing import Literal
+
 from ag_ui.core import (
+    BaseEvent,
+    EventType,
     ThinkingTextMessageContentEvent,
     ThinkingTextMessageEndEvent,
     ThinkingTextMessageStartEvent,
 )
+
+from ..event.agui_type import Message
 
 
 class CustomThinkingTextMessageStartEvent(ThinkingTextMessageStartEvent):
@@ -38,3 +44,12 @@ class CustomThinkingTextMessageEndEvent(ThinkingTextMessageEndEvent):
 
     thinking_id: str
     """Unique identifier for correlating thinking message sequences."""
+
+
+class CustomMessagesSnapshotEvent(BaseEvent):
+    """
+    Event containing a snapshot of the messages.
+    """
+
+    type: Literal[EventType.MESSAGES_SNAPSHOT] = EventType.MESSAGES_SNAPSHOT  # pyright: ignore[reportIncompatibleVariableOverride]
+    messages: list[Message]

@@ -1,12 +1,13 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from ag_ui.core import BaseEvent, MessagesSnapshotEvent
+from ag_ui.core import BaseEvent
 from ag_ui.core.types import UserMessage
 from google.adk.events import Event
 from google.adk.sessions import Session
 
 from ..data_model.session import SessionParameter
+from ..event.agui_event import CustomMessagesSnapshotEvent
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
 from ..utils.convert import ADKEventToAGUIMessageConverter
@@ -69,7 +70,9 @@ class HistoryHandler:
             )
         )
 
-    async def get_message_snapshot(self, session_id: str) -> MessagesSnapshotEvent:
+    async def get_message_snapshot(
+        self, session_id: str
+    ) -> CustomMessagesSnapshotEvent:
         """Generate a message snapshot for a conversation session.
 
         Retrieves the session events and converts them to AGUI format
@@ -83,7 +86,7 @@ class HistoryHandler:
         """
         session = await self.get_session(session_id=session_id)
         if session is None:
-            return MessagesSnapshotEvent(messages=[])
+            return CustomMessagesSnapshotEvent(messages=[])
 
         async def running() -> AsyncGenerator[Event]:
             """Internal generator for session events.

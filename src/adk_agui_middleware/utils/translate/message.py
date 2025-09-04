@@ -9,12 +9,12 @@ from collections.abc import AsyncGenerator
 from ag_ui.core import (
     BaseEvent,
     EventType,
-    MessagesSnapshotEvent,
     TextMessageContentEvent,
     TextMessageEndEvent,
     TextMessageStartEvent,
 )
 
+from ...event.agui_event import CustomMessagesSnapshotEvent
 from ...event.agui_type import Message
 
 
@@ -55,7 +55,7 @@ class MessageEventUtil:
     @staticmethod
     def create_message_snapshot(
         message_list: list[Message] | None,
-    ) -> MessagesSnapshotEvent:
+    ) -> CustomMessagesSnapshotEvent:
         """Create a message snapshot event from a list of messages.
 
         Converts a list of Message objects into a MessagesSnapshotEvent
@@ -67,6 +67,6 @@ class MessageEventUtil:
         Returns:
             MessagesSnapshotEvent containing the messages (empty if None provided)
         """
-        return MessagesSnapshotEvent(
+        return CustomMessagesSnapshotEvent(
             type=EventType.MESSAGES_SNAPSHOT, messages=message_list or []
         )
