@@ -9,8 +9,16 @@ from pydantic import BaseModel
 class ErrorModel(BaseModel):
     """Model for error information in HTTP responses.
 
-    Contains error details, description, timestamp, and optional trace ID
-    for error tracking and debugging.
+    Contains comprehensive error details including error type, description,
+    timestamp, and optional trace ID for error tracking and debugging.
+    Provides structured error information for client consumption and
+    system monitoring.
+
+    Attributes:
+        error: Error type or category identifier
+        error_description: Detailed error description (string or structured dict)
+        timestamp: Unix timestamp when the error occurred (default: current time)
+        trace_id: Optional trace identifier for error correlation across systems
     """
 
     error: str
@@ -23,7 +31,12 @@ class ErrorResponseModel(BaseModel):
     """HTTP error response model following FastAPI conventions.
 
     Wraps ErrorModel in a 'detail' field as expected by FastAPI
-    error handling mechanisms.
+    error handling mechanisms. This standardized format ensures
+    consistent error responses across all API endpoints and enables
+    proper error handling by client applications.
+
+    Attributes:
+        detail: ErrorModel containing the complete error information
     """
 
     detail: ErrorModel

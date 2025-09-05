@@ -13,7 +13,9 @@ class BaseSSEService(metaclass=ABCMeta):
     """Abstract base class defining the interface for SSE service implementations.
 
     Provides the contract for services that handle agent execution and event streaming
-    through Server-Sent Events protocol.
+    through Server-Sent Events protocol. This interface defines the core methods
+    required for processing AGUI requests and generating streaming responses with
+    proper context extraction and event encoding.
     """
 
     @abstractmethod
@@ -22,15 +24,14 @@ class BaseSSEService(metaclass=ABCMeta):
     ) -> tuple[Callable[[], AsyncGenerator[BaseEvent]], BaseInOutHandler | None]:
         """Create and configure an agent runner for the given request.
 
-        Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request containing client context
+        Extracts context from the request, initializes handlers and managers,
+        and returns a configured runner function that generates agent events.
+        This method handles all the setup required for agent execution.
 
-        Returns:
-            Callable that returns an async generator of BaseEvent objects
-
-        Raises:
-            NotImplementedError: Must be implemented by subclasses
+        :param agui_content: Input containing agent execution parameters and message content
+        :param request: HTTP request containing client context and headers
+        :return: Tuple containing the runner callable and optional input/output handler
+        :raises NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -42,17 +43,13 @@ class BaseSSEService(metaclass=ABCMeta):
     ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.
 
-        Takes the runner and encoder to produce a stream of encoded event strings
-        suitable for Server-Sent Events transmission.
+        Takes the runner and executes it to produce a stream of encoded event
+        dictionaries suitable for Server-Sent Events transmission. Handles event
+        encoding, error recovery, and optional input/output processing.
 
-        Args:
-            runner: Callable that returns an async generator of events
-            inout_handler: Optional handler for input/output recording and transformation
-
-        Yields:
-            Encoded event dictionaries ready for SSE transmission
-
-        Raises:
-            NotImplementedError: Must be implemented by subclasses
+        :param runner: Callable that returns an async generator of BaseEvent objects
+        :param inout_handler: Optional handler for input/output recording and transformation
+        :yields: Encoded event dictionaries ready for SSE transmission
+        :raises NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")

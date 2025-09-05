@@ -15,6 +15,12 @@ class SessionHandler:
     Provides a high-level interface for session operations, managing pending tool calls,
     session state updates, and session lifecycle. Acts as a bridge between the AGUI
     handler layer and the underlying session management infrastructure.
+
+    Key Responsibilities:
+    - Manage session lifecycle (creation, retrieval, state updates)
+    - Track pending tool calls for HITL (Human-in-the-Loop) workflows
+    - Provide session state access and manipulation
+    - Handle session-related error conditions and logging
     """
 
     def __init__(
@@ -22,9 +28,11 @@ class SessionHandler:
     ):
         """Initialize the session handler.
 
-        Args:
-            session_manager: Manager for session operations
-            session_parameter: Parameters identifying the session (app, user, session ID)
+        Sets up the handler with the session manager and parameters needed
+        to identify and manage the specific session for this interaction.
+
+        :param session_manager: Manager for low-level session operations
+        :param session_parameter: Parameters identifying the session (app, user, session ID)
         """
         self.session_manager = session_manager
         self.session_parameter = session_parameter
@@ -80,16 +88,20 @@ class SessionHandler:
     async def get_session(self) -> Session | None:
         """Retrieve the session object for this handler's parameters.
 
-        Returns:
-            Session object if found, None otherwise
+        Delegates to the session manager to retrieve the session identified
+        by the current session parameters.
+
+        :return: Session object if found, None otherwise
         """
         return await self.session_manager.get_session(self.session_parameter)
 
     async def get_session_state(self) -> dict[str, Any]:
         """Get the current state dictionary for this session.
 
-        Returns:
-            Dictionary containing session state key-value pairs
+        Retrieves the complete state dictionary from the session,
+        which includes all persistent data for the session.
+
+        :return: Dictionary containing session state key-value pairs
         """
         return await self.session_manager.get_session_state(self.session_parameter)
 
@@ -98,11 +110,11 @@ class SessionHandler:
     ) -> Session:
         """Create session if it doesn't exist, otherwise return existing session.
 
-        Args:
-            initial_state: Optional initial state to set when creating a new session
+        Implements the "get or create" pattern for sessions, ensuring a session
+        always exists after this call. This is essential for session-based workflows.
 
-        Returns:
-            Session object (either existing or newly created)
+        :param initial_state: Optional initial state to set when creating a new session
+        :return: Session object (either existing or newly created)
         """
         return await self.session_manager.check_and_create_session(
             session_parameter=self.session_parameter, initial_state=initial_state
@@ -113,11 +125,11 @@ class SessionHandler:
     ) -> bool:
         """Update the session state with new values.
 
-        Args:
-            initial_state: Dictionary of state updates to apply
+        Applies the provided state updates to the current session,
+        merging them with existing state data.
 
-        Returns:
-            True if update was successful, False otherwise
+        :param initial_state: Dictionary of state updates to apply
+        :return: True if update was successful, False otherwise
         """
         return await self.session_manager.update_session_state(
             session_parameter=self.session_parameter,

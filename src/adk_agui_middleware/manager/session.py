@@ -29,12 +29,12 @@ class SessionManager:
     async def list_sessions(self, app_name: str, user_id: str) -> list[Session]:
         """List all sessions for a given app and user.
 
-        Args:
-            app_name: Name of the application
-            user_id: Identifier for the user
+        Retrieves all session objects associated with the specified application
+        and user, useful for conversation history and session management.
 
-        Returns:
-            List of Session objects
+        :param app_name: Name of the application
+        :param user_id: Identifier for the user
+        :return: List of Session objects
         """
         return (
             await self.session_service.list_sessions(app_name=app_name, user_id=user_id)
@@ -43,11 +43,11 @@ class SessionManager:
     async def get_session(self, session_parameter: SessionParameter) -> Session | None:
         """Retrieve a session using the provided session parameters.
 
-        Args:
-            session_parameter: Parameters identifying the session (app, user, session ID)
+        Fetches a specific session identified by the complete session parameters,
+        returning None if the session doesn't exist.
 
-        Returns:
-            Session object if found, None otherwise
+        :param session_parameter: Parameters identifying the session (app, user, session ID)
+        :return: Session object if found, None otherwise
         """
         return await self.session_service.get_session(
             session_id=session_parameter.session_id,
@@ -92,14 +92,12 @@ class SessionManager:
         """Update session state by appending a state delta event.
 
         Creates an ADK Event with state delta actions and appends it to the session,
-        which triggers state updates in the session service.
+        which triggers state updates in the session service. This is the primary
+        mechanism for persisting state changes including HITL workflow data.
 
-        Args:
-            session_parameter: Parameters identifying the session to update
-            state_updates: Dictionary of state changes to apply
-
-        Returns:
-            True if update was successful, False if session not found or no updates
+        :param session_parameter: Parameters identifying the session to update
+        :param state_updates: Dictionary of state changes to apply
+        :return: True if update was successful, False if session not found or no updates
         """
         session = await self.get_session(session_parameter)
         if not (session and state_updates):
@@ -125,13 +123,11 @@ class SessionManager:
         """Retrieve the current state dictionary for a session.
 
         Gets the session and returns its state dictionary. Handles missing
-        sessions and errors gracefully by returning empty dictionary.
+        sessions and errors gracefully by returning empty dictionary. This
+        provides access to all persistent session data including HITL state.
 
-        Args:
-            session_parameter: Parameters identifying the session
-
-        Returns:
-            Dictionary containing session state, empty dict if session not found or error
+        :param session_parameter: Parameters identifying the session
+        :return: Dictionary containing session state, empty dict if session not found or error
         """
         try:
             if session := await self.get_session(session_parameter):
@@ -153,15 +149,13 @@ class SessionManager:
         """Get a specific value from the session state by key.
 
         Convenience method for retrieving individual state values without
-        getting the entire state dictionary.
+        getting the entire state dictionary. Useful for checking specific
+        state flags or values like pending tool calls.
 
-        Args:
-            session_parameter: Parameters identifying the session
-            key: State key to retrieve
-            default: Default value to return if key not found or session missing
-
-        Returns:
-            Value for the specified key, or default if not found
+        :param session_parameter: Parameters identifying the session
+        :param key: State key to retrieve
+        :param default: Default value to return if key not found or session missing
+        :return: Value for the specified key, or default if not found
         """
         try:
             session = await self.get_session(session_parameter)

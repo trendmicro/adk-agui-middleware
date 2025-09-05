@@ -31,10 +31,21 @@ class EventTranslator:
     Handles the complex conversion of ADK events to AGUI events, managing streaming
     messages, tool calls, function calls, and state updates. Maintains internal state
     for streaming operations and long-running tool executions.
+
+    Key Responsibilities:
+    - Convert ADK events to AGUI-compatible format
+    - Manage streaming message state and sequencing
+    - Handle tool call and function response translation
+    - Process state deltas and custom metadata
+    - Support long-running tool detection and management
     """
 
     def __init__(self) -> None:
-        """Initialize the event translator with empty state containers."""
+        """Initialize the event translator with empty state containers.
+
+        Sets up internal state tracking for streaming messages, long-running tools,
+        and utility classes for different types of event translation.
+        """
         self._streaming_message_id: dict[str, str] = {}
         self.long_running_tool_ids: list[str] = []  # IDs of long-running tools
         self.state_event_util = StateEventUtil()
@@ -46,12 +57,10 @@ class EventTranslator:
 
         Processes different types of ADK events (text content, function calls,
         function responses, state updates) and yields appropriate AGUI events.
+        This is the main entry point for event translation in the middleware.
 
-        Args:
-            adk_event: ADK event to translate
-
-        Yields:
-            BaseEvent objects in AGUI format
+        :param adk_event: ADK event to translate
+        :yields: BaseEvent objects in AGUI format
         """
         try:
             # Skip user-authored events as they don't need translation
@@ -82,11 +91,11 @@ class EventTranslator:
     ) -> AsyncGenerator[BaseEvent]:
         """Handle function calls by closing streaming messages and translating calls.
 
-        Args:
-            adk_event: ADK event containing function calls
+        Ensures proper sequencing by closing any active streaming messages before
+        processing tool calls, then translates the function calls to AGUI events.
 
-        Yields:
-            BaseEvent objects for function call handling
+        :param adk_event: ADK event containing function calls
+        :yields: BaseEvent objects for function call handling
         """
         # Force close any active streaming message before handling function calls
         async for event in self.force_close_streaming_message():
@@ -102,11 +111,11 @@ class EventTranslator:
     ) -> AsyncGenerator[BaseEvent]:
         """Handle additional data like state deltas and custom metadata.
 
-        Args:
-            adk_event: ADK event potentially containing additional data
+        Processes auxiliary data from ADK events including state updates
+        and custom metadata, converting them to appropriate AGUI events.
 
-        Yields:
-            BaseEvent objects for state updates and custom events
+        :param adk_event: ADK event potentially containing additional data
+        :yields: BaseEvent objects for state updates and custom events
         """
         # Handle state delta updates
         if adk_event.actions and adk_event.actions.state_delta:
@@ -125,13 +134,11 @@ class EventTranslator:
         """Translate text content from ADK event to AGUI streaming text events.
 
         Handles streaming text messages by managing message start, content chunks,
-        and message end events. Tracks streaming state to ensure proper event sequencing.
+        and message end events. Tracks streaming state to ensure proper event sequencing
+        and supports both streaming and non-streaming text responses.
 
-        Args:
-            adk_event: ADK event containing text content to translate
-
-        Yields:
-            AGUI text message events (start, content, end) for streaming text
+        :param adk_event: ADK event containing text content to translate
+        :yields: AGUI text message events (start, content, end) for streaming text
         """
         if not (adk_event.content and adk_event.content.parts):
             return

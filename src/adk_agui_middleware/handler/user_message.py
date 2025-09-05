@@ -14,7 +14,15 @@ class UserMessageHandler:
     """Handles processing of user messages and tool results for agent execution.
 
     Manages extraction and conversion of user messages, tool calls, and tool results
-    from AGUI format to Google GenAI format for agent processing.
+    from AGUI format to Google GenAI format for agent processing. This handler is
+    crucial for HITL (Human-in-the-Loop) workflows, distinguishing between new
+    user messages and tool result submissions.
+
+    Key Responsibilities:
+    - Detect HITL workflow states (new messages vs tool result submissions)
+    - Extract and process user messages from conversation history
+    - Extract and parse tool results from human input
+    - Convert AGUI format to Google GenAI format for agent consumption
     """
 
     def __init__(
@@ -71,6 +79,8 @@ class UserMessageHandler:
 
         Safely parses tool result content from human input in HITL workflows,
         providing robust error handling for malformed JSON and empty responses.
+        This ensures that tool results are always in a consistent format for
+        agent processing, even when human input is malformed.
 
         :param content: Raw tool result content string from human input
         :param tool_call_id: Identifier of the tool call for error logging and tracking
@@ -95,10 +105,10 @@ class UserMessageHandler:
         """Extract the most recent user message from the conversation.
 
         Searches backwards through messages to find the latest user message
-        with non-empty content.
+        with non-empty content. This is used for new agent execution requests
+        (not HITL completions).
 
-        Returns:
-            Google GenAI Content object for the latest user message, or None
+        :return: Google GenAI Content object for the latest user message, or None
         """
         if not self.agui_content.messages:
             return None
@@ -158,11 +168,11 @@ class UserMessageHandler:
     async def process_tool_results(self) -> types.Content | None:
         """Process tool results and convert to Google GenAI Content format.
 
-        Extracts tool results, parses their content, and creates function response
-        parts for the agent to process.
+        Extracts tool results from HITL completion messages, parses their content,
+        and creates function response parts in Google GenAI format for the agent
+        to process. This enables seamless integration of human-provided tool results.
 
-        Returns:
-            Google GenAI Content object with function responses, or None if no tool results
+        :return: Google GenAI Content object with function responses, or None if no tool results
         """
         if not self.is_tool_result_submission:
             return None
@@ -185,10 +195,10 @@ class UserMessageHandler:
     async def get_message(self) -> types.Content | None:
         """Get the appropriate message content for agent processing.
 
-        Returns tool results if this is a tool result submission, otherwise
-        returns the latest user message.
+        Determines the appropriate message content based on the HITL workflow state:
+        returns tool results for HITL completions, or the latest user message for
+        new agent execution requests.
 
-        Returns:
-            Google GenAI Content object for agent processing, or None
+        :return: Google GenAI Content object for agent processing, or None
         """
         return await self.process_tool_results() or await self.get_latest_message()

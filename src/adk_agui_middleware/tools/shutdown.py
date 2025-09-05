@@ -29,22 +29,32 @@ class ShutdownHandler(metaclass=Singleton):
     ) -> None:
         """Register a function to be called during graceful shutdown.
 
-        Args:
-            shutdown_function: Async function to call during shutdown process
+        Adds an async function to the shutdown sequence that will be called
+        when the application receives termination signals. Useful for cleanup
+        operations like closing database connections, stopping runners, etc.
+
+        :param shutdown_function: Async function to call during shutdown process
         """
         self._shutdown_list.append(shutdown_function)
 
     def _setup_signal_handlers(self) -> None:
-        """Set up signal handlers for graceful shutdown on common termination signals."""
+        """Set up signal handlers for graceful shutdown on common termination signals.
+
+        Registers signal handlers for SIGTERM, SIGINT, and SIGHUP to ensure
+        graceful shutdown when the application receives these signals.
+        """
         for sig in [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]:
             signal.signal(sig, self._signal_handler)
 
     def _signal_handler(self, signum: int, frame: Any) -> None:  # noqa: ARG002
         """Handle termination signals by initiating graceful shutdown.
 
-        Args:
-            signum: Signal number that was received
-            frame: Current stack frame (unused)
+        Called when the application receives termination signals. Initiates
+        the graceful shutdown process to ensure all resources are properly
+        cleaned up before the application exits.
+
+        :param signum: Signal number that was received
+        :param frame: Current stack frame (unused)
         """
         if self._shutdown_in_progress:
             return
@@ -84,6 +94,7 @@ class ShutdownHandler(metaclass=Singleton):
 
         Iterates through all registered shutdown functions and calls them,
         logging any errors that occur without stopping the shutdown process.
+        This ensures that all cleanup operations are attempted even if some fail.
         """
         for shutdown_function in self._shutdown_list:
             try:

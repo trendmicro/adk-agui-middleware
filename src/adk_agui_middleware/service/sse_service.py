@@ -65,15 +65,13 @@ class SSEService(BaseSSEService):
         """Extract configuration value from context config.
 
         Handles both static string values and dynamic callable configurations
-        that can extract values from the request context.
+        that can extract values from the request context. This enables flexible
+        multi-tenant configuration based on request characteristics.
 
-        Args:
-            config_attr: Name of the configuration attribute to retrieve
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
-
-        Returns:
-            Configuration value as string
+        :param config_attr: Name of the configuration attribute to retrieve
+        :param agui_content: Input containing agent execution parameters
+        :param request: HTTP request for context extraction
+        :return: Configuration value as string
         """
         value: Callable[[RunAgentInput, Request], Awaitable[str]] | str = getattr(
             self.config_context, config_attr
@@ -123,12 +121,12 @@ class SSEService(BaseSSEService):
     ) -> str:
         """Extract application name from the request context.
 
-        Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+        Uses the configured app_name extractor to determine the application
+        name for the current request, enabling multi-tenant deployments.
 
-        Returns:
-            Application name string
+        :param agui_content: Input containing agent execution parameters
+        :param request: HTTP request for context extraction
+        :return: Application name string
         """
         return await self._get_config_value("app_name", agui_content, request)
 
@@ -137,12 +135,12 @@ class SSEService(BaseSSEService):
     ) -> str:
         """Extract user identifier from the request context.
 
-        Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+        Uses the configured user_id extractor to determine the user
+        identity for the current request, essential for session isolation.
 
-        Returns:
-            User identifier string
+        :param agui_content: Input containing agent execution parameters
+        :param request: HTTP request for context extraction
+        :return: User identifier string
         """
         return await self._get_config_value("user_id", agui_content, request)
 
@@ -151,12 +149,12 @@ class SSEService(BaseSSEService):
     ) -> str:
         """Extract session identifier from the request context.
 
-        Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+        Uses the configured session_id extractor to determine the session
+        identity for the current request, enabling conversation persistence.
 
-        Returns:
-            Session identifier string
+        :param agui_content: Input containing agent execution parameters
+        :param request: HTTP request for context extraction
+        :return: Session identifier string
         """
         return await self._get_config_value("session_id", agui_content, request)
 
@@ -165,12 +163,12 @@ class SSEService(BaseSSEService):
     ) -> dict[str, Any] | None:
         """Extract initial state dictionary from the request context.
 
-        Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+        Uses the configured initial state extractor to determine any
+        initial session state for new sessions, enabling context-aware initialization.
 
-        Returns:
-            Dictionary containing initial state key-value pairs, or None
+        :param agui_content: Input containing agent execution parameters
+        :param request: HTTP request for context extraction
+        :return: Dictionary containing initial state key-value pairs, or None
         """
         value = self.config_context.extract_initial_state
         if callable(value):
@@ -182,13 +180,11 @@ class SSEService(BaseSSEService):
         """Handle event encoding with error recovery.
 
         Attempts to encode the event using the provided encoder, falling back
-        to error event encoding if the primary encoding fails.
+        to error event encoding if the primary encoding fails. This ensures
+        that clients always receive valid SSE events even when encoding errors occur.
 
-        Args:
-            event: Base event to be encoded
-
-        Returns:
-            Encoded event dictionary in SSE format, either successful encoding or error event
+        :param event: Base event to be encoded
+        :return: Encoded event dictionary in SSE format, either successful encoding or error event
         """
         try:
             return convert_agui_event_to_sse(event)

@@ -31,6 +31,14 @@ class RunningHandler:
     Orchestrates the execution of ADK agents while translating their events into
     AGUI-compatible format. Handles streaming messages, long-running tools, and
     state snapshots with proper event processing pipelines.
+
+    Key Responsibilities:
+    - Execute ADK agents with proper configuration
+    - Translate ADK events to AGUI format through event translator
+    - Manage custom event handlers for preprocessing and postprocessing
+    - Handle timeout scenarios and fallback processing
+    - Detect and manage long-running tool executions
+    - Generate state snapshot events for session persistence
     """
 
     def __init__(
@@ -41,10 +49,13 @@ class RunningHandler:
     ):
         """Initialize the running handler with agent runner and configuration.
 
-        Args:
-            runner: ADK Runner instance for executing agent operations
-            run_config: Configuration for agent run behavior and streaming mode
-            handler_context: Context containing optional event handlers for processing
+        Sets up the handler with the necessary components for agent execution
+        and event processing, including optional custom handlers for extending
+        the default processing pipeline.
+
+        :param runner: ADK Runner instance for executing agent operations
+        :param run_config: Configuration for agent run behavior and streaming mode
+        :param handler_context: Context containing optional event handlers for processing
         """
         self.runner: Runner | None = runner
         self.run_config: RunConfig | None = run_config
@@ -62,10 +73,10 @@ class RunningHandler:
         """Initialize optional event handlers from the provided context.
 
         Creates instances of event handlers if they are configured in the handler context.
-        Each handler type serves a specific purpose in the event processing pipeline.
+        Each handler type serves a specific purpose in the event processing pipeline,
+        enabling customization of event processing behavior.
 
-        Args:
-            handler_context: Context containing handler class types to instantiate
+        :param handler_context: Context containing handler class types to instantiate
         """
         if handler_context is None:
             return
@@ -82,11 +93,11 @@ class RunningHandler:
     async def _get_timeout(self, enable_timeout: bool) -> float | None:
         """Get timeout duration for event processing if timeout is enabled.
 
-        Args:
-            enable_timeout: Whether timeout handling is enabled
+        Retrieves the timeout configuration from the timeout handler if available
+        and timeout is enabled, otherwise returns None to disable timeout handling.
 
-        Returns:
-            Timeout duration in seconds, or None if timeout is disabled
+        :param enable_timeout: Whether timeout handling is enabled for this operation
+        :return: Timeout duration in seconds, or None if timeout is disabled
         """
         if not (self.adk_event_timeout_handler and enable_timeout):
             return None
@@ -95,8 +106,10 @@ class RunningHandler:
     async def _handle_timeout_fallback(self) -> AsyncGenerator[Event | None, Any]:
         """Handle timeout fallback when event processing exceeds time limit.
 
-        Yields:
-            Fallback events to process when timeout occurs, or None if no handler
+        Delegates to the timeout handler to generate appropriate fallback events
+        when agent processing exceeds the configured timeout duration.
+
+        :yields: Fallback ADK events to process when timeout occurs, or None if no handler
         """
         if self.adk_event_timeout_handler is None:
             return
@@ -113,13 +126,13 @@ class RunningHandler:
     ) -> AsyncGenerator[BaseEvent | Event]:
         """Process a single event with logging and optional custom event handler.
 
-        Args:
-            event: Event to process (ADK or AGUI format)
-            log_func: Logging function to record the event
-            event_handler: Optional custom handler to process the event
+        Logs the event and optionally processes it through a custom handler.
+        User-authored events are passed through unchanged to avoid infinite loops.
 
-        Yields:
-            Processed events (original or modified by handler)
+        :param event: Event to process (ADK or AGUI format)
+        :param log_func: Logging function to record the event
+        :param event_handler: Optional custom handler to process the event
+        :yields: Processed events (original or modified by handler)
         """
         log_func(event)
         if not event_handler or (isinstance(event, Event) and event.author == "user"):
@@ -165,9 +178,12 @@ class RunningHandler:
     def _check_is_long_tool(self, adk_event: Event, agui_event: BaseEvent) -> None:
         """Check if the event indicates a long-running tool and set flag accordingly.
 
-        Args:
-            adk_event: ADK event to check for long-running tool indicators
-            agui_event: AGUI event to check for tool call end type
+        Determines if the current event combination indicates a long-running tool
+        by checking if the ADK event is a final response and the AGUI event is
+        a tool call end event.
+
+        :param adk_event: ADK event to check for final response status
+        :param agui_event: AGUI event to check for tool call end type
         """
         if adk_event.is_final_response() and agui_event.type == EventType.TOOL_CALL_END:
             self.is_long_running_tool = True
@@ -178,13 +194,11 @@ class RunningHandler:
         """Select appropriate translation function based on event characteristics.
 
         Determines whether to use standard translation or long-running function
-        call translation based on event content and completion status.
+        call translation based on event content and completion status. This
+        enables proper handling of different event types in the translation pipeline.
 
-        Args:
-            adk_event: ADK event to analyze for translation method selection
-
-        Returns:
-            Translation function appropriate for the event type
+        :param adk_event: ADK event to analyze for translation method selection
+        :return: Translation function appropriate for the event type
         """
         has_content = adk_event.content and adk_event.content.parts
         is_incomplete_response = not adk_event.is_final_response()
@@ -229,10 +243,9 @@ class RunningHandler:
 
         Configures the event translator with the list of tool call IDs that are
         marked as long-running operations, enabling proper handling of these tools
-        during event translation.
+        during event translation. This is essential for HITL workflow management.
 
-        Args:
-            long_running_tool_ids: List of tool call IDs for long-running operations
+        :param long_running_tool_ids: List of tool call IDs for long-running operations
         """
         self.event_translator.long_running_tool_ids = long_running_tool_ids
 
@@ -240,10 +253,10 @@ class RunningHandler:
         """Force close any active streaming message in the event translator.
 
         Delegates to the event translator to handle cleanup of unclosed
-        streaming messages that may remain after agent execution.
+        streaming messages that may remain after agent execution. This ensures
+        proper message closure for incomplete streaming responses.
 
-        Returns:
-            AsyncGenerator yielding events for closing streaming messages
+        :return: AsyncGenerator yielding events for closing streaming messages
         """
         return self.event_translator.force_close_streaming_message()
 
@@ -253,13 +266,11 @@ class RunningHandler:
         """Create a state snapshot event with optional state processing.
 
         Processes the final state through the configured state snapshot handler
-        if available, then creates a state snapshot event.
+        if available, then creates a state snapshot event. This enables custom
+        state processing before sending the snapshot to clients.
 
-        Args:
-            final_state: Dictionary containing the final session state
-
-        Returns:
-            StateSnapshotEvent containing the processed state
+        :param final_state: Dictionary containing the final session state
+        :return: StateSnapshotEvent containing the processed state, or None if suppressed
         """
         if self.agui_state_snapshot_handler is not None:
             final_state = await self.agui_state_snapshot_handler.process(final_state)  # type: ignore[assignment]
@@ -274,13 +285,12 @@ class RunningHandler:
 
         Runs the ADK agent asynchronously with the provided arguments and
         processes the resulting events through the configured ADK event handler.
+        This is the primary method for executing agents and obtaining event streams.
 
-        Args:
-            *args: Positional arguments to pass to the runner
-            **kwargs: Keyword arguments to pass to the runner
-
-        Returns:
-            AsyncGenerator yielding processed ADK Event objects
+        :param args: Positional arguments to pass to the runner (typically user_id, session_id, message)
+        :param kwargs: Keyword arguments to pass to the runner
+        :return: AsyncGenerator yielding processed ADK Event objects
+        :raises ValueError: If runner or run_config is not provided
         """
         if not self.runner or not self.run_config:
             raise ValueError("Runner and RunConfig must be provided to run the agent.")
@@ -298,7 +308,8 @@ class RunningHandler:
 
         Takes a pre-generated stream of ADK events (e.g., from conversation history)
         and processes them through the configured ADK event handler without timeout.
-        This is typically used for replaying or reprocessing stored events.
+        This is typically used for replaying or reprocessing stored events during
+        conversation reconstruction or analysis.
 
         :param runner: AsyncGenerator yielding ADK Event objects to process
         :return: AsyncGenerator yielding processed ADK Event objects
@@ -312,14 +323,12 @@ class RunningHandler:
     def run_async_with_agui(self, adk_event: Event) -> AsyncGenerator[BaseEvent]:
         """Translate ADK event to AGUI events and process through AGUI event handler.
 
-        Takes an ADK event, translates it to AGUI format, and processes the
-        resulting events through the configured AGUI event handler.
+        Takes an ADK event, translates it to AGUI format using the event translator,
+        and processes the resulting events through the configured AGUI event handler.
+        This is the core method for converting ADK events to client-ready AGUI events.
 
-        Args:
-            adk_event: ADK Event to translate and process
-
-        Returns:
-            AsyncGenerator yielding processed AGUI BaseEvent objects
+        :param adk_event: ADK Event to translate and process
+        :return: AsyncGenerator yielding processed AGUI BaseEvent objects
         """
         return self._process_events_with_handler(
             self._translate_adk_to_agui_async(adk_event),

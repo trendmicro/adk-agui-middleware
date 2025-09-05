@@ -23,7 +23,15 @@ class AGUIUserHandler:
     """Orchestrates user interactions with the agent through the AGUI interface.
 
     Manages the complete workflow of agent execution including session management,
-    event translation, tool call tracking, and error handling.
+    event translation, tool call tracking, and error handling. This handler is
+    the primary coordinator for HITL (Human-in-the-Loop) workflows, managing
+    the transition between agent execution and human intervention states.
+
+    Key Responsibilities:
+    - Orchestrates agent execution through the running handler
+    - Manages session state and HITL workflow transitions
+    - Tracks tool calls and manages pending tool call states
+    - Coordinates between user messages, agent responses, and tool results
     """
 
     def __init__(
@@ -34,10 +42,13 @@ class AGUIUserHandler:
     ):
         """Initialize the AGUI user handler.
 
-        Args:
-            running_handler: Handler for executing agent runs
-            user_message_handler: Handler for processing user messages
-            session_handler: Handler for session state management
+        Sets up the handler with its dependent components for managing the complete
+        agent interaction workflow including execution, message processing, and
+        session state management.
+
+        :param running_handler: Handler for executing agent runs and event translation
+        :param user_message_handler: Handler for processing user messages and tool results
+        :param session_handler: Handler for session state management and HITL workflows
         """
         self.running_handler = running_handler
         self.user_message_handler = user_message_handler
@@ -48,15 +59,19 @@ class AGUIUserHandler:
     async def _async_init(self) -> None:
         """Initialize asynchronous components of the handler.
 
-        Sets up long-running tool IDs from pending tool calls in session state.
+        Performs async initialization that cannot be done in __init__, specifically
+        setting up long-running tool IDs from pending tool calls in session state.
+        This is crucial for resuming HITL workflows correctly.
         """
         await self._initialize_long_running_tools()
 
     async def _initialize_long_running_tools(self) -> None:
         """Initialize long-running tool IDs from session state.
 
-        Retrieves pending tool calls from session and configures the running
-        handler to properly handle these long-running operations.
+        Retrieves pending tool calls from session state and configures the running
+        handler to properly handle these long-running operations. This ensures that
+        tool calls marked as pending in previous requests are handled correctly
+        in the current execution context.
         """
         self.running_handler.set_long_running_tool_ids(
             await self.session_handler.get_pending_tool_calls()
@@ -101,8 +116,10 @@ class AGUIUserHandler:
     def call_start(self) -> RunStartedEvent:
         """Create a run started event.
 
-        Returns:
-            RunStartedEvent indicating the beginning of agent execution
+        Creates a standardized run started event with the current session context.
+        This event is sent to clients to indicate the beginning of agent processing.
+
+        :return: RunStartedEvent indicating the beginning of agent execution
         """
         return RunStartedEvent(
             type=EventType.RUN_STARTED, thread_id=self.session_id, run_id=self.run_id
@@ -111,8 +128,10 @@ class AGUIUserHandler:
     def call_finished(self) -> RunFinishedEvent:
         """Create a run finished event.
 
-        Returns:
-            RunFinishedEvent indicating the completion of agent execution
+        Creates a standardized run finished event with the current session context.
+        This event is sent to clients to indicate the completion of agent processing.
+
+        :return: RunFinishedEvent indicating the completion of agent execution
         """
         return RunFinishedEvent(
             type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
@@ -121,11 +140,11 @@ class AGUIUserHandler:
     def check_tools_event(self, event: BaseEvent) -> None:
         """Track tool call events for pending tool call management.
 
-        Adds tool call IDs when tools are called and removes them when
-        tool results are received.
+        Monitors agent events to track tool call lifecycle, adding tool call IDs
+        to the tracking list when tools are invoked and removing them when tool
+        results are processed. This is essential for HITL workflow management.
 
-        Args:
-            event: Base event to check for tool call information
+        :param event: AGUI BaseEvent to check for tool call information
         """
         if isinstance(event, ToolCallEndEvent):
             self.tool_call_ids.append(event.tool_call_id)
@@ -150,8 +169,7 @@ class AGUIUserHandler:
         4. Agent execution resumes with the human-provided tool results
         5. Workflow continues with human input incorporated
 
-        Returns:
-            RunErrorEvent if no tool results found or processing fails, None on success
+        :return: RunErrorEvent if no tool results found or processing fails, None on success
 
         Note:
             This is the critical completion step in HITL workflows, transforming
@@ -181,8 +199,10 @@ class AGUIUserHandler:
         tracks tool calls, handles long-running tools early return, forces streaming
         message closure, and creates final state snapshot if available.
 
-        Yields:
-            AGUI BaseEvent objects from agent execution and state management
+        This method implements the core agent execution loop with proper event
+        translation, tool call tracking, and state management.
+
+        :yields: AGUI BaseEvent objects from agent execution and state management
         """
         async for adk_event in self.running_handler.run_async_with_adk(
             user_id=self.user_id,
@@ -209,9 +229,9 @@ class AGUIUserHandler:
 
         Manages the entire workflow including session creation, state updates,
         agent execution, pending tool call management, and run completion.
+        This orchestrates the full lifecycle of an agent execution request.
 
-        Yields:
-            AGUI BaseEvent objects for the complete workflow
+        :yields: AGUI BaseEvent objects for the complete workflow
         """
         yield self.call_start()
         await self.session_handler.check_and_create_session(
@@ -240,8 +260,7 @@ class AGUIUserHandler:
         3. If new request: Execute agent and add any tool calls to pending state
         4. Handle errors and state transitions throughout the process
 
-        Yields:
-            AGUI BaseEvent objects from the handler execution, including HITL state changes
+        :yields: AGUI BaseEvent objects from the handler execution, including HITL state changes
 
         Note:
             This is the primary entry point for HITL workflow management, handling

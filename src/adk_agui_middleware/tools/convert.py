@@ -11,7 +11,14 @@ def convert_agui_event_to_sse(event: BaseEvent) -> dict[str, str]:
 
     Transforms an AGUI event into the standard SSE format with data, event type,
     and unique identifier. Adds timestamp and excludes null values from serialization.
-    This is the core conversion function for streaming agent events to clients.
+    This is the core conversion function for streaming agent events to clients
+    through the SSE protocol.
+
+    The function ensures proper SSE formatting by:
+    - Adding a millisecond timestamp for event tracking
+    - Serializing event data as JSON with proper field exclusions
+    - Providing event type for client-side event handling
+    - Generating unique IDs for event correlation
 
     :param event: AGUI BaseEvent to convert to SSE format
     :return: Dictionary containing SSE-formatted event with 'data', 'event', and 'id' fields
