@@ -1,6 +1,6 @@
 # ADK AGUI Python Middleware
 
-A professional Python 3.13+ middleware library that bridges Google Agent Development Kit (ADK) agents with AGUI (Agent UI) protocol, providing Server-Sent Events (SSE) streaming capabilities for real-time agent interactions.
+A professional Python 3.10+ middleware library that bridges Google Agent Development Kit (ADK) agents with AGUI (Agent UI) protocol, providing Server-Sent Events (SSE) streaming capabilities for real-time agent interactions.
 
 ## ✨ Core Features
 
@@ -23,7 +23,12 @@ A professional Python 3.13+ middleware library that bridges Google Agent Develop
 pip install adk-agui-middleware
 ```
 
-**Requirements:** Python 3.13+ • Google ADK ≥1.9.0 • AGUI Protocol ≥0.1.7 • FastAPI ≥0.104.0 • Pydantic ≥2.11
+**Requirements:** 
+- Python 3.10+
+- Google ADK ≥1.9.0
+- AGUI Protocol ≥0.1.7
+- FastAPI ≥0.104.0
+- Pydantic ≥2.11
 
 ### Basic Usage
 
@@ -95,38 +100,6 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
-```
-
-### HITL (Human-in-the-Loop) Example
-
-```python
-from adk_agui_middleware.data_model.context import PathConfig
-from adk_agui_middleware.service.history_service import HistoryService
-from adk_agui_middleware.data_model.context import HistoryConfig
-
-# Configure history service for HITL workflows
-history_config = HistoryConfig(
-    user_id=extract_user_id,
-    session_id=lambda request: request.path_params.get("thread_id", "default")
-)
-
-history_service = HistoryService(history_config)
-
-# Configure custom paths
-path_config = PathConfig(
-    agui_main_path="/chat",
-    agui_thread_list_path="/threads",
-    agui_message_snapshot_path="/threads/{thread_id}/messages",
-    agui_state_snapshot_path="/threads/{thread_id}/state"
-)
-
-# Register endpoint with history service
-register_agui_endpoint(
-    app, 
-    sse_service, 
-    path_config=path_config,
-    history_service=history_service
-)
 ```
 
 ## 🏗️ Architecture Overview
@@ -340,15 +313,6 @@ sequenceDiagram
     Note over C,ADK: HITL enables multi-turn asynchronous interactions
 ```
 
-## 🔧 Core Concepts
-
-### Primary Features
-
-- **📊 Event Translation**: Seamless ADK ↔ AGUI event conversion with streaming support
-- **🤝 HITL Workflows**: Built-in Human-in-the-Loop support for tool call approval
-- **⚙️ Flexible Configuration**: Multi-tenant context extraction and service configuration
-- **🛡️ Error Handling**: Comprehensive error handling with structured logging
-- **🎯 Processing Pipeline**: Extensible event processing with custom handlers
 
 ### Event Translation Pipeline
 
@@ -382,106 +346,6 @@ The middleware implements sophisticated HITL patterns:
 - `SessionHandler.get_pending_tool_calls()` - Query pending interventions
 - `UserMessageHandler.is_tool_result_submission` - Detect completion state
 - `AGUIUserHandler.remove_pending_tool_call()` - Orchestrate completion flow
-
-## 📈 Production Best Practices
-
-### Configuration Setup
-```python
-from google.adk.agents.run_config import StreamingMode
-
-# Production configuration
-runner_config = RunnerConfig(
-    use_in_memory_services=False,  # Use persistent services
-    run_config=RunConfig(
-        streaming_mode=StreamingMode.SSE,
-        timeout_seconds=300
-    )
-)
-```
-
-### Key Features
-- **Thread Safety**: Async/await patterns with proper concurrency handling
-- **Error Recovery**: Comprehensive error handling with structured logging
-- **Type Safety**: Full type annotations with Pydantic validation
-- **Extensibility**: Abstract base classes for custom event processing
-
-## 🔧 Extension Points
-
-The middleware provides multiple customization extension points:
-
-- **Event Handlers**: Implement `BaseADKEventHandler` or `BaseAGUIEventHandler`
-- **Translation Logic**: Extend `BaseTranslateHandler` for custom event translation
-- **State Management**: Implement `BaseAGUIStateSnapshotHandler` for custom state processing
-- **I/O Recording**: Implement `BaseInOutHandler` for request/response logging
-
-## 🧪 Testing
-
-The project includes comprehensive test coverage for all core components:
-
-```bash
-# Run tests with coverage
-pytest --cov=src/adk_agui_middleware --cov-report=html
-
-# Run specific test categories
-pytest tests/test_handler_*  # Handler tests
-pytest tests/test_event_*    # Event translation tests
-pytest tests/test_data_*     # Data model tests
-```
-
-## 🔧 Development
-
-### Code Quality Standards
-
-This project maintains high code quality standards:
-
-- **Type Safety**: Complete type annotations supporting Python 3.13+
-- **Documentation**: Google-style docstrings with `:param` and `:return` annotations
-- **Testing**: Extensive test coverage including HITL workflow tests
-- **Code Review**: Professional code review standards with detailed analysis
-- **Naming Conventions**: Consistent Python naming standards (PascalCase for classes, snake_case for functions/variables)
-- **Error Handling**: Structured error handling with proper logging and recovery mechanisms
-- **HITL Support**: Built-in Human-in-the-Loop workflow management with session persistence
-
-### Architecture Principles
-
-- **Separation of Concerns**: Clear separation between handlers, services, and data models
-- **Dependency Injection**: Configure handlers and services through context objects
-- **Event-Driven Design**: Complete event processing pipeline with translation layers
-- **Session Management**: Robust session state management with HITL workflow support
-- **Extensibility**: Abstract base classes enable custom implementations without core modifications
-
-### Contributing Guidelines
-
-1. Follow PEP 8 and use type hints throughout
-2. Add complete docstrings for all classes and functions using established `:param`/`:return` format
-3. Include tests for new features including appropriate HITL workflow tests
-4. Update documentation as needed, especially for HITL-related functionality
-5. Ensure proper error handling and logging for all new code paths
-6. Test multi-tenant scenarios and session isolation
-
-## 🏆 Code Quality Highlights
-
-This library has been professionally reviewed and enhanced:
-
-### 📝 Documentation Excellence
-- **Complete Docstrings**: Every class and function has detailed descriptions
-- **Parameter Documentation**: Consistent `:param` and `:return` annotations throughout
-- **Architecture Documentation**: Detailed explanation of HITL workflows and event processing
-- **Usage Examples**: Real-world examples for multi-tenant configuration
-
-### 🎯 Professional Standards
-- **Type Safety**: Full type annotations supporting Python 3.13+
-- **Error Handling**: Structured error handling with comprehensive logging
-- **Testing**: Extensive test coverage including HITL scenarios
-- **Performance**: Optimized event processing with streaming support
-- **Security**: Proper session isolation with multi-tenant support
-
-### 🔧 Advanced Features
-- **HITL Workflows**: Complete Human-in-the-Loop implementation with state persistence
-- **Event Translation**: Sophisticated ADK ↔ AGUI event conversion
-- **Custom Handlers**: Extensible handler system for custom event processing
-- **Session Management**: Robust session state management with configurable backends
-- **Multi-tenant Support**: Flexible context extraction for multi-tenant deployments
 
 ## 📄 License
 
