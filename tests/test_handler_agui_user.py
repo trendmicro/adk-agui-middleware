@@ -287,14 +287,14 @@ class TestAGUIUserHandler:
         mock_running_handler.is_long_running_tool = False
         mock_running_handler.force_close_streaming_message = mock_empty_force_close
         mock_session_handler.get_session_state = AsyncMock(return_value=None)
-        mock_running_handler.create_state_snapshot_event = Mock()
+        mock_running_handler.create_state_snapshot_event = AsyncMock(return_value=None)
         
         events = []
         async for event in agui_user_handler._run_async():
             events.append(event)
         
-        # Should not create state snapshot
-        mock_running_handler.create_state_snapshot_event.assert_not_called()
+        # Should call create_state_snapshot_event but not yield since it returns None
+        mock_running_handler.create_state_snapshot_event.assert_called_once_with(None)
 
     @pytest.mark.asyncio
     async def test_run_workflow(self, agui_user_handler, mock_session_handler, mock_user_message_handler):
