@@ -202,9 +202,8 @@ class RunningHandler:
         """
         has_content = adk_event.content and adk_event.content.parts
         is_incomplete_response = not adk_event.is_final_response()
-        has_content_without_metadata = not adk_event.usage_metadata and has_content
 
-        if is_incomplete_response or has_content_without_metadata:
+        if is_incomplete_response or has_content:
             return self.event_translator.translate
         return self.event_translator.translate_long_running_function_calls
 

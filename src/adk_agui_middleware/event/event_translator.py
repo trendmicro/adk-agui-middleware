@@ -149,7 +149,6 @@ class EventTranslator:
 
         if (
             not author_id
-            and not adk_event.usage_metadata
             and adk_event.is_final_response()
             and not adk_event.partial
         ):
