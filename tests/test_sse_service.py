@@ -11,7 +11,7 @@ from google.adk.agents import BaseAgent
 
 from adk_agui_middleware.data_model.context import ConfigContext, RunnerConfig
 from adk_agui_middleware.data_model.session import SessionParameter
-from adk_agui_middleware.sse_service import SSEService
+from adk_agui_middleware.service.sse_service import SSEService
 
 
 class TestSSEService(unittest.TestCase):
@@ -119,9 +119,9 @@ class TestSSEService(unittest.TestCase):
         expected = {"custom_key": "custom_value"}
         self.assertEqual(result, expected)
 
-    @patch("adk_agui_middleware.sse_service.convert_agui_event_to_sse")
+    @patch("adk_agui_middleware.service.sse_service.convert_agui_event_to_sse")
     def test_encoding_handler_success(self, mock_convert_agui_event_to_sse):
-        """Test _encoding_handler with successful encoding."""
+        """Test _encode_event_to_sse with successful encoding."""
         mock_convert_agui_event_to_sse.return_value = {"data": "encoded_event_string"}
         mock_event = Mock(spec=BaseEvent)
 
@@ -130,10 +130,10 @@ class TestSSEService(unittest.TestCase):
         self.assertEqual(result, {"data": "encoded_event_string"})
         mock_convert_agui_event_to_sse.assert_called_once_with(mock_event)
 
-    @patch("adk_agui_middleware.sse_service.AGUIEncoderError")
-    @patch("adk_agui_middleware.sse_service.convert_agui_event_to_sse")
+    @patch("adk_agui_middleware.service.sse_service.AGUIEncoderError")
+    @patch("adk_agui_middleware.service.sse_service.convert_agui_event_to_sse")
     def test_encoding_handler_exception(self, mock_convert_agui_event_to_sse, mock_agui_encoder_error):
-        """Test _encoding_handler with encoding exception."""
+        """Test _encode_event_to_sse with encoding exception."""
         exception_obj = Exception("Encoding failed")
         mock_convert_agui_event_to_sse.side_effect = exception_obj
         mock_event = Mock(spec=BaseEvent)
@@ -144,7 +144,7 @@ class TestSSEService(unittest.TestCase):
         self.assertEqual(result, {"data": "error_event_string"})
         mock_agui_encoder_error.create_encoding_error_event.assert_called_once_with(exception_obj)
 
-    @patch("adk_agui_middleware.sse_service.Runner")
+    @patch("adk_agui_middleware.service.sse_service.Runner")
     async def test_create_runner_new(self, mock_runner_class):
         """Test _create_runner creates new runner for new app."""
         mock_runner_instance = Mock(spec=Runner)
@@ -177,9 +177,9 @@ class TestSSEService(unittest.TestCase):
 
         self.assertEqual(result, cached_runner)
 
-    @patch("adk_agui_middleware.sse_service.AGUIUserHandler")
-    @patch("adk_agui_middleware.sse_service.UserMessageHandler")
-    @patch("adk_agui_middleware.sse_service.SessionHandler")
+    @patch("adk_agui_middleware.service.sse_service.AGUIUserHandler")
+    @patch("adk_agui_middleware.service.sse_service.UserMessageHandler")
+    @patch("adk_agui_middleware.service.sse_service.SessionHandler")
     async def test_get_runner(
         self,
         mock_session_handler_class,
@@ -208,10 +208,10 @@ class TestSSEService(unittest.TestCase):
 
         # Mock runner creation
         mock_runner = Mock(spec=Runner)
-        self.sse_service._create_runner = Mock(return_value=mock_runner)
+        self.sse_service._create_runner = AsyncMock(return_value=mock_runner)
 
         # Get the runner function
-        runner_func = await self.sse_service.get_runner(
+        runner_func, in_out_handler = await self.sse_service.get_runner(
             self.mock_agui_content, self.mock_request
         )
 
@@ -230,7 +230,7 @@ class TestSSEService(unittest.TestCase):
         mock_session_handler_class.assert_called_once()
         session_handler_call_args = mock_session_handler_class.call_args
         self.assertEqual(
-            session_handler_call_args[1]["session_manger"],
+            session_handler_call_args[1]["session_manager"],
             self.sse_service.session_manager,
         )
 
@@ -258,13 +258,13 @@ class TestSSEService(unittest.TestCase):
         # Mock encoding handler to return encoded strings
         with patch.object(
             SSEService,
-            "_encoding_handler",
+            "_encode_event_to_sse",
             side_effect=["encoded_event1", "encoded_event2"],
         ) as mock_encoding_handler:
             # Collect results from generator
             results = []
             async for encoded_event in self.sse_service.event_generator(
-                mock_runner, mock_encoder
+                mock_runner
             ):
                 results.append(encoded_event)
 
@@ -274,10 +274,10 @@ class TestSSEService(unittest.TestCase):
 
             # Verify encoding handler was called for each event
             self.assertEqual(mock_encoding_handler.call_count, 2)
-            mock_encoding_handler.assert_any_call(mock_encoder, mock_event1)
-            mock_encoding_handler.assert_any_call(mock_encoder, mock_event2)
+            mock_encoding_handler.assert_any_call(mock_event1)
+            mock_encoding_handler.assert_any_call(mock_event2)
 
-    @patch("adk_agui_middleware.sse_service.AGUIEncoderError")
+    @patch("adk_agui_middleware.service.sse_service.AGUIEncoderError")
     async def test_event_generator_runner_exception(self, mock_agui_encoder_error):
         """Test event_generator handles runner exceptions."""
 
@@ -285,19 +285,18 @@ class TestSSEService(unittest.TestCase):
         async def mock_runner():
             raise Exception("Runner failed")
 
-        mock_encoder = Mock(spec=EventEncoder)
-        mock_agui_encoder_error.agent_error.return_value = "error_encoded_event"
+        mock_agui_encoder_error.create_agent_error_event.return_value = "error_encoded_event"
 
         # Collect results from generator
         results = []
         async for encoded_event in self.sse_service.event_generator(
-            mock_runner, mock_encoder
+            mock_runner
         ):
             results.append(encoded_event)
 
         # Should yield error event
         self.assertEqual(results, ["error_encoded_event"])
-        mock_agui_encoder_error.agent_error.assert_called_once()
+        mock_agui_encoder_error.create_agent_error_event.assert_called_once()
 
     async def test_event_generator_empty_runner(self):
         """Test event_generator with runner that yields no events."""
@@ -307,12 +306,10 @@ class TestSSEService(unittest.TestCase):
             return
             yield  # Unreachable, just to make it a generator
 
-        mock_encoder = Mock(spec=EventEncoder)
-
         # Collect results
         results = []
         async for encoded_event in self.sse_service.event_generator(
-            mock_runner, mock_encoder
+            mock_runner
         ):
             results.append(encoded_event)
 
@@ -353,7 +350,7 @@ class TestSSEService(unittest.TestCase):
         app1_runner_cached = await self.sse_service._create_runner("app1")
         self.assertEqual(app1_runner, app1_runner_cached)
 
-    @patch("adk_agui_middleware.sse_service.SessionManager")
+    @patch("adk_agui_middleware.service.sse_service.SessionManager")
     def test_session_manager_initialization(self, mock_session_manager_class):
         """Test that SessionManager is initialized with correct session service."""
         mock_session_manager_instance = Mock()

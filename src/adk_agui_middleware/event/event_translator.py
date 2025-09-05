@@ -147,11 +147,7 @@ class EventTranslator:
             return
         author_id = self._streaming_message_id.get(adk_event.author, None)
 
-        if (
-            not author_id
-            and adk_event.is_final_response()
-            and not adk_event.partial
-        ):
+        if not author_id and adk_event.is_final_response() and not adk_event.partial:
             async for agui_event in self.message_event_util.generate_message_event(
                 adk_event.id, "".join(text_parts)
             ):

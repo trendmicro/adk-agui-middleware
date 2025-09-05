@@ -27,6 +27,7 @@ from ..base_abc.handler import (
     BaseTranslateHandler,
 )
 
+
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
 
 
@@ -93,7 +94,7 @@ class ConfigContext(BaseModel):
         default_session_id
     )
     extract_initial_state: (
-            Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
+        Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
     ) = None
 
 
