@@ -1,7 +1,6 @@
 """FastAPI endpoint registration for AGUI middleware service."""
 
 from http.client import InvalidURL
-from typing import Any, Coroutine
 
 from ag_ui.core import RunAgentInput, StateSnapshotEvent
 from fastapi import APIRouter, FastAPI, Request
@@ -15,10 +14,10 @@ from .service.history_service import HistoryService
 
 
 def register_agui_endpoint(
-        app: FastAPI | APIRouter,
-        sse_service: BaseSSEService,
-        path_config: PathConfig = PathConfig(),  # noqa: B008
-        history_service: HistoryService | None = None,
+    app: FastAPI | APIRouter,
+    sse_service: BaseSSEService,
+    path_config: PathConfig = PathConfig(),  # noqa: B008
+    history_service: HistoryService | None = None,
 ) -> None:
     """Register AGUI endpoint for handling agent interactions via Server-Sent Events.
 
@@ -38,7 +37,7 @@ def register_agui_endpoint(
 
     @app.post(path_config.agui_main_path)
     async def run_agui_main(
-            agui_content: RunAgentInput, request: Request
+        agui_content: RunAgentInput, request: Request
     ) -> EventSourceResponse:
         """Handle AGUI agent execution requests.
 
@@ -99,7 +98,7 @@ def register_agui_endpoint(
 
     @app.get(path_config.agui_message_snapshot_path)
     async def get_agui_message_snapshot(
-            request: Request,
+        request: Request,
     ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 

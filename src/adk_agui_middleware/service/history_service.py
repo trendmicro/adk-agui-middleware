@@ -1,7 +1,6 @@
 """History service for managing conversation history and session retrieval."""
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Coroutine
 
 from ag_ui.core import StateSnapshotEvent
 from fastapi import Request
@@ -112,7 +111,7 @@ class HistoryService:
         return {"status": "deleted"}
 
     async def get_message_snapshot(
-            self, request: Request
+        self, request: Request
     ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
