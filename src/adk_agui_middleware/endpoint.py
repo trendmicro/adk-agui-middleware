@@ -1,6 +1,7 @@
 """FastAPI endpoint registration for AGUI middleware service."""
 
 from http.client import InvalidURL
+from typing import Any, Coroutine
 
 from ag_ui.core import RunAgentInput, StateSnapshotEvent
 from fastapi import APIRouter, FastAPI, Request
@@ -14,10 +15,10 @@ from .service.history_service import HistoryService
 
 
 def register_agui_endpoint(
-    app: FastAPI | APIRouter,
-    sse_service: BaseSSEService,
-    path_config: PathConfig = PathConfig(),  # noqa: B008
-    history_service: HistoryService | None = None,
+        app: FastAPI | APIRouter,
+        sse_service: BaseSSEService,
+        path_config: PathConfig = PathConfig(),  # noqa: B008
+        history_service: HistoryService | None = None,
 ) -> None:
     """Register AGUI endpoint for handling agent interactions via Server-Sent Events.
 
@@ -37,7 +38,7 @@ def register_agui_endpoint(
 
     @app.post(path_config.agui_main_path)
     async def run_agui_main(
-        agui_content: RunAgentInput, request: Request
+            agui_content: RunAgentInput, request: Request
     ) -> EventSourceResponse:
         """Handle AGUI agent execution requests.
 
@@ -65,7 +66,7 @@ def register_agui_endpoint(
             )
 
     @app.get(path_config.agui_thread_list_path)
-    async def get_agui_thread_list_path(request: Request) -> list[dict[str, str]]:
+    async def get_agui_thread_list(request: Request) -> list[dict[str, str]]:
         """Get list of available conversation threads for the user.
 
         Retrieves all available conversation threads/sessions for the requesting
@@ -87,9 +88,18 @@ def register_agui_endpoint(
                 )
             return await history_service.list_threads(request)
 
+    @app.delete(path_config.agui_thread_delete_path)
+    async def delete_agui_thread(request: Request) -> dict[str, str]:
+        async with http_exception_handler(request):
+            if history_service is None:
+                raise InvalidURL(
+                    "History service not configured for chat list endpoint"
+                )
+            return await history_service.delete_thread(request)
+
     @app.get(path_config.agui_message_snapshot_path)
-    async def get_agui_message_snapshot_path(
-        request: Request,
+    async def get_agui_message_snapshot(
+            request: Request,
     ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
@@ -111,7 +121,7 @@ def register_agui_endpoint(
             return await history_service.get_message_snapshot(request)
 
     @app.get(path_config.agui_state_snapshot_path)
-    async def get_agui_state_snapshot_path(request: Request) -> StateSnapshotEvent:
+    async def get_agui_state_snapshot(request: Request) -> StateSnapshotEvent:
         """Get current state snapshot for a specific session.
 
         Retrieves the current state snapshot for a session specified

@@ -1,6 +1,7 @@
 """History service for managing conversation history and session retrieval."""
 
 from collections.abc import Awaitable, Callable
+from typing import Any, Coroutine
 
 from ag_ui.core import StateSnapshotEvent
 from fastapi import Request
@@ -92,8 +93,26 @@ class HistoryService:
             return await self.history_config.get_thread_list(session_list)
         return [{"thread_id": session.id} for session in session_list]
 
+    async def delete_thread(self, request: Request) -> dict[str, str]:
+        """Delete a specific conversation thread for the user.
+
+        Extracts session context from the request and deletes the specified
+        conversation thread, returning the updated list of available threads.
+
+        Args:
+            request: HTTP request containing session context
+
+        Returns:
+            Updated list of dictionaries containing thread information
+        """
+        await self._create_history_handler(
+            await self._get_config_value("app_name", request),
+            await self._get_config_value("user_id", request),
+        ).delete_session(await self._get_config_value("session_id", request))
+        return {"status": "deleted"}
+
     async def get_message_snapshot(
-        self, request: Request
+            self, request: Request
     ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 

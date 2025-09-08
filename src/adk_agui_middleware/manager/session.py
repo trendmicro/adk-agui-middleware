@@ -56,9 +56,9 @@ class SessionManager:
         )
 
     async def check_and_create_session(
-        self,
-        session_parameter: SessionParameter,
-        initial_state: dict[str, Any] | None = None,
+            self,
+            session_parameter: SessionParameter,
+            initial_state: dict[str, Any] | None = None,
     ) -> Session:
         """Get existing session or create a new one if it doesn't exist.
 
@@ -84,10 +84,17 @@ class SessionManager:
             )
         return session
 
+    async def delete_session(self, session_parameter: SessionParameter) -> None:
+        await self.session_service.delete_session(
+            session_id=session_parameter.session_id,
+            app_name=session_parameter.app_name,
+            user_id=session_parameter.user_id,
+        )
+
     async def update_session_state(
-        self,
-        session_parameter: SessionParameter,
-        state_updates: dict[str, Any] | None,
+            self,
+            session_parameter: SessionParameter,
+            state_updates: dict[str, Any] | None,
     ) -> bool:
         """Update session state by appending a state delta event.
 
@@ -118,7 +125,7 @@ class SessionManager:
         return True
 
     async def get_session_state(
-        self, session_parameter: SessionParameter
+            self, session_parameter: SessionParameter
     ) -> dict[str, Any]:
         """Retrieve the current state dictionary for a session.
 
@@ -141,10 +148,10 @@ class SessionManager:
         return {}
 
     async def get_state_value(
-        self,
-        session_parameter: SessionParameter,
-        key: str,
-        default: Any = None,
+            self,
+            session_parameter: SessionParameter,
+            key: str,
+            default: Any = None,
     ) -> Any:
         """Get a specific value from the session state by key.
 

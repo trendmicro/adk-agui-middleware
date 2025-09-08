@@ -114,6 +114,7 @@ class PathConfig(BaseModel):
 
     agui_main_path: str = ""
     agui_thread_list_path: str = "/thread/list"
+    agui_thread_delete_path: str = "/thread/{thread_id}"
     agui_state_snapshot_path: str = "/state_snapshot/{thread_id}"
     agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
 

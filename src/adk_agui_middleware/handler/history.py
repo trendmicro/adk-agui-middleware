@@ -22,11 +22,11 @@ class HistoryHandler:
     """
 
     def __init__(
-        self,
-        session_manager: SessionManager,
-        running_handler: RunningHandler,
-        app_name: str,
-        user_id: str,
+            self,
+            session_manager: SessionManager,
+            running_handler: RunningHandler,
+            app_name: str,
+            user_id: str,
     ) -> None:
         """Initialize the history handler.
 
@@ -70,8 +70,17 @@ class HistoryHandler:
             )
         )
 
+    async def delete_session(self, session_id: str) -> None:
+        await self.session_manager.delete_session(
+            SessionParameter(
+                app_name=self.app_name,
+                user_id=self.user_id,
+                session_id=session_id,
+            )
+        )
+
     async def get_message_snapshot(
-        self, session_id: str
+            self, session_id: str
     ) -> CustomMessagesSnapshotEvent:
         """Generate a message snapshot for a conversation session.
 
