@@ -89,6 +89,16 @@ def register_agui_endpoint(
 
     @app.delete(path_config.agui_thread_delete_path)
     async def delete_agui_thread(request: Request) -> dict[str, str]:
+        """Delete a specific conversation thread for the user.
+
+        Permanently removes a conversation thread identified by the thread_id
+        in the request path. This operation deletes all associated messages
+        and session data for the specified conversation.
+
+        :param request: FastAPI request object containing thread_id in path and user context
+        :return: Dictionary containing deletion status confirmation
+        :raises HTTPException: If history service is not configured or thread not found
+        """
         async with http_exception_handler(request):
             if history_service is None:
                 raise InvalidURL(

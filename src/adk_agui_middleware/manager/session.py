@@ -85,6 +85,14 @@ class SessionManager:
         return session
 
     async def delete_session(self, session_parameter: SessionParameter) -> None:
+        """Delete a session using the provided session parameters.
+
+        Permanently removes the session and all associated data from the session service.
+        This operation cannot be undone and will remove all conversation history
+        and state data for the specified session.
+
+        :param session_parameter: Parameters identifying the session to delete (app, user, session ID)
+        """
         await self.session_service.delete_session(
             session_id=session_parameter.session_id,
             app_name=session_parameter.app_name,

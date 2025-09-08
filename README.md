@@ -24,7 +24,7 @@ pip install adk-agui-middleware
 ```
 
 **Requirements:** 
-- Python 3.10+
+- Python 3.10+ (Fully compatible with Python 3.13)
 - Google ADK ≥1.9.0
 - AGUI Protocol ≥0.1.7
 - FastAPI ≥0.104.0

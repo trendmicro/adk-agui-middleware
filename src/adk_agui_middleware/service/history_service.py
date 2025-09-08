@@ -90,7 +90,7 @@ class HistoryService:
         ).list_sessions()
         if self.history_config.get_thread_list:
             return await self.history_config.get_thread_list(session_list)
-        return [{"thread_id": session.id} for session in session_list]
+        return [{"threadId": session.id} for session in session_list]
 
     async def delete_thread(self, request: Request) -> dict[str, str]:
         """Delete a specific conversation thread for the user.
