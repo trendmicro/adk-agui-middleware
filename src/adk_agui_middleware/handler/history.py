@@ -1,6 +1,7 @@
 from collections.abc import AsyncGenerator
 from typing import Any
 
+import jsonpatch  # type: ignore
 from ag_ui.core import BaseEvent
 from ag_ui.core.types import UserMessage
 from google.adk.events import Event
@@ -88,7 +89,7 @@ class HistoryHandler:
 
     async def get_message_snapshot(
         self, session_id: str
-    ) -> CustomMessagesSnapshotEvent:
+    ) -> CustomMessagesSnapshotEvent | None:
         """Generate a message snapshot for a conversation session.
 
         Retrieves the session events and converts them to AGUI format
@@ -102,7 +103,7 @@ class HistoryHandler:
         """
         session = await self.get_session(session_id=session_id)
         if session is None:
-            return CustomMessagesSnapshotEvent(messages=[])
+            return None
 
         async def running() -> AsyncGenerator[Event]:
             """Internal generator for session events.
@@ -132,7 +133,7 @@ class HistoryHandler:
             ADKEventToAGUIMessageConverter().convert(agui_event_box)
         )
 
-    async def get_state_snapshot(self, session_id: str) -> dict[str, Any]:
+    async def get_state_snapshot(self, session_id: str) -> dict[str, Any] | None:
         """Get the current state snapshot for a specific session.
 
         Retrieves the complete state dictionary for the session,
@@ -147,5 +148,13 @@ class HistoryHandler:
         return (
             session.state
             if (session := await self.get_session(session_id=session_id))
-            else {}
+            else None
         )
+
+    async def patch_state(
+        self, session_id: str, state_patch: list[dict[str, Any]]
+    ) -> None | dict[str, Any]:
+        if session := await self.get_session(session_id=session_id) is not None:
+            session.state = jsonpatch.apply_patch(session.state, state_patch)  # type: ignore
+            return {"status": "updated"}
+        return None

@@ -1,6 +1,7 @@
 """History service for managing conversation history and session retrieval."""
 
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from ag_ui.core import StateSnapshotEvent
 from fastapi import Request
@@ -33,25 +34,31 @@ class HistoryService:
         )
         self.state_event_util = StateEventUtil()
 
-    def _create_history_handler(self, app_name: str, user_id: str) -> HistoryHandler:
-        """Create a history handler for the specified app and user.
+    async def _get_user_id_and_app_name(self, request: Request) -> dict[str, str]:
+        return {
+            "app_name": await self._get_config_value("app_name", request),
+            "user_id": await self._get_config_value("user_id", request),
+        }
 
-        Args:
-            app_name: Name of the application
-            user_id: Identifier for the user
+    async def _get_session_id(self, request: Request) -> str:
+        return await self._get_config_value("session_id", request)
+
+    async def _create_history_handler(self, request: Request) -> HistoryHandler:
+        """Create a history handler for the specified app and user.
 
         Returns:
             Configured HistoryHandler instance
         """
         return HistoryHandler(
             session_manager=self.session_manager,
-            running_handler=RunningHandler(handler_context=HandlerContext(
-                adk_event_handler=self.history_config.adk_event_handler,
-                agui_event_handler=self.history_config.agui_event_handler,
-                translate_handler=self.history_config.translate_handler,
-            )),
-            app_name=app_name,
-            user_id=user_id,
+            running_handler=RunningHandler(
+                handler_context=HandlerContext(
+                    adk_event_handler=self.history_config.adk_event_handler,
+                    agui_event_handler=self.history_config.agui_event_handler,
+                    translate_handler=self.history_config.translate_handler,
+                )
+            ),
+            **await self._get_user_id_and_app_name(request),
         )
 
     async def _get_config_value(self, config_attr: str, request: Request) -> str:
@@ -86,9 +93,8 @@ class HistoryService:
         Returns:
             List of dictionaries containing thread information
         """
-        session_list = await self._create_history_handler(
-            await self._get_config_value("app_name", request),
-            await self._get_config_value("user_id", request),
+        session_list = await (
+            await self._create_history_handler(request)
         ).list_sessions()
         if self.history_config.get_thread_list:
             return await self.history_config.get_thread_list(session_list)
@@ -106,14 +112,13 @@ class HistoryService:
         Returns:
             Updated list of dictionaries containing thread information
         """
-        await self._create_history_handler(
-            await self._get_config_value("app_name", request),
-            await self._get_config_value("user_id", request),
-        ).delete_session(await self._get_config_value("session_id", request))
+        await (await self._create_history_handler(request)).delete_session(
+            await self._get_session_id(request)
+        )
         return {"status": "deleted"}
 
     async def get_message_snapshot(
-            self, request: Request
+        self, request: Request
     ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 
@@ -126,10 +131,13 @@ class HistoryService:
         Returns:
             MessagesSnapshotEvent containing the conversation history
         """
-        return await self._create_history_handler(
-            await self._get_config_value("app_name", request),
-            await self._get_config_value("user_id", request),
-        ).get_message_snapshot(await self._get_config_value("session_id", request))
+
+        message_snapshot = await (
+            await self._create_history_handler(request)
+        ).get_message_snapshot(await self._get_session_id(request))
+        if message_snapshot is None:
+            raise ValueError("Session not found")
+        return message_snapshot
 
     async def get_state_snapshot(self, request: Request) -> StateSnapshotEvent:
         """Get current state snapshot for a specific session.
@@ -143,10 +151,21 @@ class HistoryService:
         Returns:
             Dictionary containing the current state snapshot
         """
-        state = await self._create_history_handler(
-            await self._get_config_value("app_name", request),
-            await self._get_config_value("user_id", request),
-        ).get_state_snapshot(await self._get_config_value("session_id", request))
+        state = await (await self._create_history_handler(request)).get_state_snapshot(
+            await self._get_session_id(request)
+        )
+        if state is None:
+            raise ValueError("Session not found")
         if self.history_config.get_state:
             state = await self.history_config.get_state(state)
         return self.state_event_util.create_state_snapshot_event(state)
+
+    async def patch_state(
+        self, request: Request, state_patch: list[dict[str, Any]]
+    ) -> dict[str, str]:
+        result = await (await self._create_history_handler(request)).patch_state(
+            session_id=await self._get_session_id(request), state_patch=state_patch
+        )
+        if result is None:
+            raise ValueError("Session not found")
+        return result

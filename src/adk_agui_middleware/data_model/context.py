@@ -27,6 +27,7 @@ from ..base_abc.handler import (
     BaseTranslateHandler,
 )
 
+
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
 
 
@@ -93,7 +94,7 @@ class ConfigContext(BaseModel):
         default_session_id
     )
     extract_initial_state: (
-            Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
+        Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
     ) = None
 
 
@@ -114,6 +115,7 @@ class PathConfig(BaseModel):
     agui_main_path: str = ""
     agui_thread_list_path: str = "/thread/list"
     agui_thread_delete_path: str = "/thread/{thread_id}"
+    agui_state_update_path: str = "/state_update/{thread_id}"
     agui_state_snapshot_path: str = "/state_snapshot/{thread_id}"
     agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
 
@@ -222,7 +224,7 @@ class HistoryConfig(BaseModel):
     user_id: str | Callable[[Request], Awaitable[str]]
     session_id: str | Callable[[Request], Awaitable[str]]
     get_thread_list: (
-            Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
+        Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
     ) = None
     get_state: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None
 

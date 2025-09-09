@@ -33,6 +33,7 @@ dependencies = [
     "pydantic-settings>=2.10.1",
     "fastapi>=0.104.0",
     "sse-starlette>=1.6.5",
+    "jsonpatch>=1.33",
 ]
 
 [dependency-groups]

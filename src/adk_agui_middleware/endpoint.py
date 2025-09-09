@@ -1,6 +1,7 @@
 """FastAPI endpoint registration for AGUI middleware service."""
 
 from http.client import InvalidURL
+from typing import Any
 
 from ag_ui.core import RunAgentInput, StateSnapshotEvent
 from fastapi import APIRouter, FastAPI, Request
@@ -13,7 +14,7 @@ from .loggers.exception import http_exception_handler
 from .service.history_service import HistoryService
 
 
-def register_agui_endpoint(
+def register_agui_endpoint(  # noqa: C901
     app: FastAPI | APIRouter,
     sse_service: BaseSSEService,
     path_config: PathConfig = PathConfig(),  # noqa: B008
@@ -110,6 +111,15 @@ def register_agui_endpoint(
                     "History service not configured for chat list endpoint"
                 )
             return await history_service.delete_thread(request)
+
+    @app.patch(path_config.agui_state_update_path)
+    async def update_agui_state(
+        request: Request, state_patch: list[dict[str, Any]]
+    ) -> dict[str, str]:
+        async with http_exception_handler(request):
+            if history_service is None:
+                raise InvalidURL("History service not configured for state endpoint")
+            return await history_service.patch_state(request, state_patch)
 
     @app.get(path_config.agui_message_snapshot_path)
     async def get_agui_message_snapshot(
