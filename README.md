@@ -1,19 +1,19 @@
 # ADK AGUI Python Middleware
 
-A professional Python 3.10+ middleware library that bridges Google Agent Development Kit (ADK) agents with AGUI (Agent UI) protocol, providing Server-Sent Events (SSE) streaming capabilities for real-time agent interactions.
+A high-performance Python 3.13 middleware library that bridges Google Agent Development Kit (ADK) agents with AGUI (Agent UI) protocol, providing enterprise-grade Server-Sent Events (SSE) streaming capabilities for real-time AI agent interactions.
 
-## ✨ Core Features
+## 🚀 Core Features
 
-- **🚀 Real-time Streaming**: Server-Sent Events (SSE) for real-time agent responses
-- **🔐 Session Management**: Complete session handling with configurable backend support
-- **⚙️ Context Extraction**: Flexible context configuration for multi-tenant applications
-- **🛡️ Error Handling**: Robust error handling with structured logging
-- **🔧 Tool Integration**: Complete tool call lifecycle management with HITL support
-- **📊 Event Translation**: ADK ↔ AGUI event conversion with streaming support
-- **🔒 Type Safety**: Full type annotations with Pydantic models
-- **🏗️ Extensible Architecture**: Abstract base classes for custom implementations
-- **📚 Complete Documentation**: Professional Google-style docstrings
-- **🎯 Code Quality**: Strict type checking and code review standards
+- **⚡ Real-time Streaming**: Server-Sent Events (SSE) with async/await patterns for real-time agent responses
+- **🏛️ Enterprise Architecture**: Modular design with dependency injection and abstract base classes
+- **🔐 Session Management**: Complete session lifecycle with configurable backend support and HITL workflows
+- **🌐 Multi-tenant Support**: Flexible context extraction for enterprise multi-tenant deployments
+- **🛡️ Robust Error Handling**: Comprehensive error handling with structured JSON logging
+- **🔧 Tool Integration**: Complete tool call lifecycle management with Human-in-the-Loop (HITL) support
+- **📊 Event Translation**: Bidirectional ADK ↔ AGUI event conversion with streaming optimization
+- **🔒 Type Safety**: Full type annotations with Pydantic v2 models and strict mypy validation
+- **🏗️ Extensible Design**: Abstract base classes and handler contexts for custom implementations
+- **🎯 Production Ready**: Strict code quality standards with comprehensive testing and security scanning
 
 ## 🚀 Quick Start
 
@@ -24,181 +24,259 @@ pip install adk-agui-middleware
 ```
 
 **Requirements:** 
-- Python 3.10+ (Fully compatible with Python 3.13)
+- Python 3.13+ (Optimized for Python 3.13 features)
 - Google ADK ≥1.9.0
 - AGUI Protocol ≥0.1.7
 - FastAPI ≥0.104.0
-- Pydantic ≥2.11
+- Pydantic ≥2.11.7
+- Modern async/await patterns
 
 ### Basic Usage
 
 ```python
+from collections.abc import Awaitable
+from typing import Any
+
 from fastapi import FastAPI, Request
 from google.adk.agents import BaseAgent
 from ag_ui.core import RunAgentInput
 from adk_agui_middleware import register_agui_endpoint, SSEService
-from adk_agui_middleware.data_model.context import RunnerConfig, ConfigContext
+from adk_agui_middleware.data_model.context import RunnerConfig, ConfigContext, HandlerContext
+from adk_agui_middleware.service.history_service import HistoryService
 
-app = FastAPI(title="AGUI Agent API", version="1.0.0")
+# Modern Python 3.13 FastAPI application
+app = FastAPI(
+    title="Enterprise AGUI Agent API",
+    version="2.0.0",
+    description="High-performance AI agent middleware with HITL support"
+)
 
-class MyAgent(BaseAgent):
-    def __init__(self):
+class IntelligentAgent(BaseAgent):
+    """Modern agent implementation with enhanced capabilities."""
+    
+    def __init__(self) -> None:
         super().__init__()
-        self.instructions = "You are a helpful AI assistant with access to various tools."
+        self.instructions = """You are an advanced AI assistant with comprehensive tool access.
+        Features: reasoning chains, multi-step planning, and human collaboration."""
 
-# Multi-tenant context extractors
+# Type-safe context extractors using modern Python 3.13 patterns
 async def extract_user_id(agui_content: RunAgentInput, request: Request) -> str:
-    """Extract user ID from JWT token or headers"""
+    """Extract user ID with JWT validation and fallback strategies."""
+    # Priority: JWT token → API key → header → anonymous
+    if auth_header := request.headers.get("Authorization"):
+        # Implement JWT validation logic here
+        return extract_jwt_user_id(auth_header)
     return request.headers.get("X-User-ID", "anonymous")
 
 async def extract_app_name(agui_content: RunAgentInput, request: Request) -> str:
-    """Extract application name from subdomain or headers"""
-    host = request.headers.get("host", "")
-    if "-" in host:
-        return host.split("-")[1].split(".")[0]
+    """Extract application name with subdomain parsing and validation."""
+    if host := request.headers.get("host"):
+        # Support for tenant.app.domain.com pattern
+        parts = host.split(".")
+        if len(parts) >= 3:
+            return parts[1]  # Extract 'app' from tenant.app.domain.com
     return request.headers.get("X-App-Name", "default")
 
-async def extract_initial_state(agui_content: RunAgentInput, request: Request) -> dict:
-    """Setup initial session state and user context"""
+async def extract_initial_state(agui_content: RunAgentInput, request: Request) -> dict[str, Any]:
+    """Initialize comprehensive session state with user context and feature flags."""
+    client_ip = "unknown"
+    if request.client:
+        client_ip = request.client.host
+    
     return {
         "user_preferences": {
             "theme": request.headers.get("X-Theme", "light"),
-            "language": request.headers.get("Accept-Language", "en")[:2]
+            "language": request.headers.get("Accept-Language", "en-US")[:5],
+            "timezone": request.headers.get("X-Timezone", "UTC"),
         },
         "session_metadata": {
             "start_time": agui_content.timestamp or 0,
-            "client_ip": request.client.host if request.client else "unknown",
-            "user_agent": request.headers.get("user-agent", "unknown")
+            "client_ip": client_ip,
+            "user_agent": request.headers.get("User-Agent", "unknown"),
+            "session_type": "interactive",
         },
         "feature_flags": {
             "enable_thinking_mode": True,
-            "enable_hitl": request.headers.get("X-Enable-HITL", "false") == "true"
+            "enable_hitl": request.headers.get("X-Enable-HITL", "false").lower() == "true",
+            "enable_tools": True,
+            "max_tool_calls": 10,
+        },
+        "security_context": {
+            "permissions": extract_user_permissions(request),
+            "rate_limit_tier": request.headers.get("X-Rate-Limit-Tier", "standard"),
         }
     }
 
-# Configuration setup
+def extract_jwt_user_id(auth_header: str) -> str:
+    """Extract user ID from JWT token (implement your JWT logic)."""
+    # Placeholder for JWT validation logic
+    return "jwt_user_id"
+
+def extract_user_permissions(request: Request) -> list[str]:
+    """Extract user permissions from request context."""
+    # Implement permission extraction logic
+    return ["read", "write", "execute_tools"]
+
+# Enterprise configuration with dependency injection
 context_config = ConfigContext(
     app_name=extract_app_name,
     user_id=extract_user_id,
-    extract_initial_state=extract_initial_state
+    session_id=lambda content, req: content.thread_id,  # Use thread_id as session_id
+    extract_initial_state=extract_initial_state,
 )
 
+# Production-ready runner configuration
 runner_config = RunnerConfig(
-    use_in_memory_services=True  # Set to False for production with persistent services
+    use_in_memory_services=False,  # Use persistent services in production
 )
 
-# Initialize and register AGUI endpoint
-agent = MyAgent()
-sse_service = SSEService(agent, runner_config, context_config)
+# Optional: Custom handler context for advanced event processing
+handler_context = HandlerContext(
+    # Add custom handlers if needed
+)
+
+# Initialize services
+agent = IntelligentAgent()
+sse_service = SSEService(agent, runner_config, context_config, handler_context)
+
+# Register AGUI endpoints with history support
 register_agui_endpoint(app, sse_service)
 
-# Health check endpoint
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "service": "adk-agui-middleware"}
-
+# Production server setup
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+    )
 ```
 
-## 🏗️ Architecture Overview
+## 🏛️ Enterprise Architecture
 
-The middleware employs a layered architecture with clear separation of concerns, providing a comprehensive solution for agent-human interactions through sophisticated event processing and state management.
+The middleware implements a sophisticated layered architecture optimized for enterprise-scale AI agent deployments, featuring dependency injection, event-driven processing, and comprehensive HITL (Human-in-the-Loop) workflows.
 
-### 🎯 Core Layers
+### 🎯 Architectural Layers
 
-- **🌐 API Layer**: FastAPI endpoint registration (`endpoint.py`)
-- **⚙️ Service Layer**: SSE service and context extraction (`service/`)
-- **🔄 Handler Layer**: Event processing pipeline (`handler/`)
-- **🔀 Translation Engine**: ADK ↔ AGUI event conversion (`event/`)
-- **📊 Data Model Layer**: Configuration and validation models (`data_model/`)
-- **🛠️ Infrastructure Layer**: Tools, logging, session management (`tools/`, `loggers/`, `manager/`)
+| Layer | Components | Responsibilities |
+|-------|------------|------------------|
+| **🌐 API Layer** | `endpoint.py` | FastAPI endpoints, request routing, HTTP handling |
+| **⚙️ Service Layer** | `service/` | Business logic, SSE streaming, history management |
+| **🔄 Handler Layer** | `handler/` | Event processing pipeline, HITL orchestration |
+| **🔀 Translation Engine** | `event/` | ADK ↔ AGUI bidirectional event conversion |
+| **📊 Data Model Layer** | `data_model/` | Pydantic models, configuration validation |
+| **🛠️ Infrastructure Layer** | `manager/`, `tools/`, `loggers/` | Session management, utilities, logging |
+| **🧩 Abstraction Layer** | `base_abc/` | Abstract base classes, interfaces |
+| **🔧 Utilities Layer** | `utils/` | Translation utilities, common functions |
 
-### 🧩 Key Components
+### 🧩 Core Components
 
-#### Event Processing Pipeline
-- **EventTranslator**: Core ADK ↔ AGUI conversion with streaming support
-- **AGUIUserHandler**: Orchestrates HITL workflows and tool call tracking
-- **RunningHandler**: Manages agent execution and custom processing pipelines
-- **SessionHandler**: HITL state management and tool call lifecycle
+#### 🎛️ Event Processing Pipeline
+- **`EventTranslator`**: High-performance ADK ↔ AGUI conversion with streaming optimization
+- **`AGUIUserHandler`**: HITL workflow orchestration and tool call lifecycle management  
+- **`RunningHandler`**: Agent execution management with custom event processing pipelines
+- **`SessionHandler`**: Session state management and HITL state transitions
+- **`UserMessageHandler`**: User input processing and tool result extraction
 
-#### Translation Utilities (`utils/translate/`)
-- **Function Calls**: Tool call event translation with HITL support
-- **Messages**: Text streaming and message sequence processing
-- **State Management**: Delta updates and snapshot operations
-- **Thinking Events**: AI reasoning display for enhanced UX
+#### 🔧 Translation Engine (`utils/translate/`)
+- **`FunctionCallEventUtil`**: Tool call event translation with HITL support
+- **`MessageEventUtil`**: Text streaming and message sequence processing
+- **`StateEventUtil`**: Delta updates and snapshot operations
+- **`ThinkingEventUtil`**: AI reasoning events for enhanced user experience
 
-#### Abstract Interfaces (`base_abc/`)
-- **Handler Base Classes**: Extensible event processing interfaces
-- **SSE Service Interface**: Service layer abstraction
+#### 🏗️ Infrastructure Services
+- **`SessionManager`**: ADK session lifecycle management with state persistence
+- **`HistoryService`**: Conversation history retrieval and management
+- **`ShutdownHandler`**: Graceful resource cleanup and lifecycle management
+- **`Singleton`**: Resource management pattern for shared instances
 
-### System Architecture Diagram
+### 🏗️ System Architecture Diagram
 
 ```mermaid
 graph TB
     %% Client Layer
-    Client[🌐 Client<br/>Web/Mobile App]
+    Client[🌐 Client Applications<br/>Web, Mobile, API]
     
-    %% API Layer
-    subgraph API ["🌐 API Layer"]
-        FastAPI[FastAPI Application]
-        Endpoints[AGUI Endpoints<br/>/chat, /threads, /health]
+    %% API Gateway Layer
+    subgraph API ["🌐 API Gateway Layer"]
+        FastAPI[FastAPI Application<br/>async/await, Type Safety]
+        MainEndpoint[Main Chat Endpoint<br/>POST /]
+        HistoryEndpoints[History Endpoints<br/>GET /threads, /snapshots]
+        HealthEndpoints[Health & Metrics<br/>GET /health, /metrics]
     end
     
-    %% Service Layer
-    subgraph Service ["⚙️ Service Layer"]
-        SSEService[SSE Service<br/>Event Stream Management]
-        HistoryService[History Service<br/>Conversation History]
+    %% Service Orchestration Layer
+    subgraph Service ["⚙️ Service Orchestration Layer"]
+        SSEService[SSE Service<br/>Event Stream Orchestration]
+        HistoryService[History Service<br/>Conversation Management]
+        ShutdownHandler[Shutdown Handler<br/>Resource Cleanup]
     end
     
-    %% Handler Layer
-    subgraph Handler ["🔄 Handler Layer"]
-        AGUIHandler[AGUI User Handler<br/>HITL Orchestrator]
-        RunningHandler[Running Handler<br/>Agent Execution Manager]
-        SessionHandler[Session Handler<br/>Session State Manager]
-        UserMsgHandler[User Message Handler<br/>User Input Processor]
+    %% Business Logic Layer
+    subgraph Handler ["🔄 Business Logic Layer"]
+        AGUIHandler[AGUI User Handler<br/>HITL Workflow Orchestration]
+        RunningHandler[Running Handler<br/>Agent Execution Management]
+        SessionHandler[Session Handler<br/>State Lifecycle Management]
+        UserMsgHandler[User Message Handler<br/>Input Processing & Tool Results]
+        HistoryHandler[History Handler<br/>Message History Processing]
     end
     
-    %% Translation Engine
-    subgraph Translation ["🔀 Translation Engine"]
-        EventTranslator[Event Translator<br/>ADK↔AGUI Conversion]
+    %% Event Processing Engine
+    subgraph Translation ["🔀 Event Processing Engine"]
+        EventTranslator[Event Translator<br/>High-Performance ADK↔AGUI]
         FunctionUtil[Function Call Util<br/>Tool Call Translation]
-        MessageUtil[Message Util<br/>Text Stream Processing]
-        StateUtil[State Util<br/>State Management]
+        MessageUtil[Message Util<br/>Streaming Text Processing]
+        StateUtil[State Util<br/>Delta & Snapshot Management]
         ThinkingUtil[Thinking Util<br/>AI Reasoning Events]
     end
     
-    %% Data Model Layer
-    subgraph DataModel ["📊 Data Model Layer"]
-        ConfigContext[Config Context<br/>Context Configuration]
-        RunnerConfig[Runner Config<br/>Execution Configuration]
-        SessionParam[Session Parameter<br/>Session Parameters]
-        HandlerContext[Handler Context<br/>Handler Configuration]
+    %% Configuration Layer
+    subgraph DataModel ["📊 Configuration Layer"]
+        ConfigContext[Config Context<br/>Multi-tenant Configuration]
+        RunnerConfig[Runner Config<br/>Service Configuration]
+        HandlerContext[Handler Context<br/>Custom Event Handlers]
+        SessionParam[Session Parameters<br/>Identity Management]
+        PathConfig[Path Config<br/>Endpoint Configuration]
     end
     
     %% Infrastructure Layer
     subgraph Infrastructure ["🛠️ Infrastructure Layer"]
-        SessionMgr[Session Manager<br/>Session Operations]
-        Logger[Logger System<br/>Logging Framework]
-        Tools[Convert Tools<br/>Conversion Utilities]
-        ErrorHandler[Error Handler<br/>Error Management]
+        SessionMgr[Session Manager<br/>ADK Session Operations]
+        LoggerSystem[Logger System<br/>Structured JSON Logging]
+        ConvertTools[Convert Tools<br/>Data Transformation]
+        ExceptionHandler[Exception Handler<br/>Error Management]
+        Singleton[Singleton Pattern<br/>Resource Management]
     end
     
-    %% External Systems
+    %% Abstract Base Classes
+    subgraph ABC ["🧩 Abstract Layer"]
+        BaseHandlers[Base Handlers<br/>Extensible Interfaces]
+        BaseSSEService[Base SSE Service<br/>Service Contracts]
+    end
+    
+    %% External Integrations
     subgraph External ["🔌 External Systems"]
         ADK[Google ADK<br/>Agent Development Kit]
-        AGUI[AGUI Protocol<br/>Agent UI Protocol]
-        Services[Services<br/>Session/Memory/Artifact/Credential]
+        AGUI[AGUI Protocol<br/>Agent UI Standard]
+        SessionService[Session Service<br/>Persistence Layer]
+        MemoryService[Memory Service<br/>Agent Memory]
+        ArtifactService[Artifact Service<br/>File Management]
+        CredentialService[Credential Service<br/>Auth Management]
     end
     
-    %% Connections
-    Client -.->|HTTP/SSE Request| FastAPI
-    FastAPI --> Endpoints
-    Endpoints --> SSEService
-    Endpoints --> HistoryService
+    %% Data Flow Connections
+    Client -.->|HTTP/SSE Requests| FastAPI
+    FastAPI --> MainEndpoint
+    FastAPI --> HistoryEndpoints
+    FastAPI --> HealthEndpoints
+    
+    MainEndpoint --> SSEService
+    HistoryEndpoints --> HistoryService
     
     SSEService --> AGUIHandler
+    HistoryService --> HistoryHandler
+    
     AGUIHandler --> RunningHandler
     AGUIHandler --> SessionHandler
     AGUIHandler --> UserMsgHandler
@@ -210,26 +288,42 @@ graph TB
     EventTranslator --> ThinkingUtil
     
     SessionHandler --> SessionMgr
-    SSEService --> ConfigContext
-    SSEService --> RunnerConfig
-    RunningHandler --> HandlerContext
-    SessionMgr --> SessionParam
+    HistoryHandler --> SessionMgr
     
-    RunningHandler --> Logger
-    RunningHandler --> ErrorHandler
-    SessionMgr --> Services
+    %% Configuration Dependencies
+    SSEService -.-> ConfigContext
+    SSEService -.-> RunnerConfig
+    RunningHandler -.-> HandlerContext
+    SessionMgr -.-> SessionParam
+    FastAPI -.-> PathConfig
+    
+    %% Infrastructure Dependencies
+    SessionMgr --> SessionService
     RunningHandler --> ADK
     EventTranslator --> AGUI
+    AGUIHandler --> LoggerSystem
+    SSEService --> ExceptionHandler
+    SSEService --> ShutdownHandler
+    
+    %% Service Dependencies
+    RunnerConfig --> MemoryService
+    RunnerConfig --> ArtifactService
+    RunnerConfig --> CredentialService
+    
+    %% Abstract Implementations
+    SSEService -.-> BaseSSEService
+    RunningHandler -.-> BaseHandlers
     
     %% Styling
-    classDef clientStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
-    classDef apiStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
-    classDef serviceStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
-    classDef handlerStyle fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
-    classDef translationStyle fill:#fce4ec,stroke:#880e4f,stroke-width:2px
-    classDef dataStyle fill:#e0f2f1,stroke:#00695c,stroke-width:2px
-    classDef infraStyle fill:#f1f8e9,stroke:#33691e,stroke-width:2px
-    classDef externalStyle fill:#fafafa,stroke:#424242,stroke-width:2px
+    classDef clientStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:3px
+    classDef apiStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    classDef serviceStyle fill:#e8f5e8,stroke:#388e3c,stroke-width:3px
+    classDef handlerStyle fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    classDef translationStyle fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    classDef dataStyle fill:#e0f2f1,stroke:#00796b,stroke-width:3px
+    classDef infraStyle fill:#f1f8e9,stroke:#689f38,stroke-width:3px
+    classDef abcStyle fill:#ede7f6,stroke:#512da8,stroke-width:3px
+    classDef externalStyle fill:#fafafa,stroke:#616161,stroke-width:3px
     
     class Client clientStyle
     class API apiStyle
@@ -238,247 +332,155 @@ graph TB
     class Translation translationStyle
     class DataModel dataStyle
     class Infrastructure infraStyle
+    class ABC abcStyle
     class External externalStyle
 ```
 
-### Request Flow and Event Processing Pipeline
+### 🔄 Request Flow and HITL Processing Pipeline
 
 ```mermaid
 sequenceDiagram
-    participant C as 🌐 Client
-    participant API as FastAPI Endpoint
-    participant SSE as SSE Service
-    participant AGH as AGUI Handler
-    participant RH as Running Handler
-    participant ET as Event Translator
-    participant SH as Session Handler
-    participant SM as Session Manager
-    participant ADK as Google ADK Agent
+    participant C as 🌐 Client Application
+    participant API as 🌐 FastAPI Endpoint
+    participant SSE as ⚙️ SSE Service
+    participant AGH as 🔄 AGUI Handler
+    participant RH as 🔄 Running Handler
+    participant ET as 🔀 Event Translator
+    participant SH as 🔄 Session Handler
+    participant SM as 🛠️ Session Manager
+    participant UMH as 🔄 User Message Handler
+    participant ADK as 🔌 Google ADK Agent
     
-    Note over C,ADK: HITL (Human-in-the-Loop) Workflow
+    Note over C,ADK: Enterprise HITL (Human-in-the-Loop) Workflow
     
-    C->>+API: POST /chat (RunAgentInput)
-    API->>+SSE: process_request()
+    C->>+API: POST / (RunAgentInput + Headers)
+    Note right of C: JWT, tenant info, feature flags
     
-    SSE->>SSE: extract_context(request)
-    Note right of SSE: Extract app_name, user_id, session_id
+    API->>+SSE: event_generator()
+    SSE->>SSE: extract_multi_tenant_context()
+    Note right of SSE: app_name, user_id, session_id, security_context
     
-    SSE->>+AGH: create_handler()
-    AGH->>+SH: check_pending_tools()
+    SSE->>+AGH: create_handler_pipeline()
+    AGH->>AGH: async_init()
+    AGH->>+SH: check_pending_tool_calls()
     SH->>+SM: get_session_state()
     SM-->>-SH: session_state
     SH-->>-AGH: pending_tool_calls[]
     
-    alt Pending Tool Calls Exist (HITL Continuation)
-        AGH->>AGH: process_tool_results()
-        AGH->>SH: remove_pending_calls()
-        Note right of AGH: Complete HITL cycle
+    AGH->>+UMH: analyze_user_input()
+    UMH->>UMH: detect_message_type()
+    
+    alt HITL Continuation (Tool Results Submission)
+        UMH-->>AGH: is_tool_result_submission = true
+        AGH->>AGH: remove_pending_tool_call()
+        AGH->>+SH: update_pending_state()
+        SH->>+SM: remove_tool_calls(tool_ids)
+        SM-->>-SH: state_updated
+        SH-->>-AGH: hitl_resumed
+        Note right of AGH: Resume agent execution with human input
+        
     else New Agent Execution
-        AGH->>+RH: run_agent()
+        UMH-->>AGH: is_tool_result_submission = false
+        AGH->>AGH: call_start()
+        AGH-->>SSE: RunStartedEvent
+        SSE-->>API: SSE Event
+        API-->>C: data: {"type": "run_started"}
+        
+        AGH->>+RH: run_async_with_adk()
         RH->>+ADK: execute_with_message()
         
-        loop Agent Event Streaming
-            ADK-->>-RH: ADK Event
-            RH->>+ET: translate_to_agui()
-            ET-->>-RH: AGUI Events
-            RH-->>AGH: AGUI Events
+        loop Real-time Event Streaming
+            ADK-->>RH: ADK Event (text/tool_call/state)
+            RH->>+ET: translate()
             
-            alt Tool Call Event
-                AGH->>AGH: track_tool_calls()
-                Note right of AGH: Track tool_call_ids
+            alt Text Content Event
+                ET->>ET: translate_text_content()
+                ET-->>RH: TextMessage Events (start/content/end)
+            else Function Call Event  
+                ET->>ET: translate_function_calls()
+                ET-->>RH: ToolCall Events (start/args/end)
+                RH->>AGH: track_tool_call_id()
+            else State Delta Event
+                ET->>ET: create_state_delta_event()
+                ET-->>RH: StateDelta Event
             end
             
+            RH-->>AGH: AGUI Event
             AGH-->>SSE: stream_event()
+            SSE->>SSE: encode_event_to_sse()
             SSE-->>API: SSE Response
-            API-->>C: Server-Sent Event
+            API-->>C: data: {"type": "...", "data": {...}}
         end
         
-        alt Agent Requires Tool Execution (HITL Start)
-            AGH->>+SH: add_pending_calls(tool_ids)
+        alt Long-Running Tools Detected
+            RH->>RH: detect_long_running_tools()
+            RH-->>AGH: is_long_running_tool = true
+            Note right of RH: Early return, tools continue in background
+        else Tools Require Human Approval (HITL)
+            AGH->>AGH: analyze_tool_calls()
+            AGH->>+SH: add_pending_tool_call(tool_ids)
             SH->>+SM: update_session_state()
-            SM-->>-SH: success
-            SH-->>-AGH: success
-            Note right of SH: Pause agent, await human intervention
+            SM-->>-SH: state_persisted
+            SH-->>-AGH: hitl_initiated
+            Note right of SH: Agent paused, awaiting human intervention
         end
     end
     
-    AGH->>+SH: create_state_snapshot()
-    SH->>+SM: get_session_state()
-    SM-->>-SH: final_state
-    SH-->>-AGH: final_state
-    AGH-->>-SSE: RunFinishedEvent
+    opt Final State Management
+        AGH->>+SH: create_state_snapshot()
+        SH->>+SM: get_final_session_state()
+        SM-->>-SH: final_state
+        SH-->>-AGH: state_snapshot
+        AGH->>+RH: create_state_snapshot_event()
+        RH-->>-AGH: StateSnapshotEvent
+        AGH-->>SSE: stream_event()
+    end
+    
+    AGH->>AGH: call_finished()
+    AGH-->>SSE: RunFinishedEvent
+    SSE-->>API: SSE Event
+    API-->>C: data: {"type": "run_finished"}
     SSE-->>-API: Stream Complete
     API-->>-C: Connection Closed
     
-    Note over C,ADK: HITL enables multi-turn asynchronous interactions
+    Note over C,ADK: HITL enables enterprise-grade human-AI collaboration
 ```
 
+### 🎛️ Configuration Architecture
 
-### Event Translation Pipeline
+| 📊 Model | 🎯 Purpose | 🔧 Features |
+|----------|-------------|-------------|
+| **`ConfigContext`** | Multi-tenant context extraction | JWT validation, subdomain parsing, security context |
+| **`RunnerConfig`** | Service dependency management | Auto-configuration, production/dev modes, service injection |
+| **`HandlerContext`** | Custom event pipeline injection | Extensible handler registration, middleware patterns |
+| **`PathConfig`** | Endpoint configuration | Customizable URL patterns, RESTful design |
+| **`HistoryConfig`** | Conversation management | History retrieval, session listing, state transformation |
 
-The middleware seamlessly converts between ADK and AGUI event formats:
+### 🤝 Enterprise HITL (Human-in-the-Loop) Framework
 
-| ADK Event | AGUI Event | Description |
-|-----------|------------|-------------|
-| Text Content | TextMessage* | Streaming text responses |
-| Function Call | ToolCall* | Tool invocations |
-| Function Response | ToolCallResult | Tool execution results |
-| State Delta | StateDelta | Session state changes |
-| Custom Metadata | CustomEvent | Custom event data |
+Advanced human-AI collaboration patterns for enterprise deployments:
 
-### Configuration Models
+#### 🔄 HITL Workflow States
+1. **🚀 Agent Execution**: AI processes user input and executes tools autonomously
+2. **⏸️ Tool Approval**: System pauses for human review of sensitive operations  
+3. **👤 Human Intervention**: Humans provide input, corrections, or approvals
+4. **▶️ Execution Resumption**: Agent continues with human-validated context
+5. **📊 State Persistence**: Session maintains workflow state across async interactions
 
-- **`ConfigContext`**: Extract context from requests (app_name, user_id, session_id)
-- **`RunnerConfig`**: Manage ADK services (session, memory, artifacts, credentials)
-- **`HandlerContext`**: Inject custom event handlers
+## 🛠️ Development Excellence
 
-### 🤝 HITL (Human-in-the-Loop) Workflows
+### 🏆 Enterprise Code Quality Standards
 
-The middleware implements sophisticated HITL patterns:
+This project exemplifies modern Python development practices with comprehensive quality assurance:
 
-1. **Tool Call Initiation**: Agent invokes tool → ID added to `pending_tool_calls`
-2. **State Management**: Session persists pending calls across requests
-3. **Human Intervention**: Humans submit tool results via API or conversation
-4. **Execution Resumption**: Agent continues with human-provided results
-
-#### Key HITL Components
-- `SessionHandler.add_pending_tool_call()` - Initiate HITL workflow
-- `SessionHandler.get_pending_tool_calls()` - Query pending interventions
-- `UserMessageHandler.is_tool_result_submission` - Detect completion state
-- `AGUIUserHandler.remove_pending_tool_call()` - Orchestrate completion flow
-
-## 🛠️ Development and Testing
-
-### Code Quality Standards
-
-This project maintains exceptional code quality standards with:
-
-- **🏆 Professional Documentation**: 100% comprehensive Google-style docstrings for all classes and functions
-- **🔒 Type Safety**: Complete type annotations throughout the codebase (100% coverage)
-- **📊 Documentation Quality Metrics**:
-  - **Docstring Coverage**: ~100% ✅
-  - **Type Annotation Coverage**: ~100% ✅
-  - **Error Handling Documentation**: ~95% ✅
-  - **Architecture Documentation**: Outstanding ✅
-- **🛡️ Error Handling**: Robust error handling with structured JSON logging
-- **⚡ Async Design**: Professional async/await patterns for optimal performance
-- **🔐 Security**: Input validation, secure error responses, and comprehensive audit logging
-- **📏 Code Standards**: Consistent formatting with ruff, follows PEP 8 guidelines
-- **🎯 HITL Documentation**: Comprehensive documentation of Human-in-the-Loop workflows
-
-### Testing
-
-Run the test suite to ensure all components work correctly:
-
-```bash
-# Install test dependencies
-pip install -e ".[test]"
-
-# Run tests
-pytest tests/
-
-# Run with coverage
-pytest --cov=adk_agui_middleware tests/
-```
-
-### Code Formatting and Linting
-
-Maintain code quality with the provided tools:
-
-```bash
-# Format code
-ruff format .
-
-# Lint code
-ruff check .
-
-# Type checking
-mypy src/
-```
-
-## 🚀 Production Deployment
-
-### Configuration
-
-Set environment variables for production:
-
-```bash
-export LOG_LEVEL=INFO
-export LOG_ADK_EVENTS=false
-export LOG_AGUI_EVENTS=false
-```
-
-### Performance Considerations
-
-- **Session Services**: Use persistent session services (not in-memory) for production
-- **Connection Pooling**: Configure connection pooling for database and external services
-- **Rate Limiting**: Implement rate limiting for SSE endpoints
-- **Monitoring**: Set up comprehensive logging and monitoring for HITL workflows
-
-### Security Checklist
-
-- ✅ Use HTTPS in production
-- ✅ Implement proper authentication and authorization
-- ✅ Configure CORS policies appropriately
-- ✅ Monitor and log all HITL interactions
-- ✅ Validate all input through Pydantic models
-- ✅ Set up proper error tracking and alerting
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**SSE Connection Issues**
-- Verify client supports EventSource
-- Check CORS configuration
-- Ensure proper event encoding
-
-**HITL Workflow Problems**
-- Verify session state persistence
-- Check tool call ID tracking
-- Monitor pending_tool_calls in session state
-
-**Performance Issues**
-- Enable connection pooling for session services
-- Monitor memory usage during long conversations
-- Implement conversation history cleanup
-
-### Debug Logging
-
-Enable debug logging for detailed troubleshooting:
-
-```python
-import logging
-logging.getLogger("adk_agui_middleware").setLevel(logging.DEBUG)
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these guidelines:
-
-1. **Code Style**: Follow PEP 8 and use the provided linting tools
-2. **Documentation**: Add comprehensive docstrings for all new code
-3. **Testing**: Include tests for new features and bug fixes
-4. **Type Safety**: Maintain full type annotations
-5. **Error Handling**: Implement proper error handling with logging
-
-### Development Setup
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd adk-agui-middleware
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install in development mode
-pip install -e ".[dev]"
-
-# Install pre-commit hooks
-pre-commit install
-```
+| 📏 Metric | 📊 Coverage | 🎯 Standard |
+|-----------|-------------|-------------|
+| **Type Annotations** | 100% | Strict mypy validation with Python 3.13 generics |
+| **Docstring Coverage** | 100% | Google-style docstrings with examples |
+| **Security Scanning** | ✅ Bandit | Comprehensive security validation |
+| **Code Formatting** | ✅ Ruff | PEP 8 compliance with modern standards |
+| **Async Patterns** | ✅ Native | Optimized async/await throughout |
+| **Error Handling** | 95%+ | Structured JSON logging with context |
 
 ## 📄 License
 
