@@ -32,9 +32,12 @@ class SessionManager:
         Retrieves all session objects associated with the specified application
         and user, useful for conversation history and session management.
 
-        :param app_name: Name of the application
-        :param user_id: Identifier for the user
-        :return: List of Session objects
+        Args:
+            app_name: Name of the application
+            user_id: Identifier for the user
+
+        Returns:
+            List of Session objects
         """
         return (
             await self.session_service.list_sessions(app_name=app_name, user_id=user_id)
@@ -46,8 +49,11 @@ class SessionManager:
         Fetches a specific session identified by the complete session parameters,
         returning None if the session doesn't exist.
 
-        :param session_parameter: Parameters identifying the session (app, user, session ID)
-        :return: Session object if found, None otherwise
+        Args:
+            session_parameter: Parameters identifying the session (app, user, session ID)
+
+        Returns:
+            Session object if found, None otherwise
         """
         return await self.session_service.get_session(
             session_id=session_parameter.session_id,
@@ -91,7 +97,8 @@ class SessionManager:
         This operation cannot be undone and will remove all conversation history
         and state data for the specified session.
 
-        :param session_parameter: Parameters identifying the session to delete (app, user, session ID)
+        Args:
+            session_parameter: Parameters identifying the session to delete (app, user, session ID)
         """
         await self.session_service.delete_session(
             session_id=session_parameter.session_id,
@@ -110,9 +117,12 @@ class SessionManager:
         which triggers state updates in the session service. This is the primary
         mechanism for persisting state changes including HITL workflow data.
 
-        :param session_parameter: Parameters identifying the session to update
-        :param state_updates: Dictionary of state changes to apply
-        :return: True if update was successful, False if session not found or no updates
+        Args:
+            session_parameter: Parameters identifying the session to update
+            state_updates: Dictionary of state changes to apply
+
+        Returns:
+            True if update was successful, False if session not found or no updates
         """
         session = await self.get_session(session_parameter)
         if not (session and state_updates):
@@ -141,8 +151,11 @@ class SessionManager:
         sessions and errors gracefully by returning empty dictionary. This
         provides access to all persistent session data including HITL state.
 
-        :param session_parameter: Parameters identifying the session
-        :return: Dictionary containing session state, empty dict if session not found or error
+        Args:
+            session_parameter: Parameters identifying the session
+
+        Returns:
+            Dictionary containing session state, empty dict if session not found or error
         """
         try:
             if session := await self.get_session(session_parameter):
@@ -167,10 +180,13 @@ class SessionManager:
         getting the entire state dictionary. Useful for checking specific
         state flags or values like pending tool calls.
 
-        :param session_parameter: Parameters identifying the session
-        :param key: State key to retrieve
-        :param default: Default value to return if key not found or session missing
-        :return: Value for the specified key, or default if not found
+        Args:
+            session_parameter: Parameters identifying the session
+            key: State key to retrieve
+            default: Default value to return if key not found or session missing
+
+        Returns:
+            Value for the specified key, or default if not found
         """
         try:
             session = await self.get_session(session_parameter)

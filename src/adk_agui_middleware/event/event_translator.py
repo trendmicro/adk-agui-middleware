@@ -60,7 +60,7 @@ class EventTranslator:
         This is the main entry point for event translation in the middleware.
 
         Args:
-            adk_event: ADK event to translate
+            :param adk_event: ADK event to translate
 
         Yields:
             BaseEvent objects in AGUI format
@@ -98,7 +98,7 @@ class EventTranslator:
         processing tool calls, then translates the function calls to AGUI events.
 
         Args:
-            adk_event: ADK event containing function calls
+            :param adk_event: ADK event containing function calls
 
         Yields:
             BaseEvent objects for function call handling
@@ -121,7 +121,7 @@ class EventTranslator:
         and custom metadata, converting them to appropriate AGUI events.
 
         Args:
-            adk_event: ADK event potentially containing additional data
+            :param adk_event: ADK event potentially containing additional data
 
         Yields:
             BaseEvent objects for state updates and custom events
@@ -147,7 +147,7 @@ class EventTranslator:
         and supports both streaming and non-streaming text responses.
 
         Args:
-            adk_event: ADK event containing text content to translate
+            :param adk_event: ADK event containing text content to translate
 
         Yields:
             AGUI text message events (start, content, end) for streaming text
@@ -200,7 +200,7 @@ class EventTranslator:
         generates appropriate AGUI tool call events without waiting for completion.
 
         Args:
-            adk_event: ADK event containing long-running function calls
+            :param adk_event: ADK event containing long-running function calls
 
         Yields:
             AGUI tool call events for long-running operations
@@ -233,7 +233,7 @@ class EventTranslator:
         excluding responses from long-running tools which are handled separately.
 
         Args:
-            function_response: List of Google GenAI function responses to translate
+            :param function_response: List of Google GenAI function responses to translate
 
         Yields:
             AGUI tool call result events for completed function calls
@@ -256,7 +256,7 @@ class EventTranslator:
         Each key-value pair becomes an "add" operation with the appropriate path.
 
         Args:
-            state_delta: Dictionary containing state changes to apply
+            :param state_delta: Dictionary containing state changes to apply
 
         Returns:
             StateDeltaEvent with JSON Patch operations
@@ -276,7 +276,7 @@ class EventTranslator:
         StateSnapshotEvent containing the current session state.
 
         Args:
-            state_snapshot: Dictionary containing the complete session state
+            :param state_snapshot: Dictionary containing the complete session state
 
         Returns:
             StateSnapshotEvent containing the full state snapshot

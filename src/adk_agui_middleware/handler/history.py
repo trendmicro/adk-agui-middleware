@@ -32,10 +32,10 @@ class HistoryHandler:
         """Initialize the history handler.
 
         Args:
-            session_manager: Manager for session operations
-            running_handler: Handler for processing agent runs and events
-            app_name: Name of the application
-            user_id: Identifier for the user
+            :param session_manager: Manager for session operations
+            :param running_handler: Handler for processing agent runs and events
+            :param app_name: Name of the application
+            :param user_id: Identifier for the user
         """
         self.session_manager = session_manager
         self.running_handler = running_handler
@@ -58,7 +58,7 @@ class HistoryHandler:
         """Retrieve a specific session by ID.
 
         Args:
-            session_id: Unique identifier for the session
+            :param session_id: Unique identifier for the session
 
         Returns:
             Session object if found, None otherwise
@@ -77,7 +77,7 @@ class HistoryHandler:
         Permanently removes the session and all associated conversation data.
 
         Args:
-            session_id: Unique identifier for the session to delete
+            :param session_id: Unique identifier for the session to delete
         """
         await self.session_manager.delete_session(
             SessionParameter(
@@ -96,7 +96,7 @@ class HistoryHandler:
         for client consumption as a conversation history.
 
         Args:
-            session_id: Unique identifier for the session
+            :param session_id: Unique identifier for the session
 
         Returns:
             MessagesSnapshotEvent containing the conversation history
@@ -140,7 +140,7 @@ class HistoryHandler:
         returning an empty dictionary if the session is not found.
 
         Args:
-            session_id: Unique identifier for the session
+            :param session_id: Unique identifier for the session
 
         Returns:
             Dictionary containing the session state, empty dict if session not found
@@ -154,7 +154,22 @@ class HistoryHandler:
     async def patch_state(
         self, session_id: str, state_patch: list[dict[str, Any]]
     ) -> None | dict[str, Any]:
-        if session := await self.get_session(session_id=session_id) is not None:
-            session.state = jsonpatch.apply_patch(session.state, state_patch)  # type: ignore
-            return {"status": "updated"}
-        return None
+        """Apply JSON patch operations to update session state incrementally.
+
+        Uses JSON Patch RFC 6902 format to apply partial updates to the session state,
+        enabling efficient incremental state modifications without replacing the entire
+        state dictionary. This is useful for updating specific state fields while
+        preserving other session data.
+
+        Args:
+            :param session_id: Unique identifier for the session to update
+            :param state_patch: List of JSON Patch operations to apply to the session state
+
+        Returns:
+            Dictionary with success status if patch applied successfully, None if session not found
+        """
+        session = await self.get_session(session_id=session_id)
+        if session is None:
+            return None
+        session.state = jsonpatch.apply_patch(session.state, state_patch)  # type: ignore
+        return {"status": "updated"}

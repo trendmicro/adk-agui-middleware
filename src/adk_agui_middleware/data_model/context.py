@@ -38,9 +38,12 @@ async def default_session_id(agui_content: RunAgentInput, request: Request) -> s
     incoming AGUI requests. Uses the thread_id as the session identifier,
     enabling conversation continuity across multiple requests.
 
-    :param agui_content: Input containing agent execution parameters and thread information
-    :param request: HTTP request object (unused in default implementation)
-    :return: Thread ID string to be used as session identifier
+    Args:
+        :param agui_content: Input containing agent execution parameters and thread information
+        :param request: HTTP request object (unused in default implementation)
+
+    Returns:
+        Thread ID string to be used as session identifier
     """
     return agui_content.thread_id
 
@@ -115,7 +118,7 @@ class PathConfig(BaseModel):
     agui_main_path: str = ""
     agui_thread_list_path: str = "/thread/list"
     agui_thread_delete_path: str = "/thread/{thread_id}"
-    agui_state_update_path: str = "/state_update/{thread_id}"
+    agui_patch_state_path: str = "/state/{thread_id}"
     agui_state_snapshot_path: str = "/state_snapshot/{thread_id}"
     agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
 
@@ -153,10 +156,15 @@ class RunnerConfig(BaseModel):
         instances only when needed and only if in-memory services are enabled.
         This provides flexible service configuration for different environments.
 
-        :param service_attr: Name of the service attribute to check and potentially set
-        :param service_class: Class to instantiate if service is None and in-memory is enabled
-        :return: Service instance (existing or newly created)
-        :raises ValueError: If service is None and in-memory services are disabled
+        Args:
+            :param service_attr: Name of the service attribute to check and potentially set
+            :param service_class: Class to instantiate if service is None and in-memory is enabled
+
+        Returns:
+            Service instance (existing or newly created)
+
+        Raises:
+            ValueError: If service is None and in-memory services are disabled
         """
         service = getattr(self, service_attr)
         if service is None:
@@ -175,7 +183,8 @@ class RunnerConfig(BaseModel):
         Retrieves the configured artifact service or creates an in-memory
         implementation if none is configured and in-memory services are enabled.
 
-        :return: Configured artifact service instance for file and data management
+        Returns:
+            Configured artifact service instance for file and data management
         """
         return self._get_or_create_service("artifact_service", InMemoryArtifactService)
 
@@ -185,7 +194,8 @@ class RunnerConfig(BaseModel):
         Retrieves the configured memory service or creates an in-memory
         implementation if none is configured and in-memory services are enabled.
 
-        :return: Configured memory service instance for agent memory management
+        Returns:
+            Configured memory service instance for agent memory management
         """
         return self._get_or_create_service("memory_service", InMemoryMemoryService)
 
@@ -195,7 +205,8 @@ class RunnerConfig(BaseModel):
         Retrieves the configured credential service or creates an in-memory
         implementation if none is configured and in-memory services are enabled.
 
-        :return: Configured credential service instance for authentication management
+        Returns:
+            Configured credential service instance for authentication management
         """
         return self._get_or_create_service(
             "credential_service", InMemoryCredentialService

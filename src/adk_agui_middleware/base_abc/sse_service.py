@@ -29,8 +29,8 @@ class BaseSSEService(metaclass=ABCMeta):
         This method handles all the setup required for agent execution.
 
         Args:
-            agui_content: Input containing agent execution parameters and message content
-            request: HTTP request containing client context and headers
+            :param agui_content: Input containing agent execution parameters and message content
+            :param request: HTTP request containing client context and headers
 
         Returns:
             Tuple containing the runner callable and optional input/output handler
@@ -53,8 +53,8 @@ class BaseSSEService(metaclass=ABCMeta):
         encoding, error recovery, and optional input/output processing.
 
         Args:
-            runner: Callable that returns an async generator of BaseEvent objects
-            inout_handler: Optional handler for input/output recording and transformation
+            :param runner: Callable that returns an async generator of BaseEvent objects
+            :param inout_handler: Optional handler for input/output recording and transformation
 
         Yields:
             Encoded event dictionaries ready for SSE transmission

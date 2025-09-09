@@ -23,7 +23,7 @@ class AGUIEncoderError(Exception):
         transmitted to clients.
 
         Args:
-            e: Original exception that caused the encoding failure
+            :param e: Original exception that caused the encoding failure
 
         Returns:
             Encoded error event dictionary in SSE format
@@ -45,7 +45,7 @@ class AGUIEncoderError(Exception):
         to indicate the failure.
 
         Args:
-            e: Original exception that caused the agent failure
+            :param e: Original exception that caused the agent failure
 
         Returns:
             Encoded error event dictionary in SSE format
@@ -75,7 +75,7 @@ class AGUIErrorEvent:
         providing a standardized error event for client consumption.
 
         Args:
-            e: Exception that caused the execution failure
+            :param e: Exception that caused the execution failure
 
         Returns:
             RunErrorEvent for the execution error
@@ -93,7 +93,7 @@ class AGUIErrorEvent:
         but no actual tool results are found in the message content.
 
         Args:
-            thread_id: ID of the thread where tool results were expected
+            :param thread_id: ID of the thread where tool results were expected
 
         Returns:
             RunErrorEvent for missing tool results
@@ -115,7 +115,7 @@ class AGUIErrorEvent:
         in HITL workflows, such as parsing errors or session state updates.
 
         Args:
-            e: Exception that occurred during tool result processing
+            :param e: Exception that occurred during tool result processing
 
         Returns:
             RunErrorEvent for the tool result processing error

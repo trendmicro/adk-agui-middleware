@@ -32,8 +32,8 @@ class SessionHandler:
         to identify and manage the specific session for this interaction.
 
         Args:
-            session_manager: Manager for low-level session operations
-            session_parameter: Parameters identifying the session (app, user, session ID)
+            :param session_manager: Manager for low-level session operations
+            :param session_parameter: Parameters identifying the session (app, user, session ID)
         """
         self.session_manager = session_manager
         self.session_parameter = session_parameter
@@ -74,7 +74,7 @@ class SessionHandler:
         format ensures consistent storage and retrieval of pending tool calls.
 
         Args:
-            pending_calls: List of pending tool call IDs requiring human intervention
+            :param pending_calls: List of pending tool call IDs requiring human intervention
 
         Returns:
             Dictionary with 'pending_tool_calls' key for session state updates
@@ -117,7 +117,7 @@ class SessionHandler:
         always exists after this call. This is essential for session-based workflows.
 
         Args:
-            initial_state: Optional initial state to set when creating a new session
+            :param initial_state: Optional initial state to set when creating a new session
 
         Returns:
             Session object (either existing or newly created)
@@ -135,7 +135,7 @@ class SessionHandler:
         merging them with existing state data.
 
         Args:
-            initial_state: Dictionary of state updates to apply
+            :param initial_state: Dictionary of state updates to apply
 
         Returns:
             True if update was successful, False otherwise
@@ -163,7 +163,7 @@ class SessionHandler:
         5. Agent execution resumes with tool result
 
         Args:
-            tool_call_ids: List of tool call IDs to remove from pending list
+            :param tool_call_ids: List of tool call IDs to remove from pending list
 
         Note:
             This is essential for HITL workflows where tools require human approval
@@ -203,7 +203,7 @@ class SessionHandler:
         5. External systems can query pending_tool_calls to show humans what needs attention
 
         Args:
-            tool_call_ids: List of tool call IDs to add to pending list
+            :param tool_call_ids: List of tool call IDs to add to pending list
 
         Note:
             This enables asynchronous HITL workflows where agent execution can be

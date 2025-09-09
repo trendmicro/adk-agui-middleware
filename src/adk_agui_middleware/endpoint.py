@@ -112,10 +112,27 @@ def register_agui_endpoint(  # noqa: C901
                 )
             return await history_service.delete_thread(request)
 
-    @app.patch(path_config.agui_state_update_path)
-    async def update_agui_state(
+    @app.patch(path_config.agui_patch_state_path)
+    async def patch_agui_state(
         request: Request, state_patch: list[dict[str, Any]]
     ) -> dict[str, str]:
+        """Update session state with partial state modifications.
+
+        Applies JSON patch operations to update session state, enabling
+        partial updates without replacing the entire state dictionary.
+        This endpoint supports incremental state changes for maintaining
+        session context across multiple interactions.
+
+        Args:
+            request: FastAPI request object containing session context in path
+            state_patch: List of JSON patch operations to apply to session state
+
+        Returns:
+            Dictionary containing operation status confirmation
+
+        Raises:
+            HTTPException: If history service is not configured or state update fails
+        """
         async with http_exception_handler(request):
             if history_service is None:
                 raise InvalidURL("History service not configured for state endpoint")

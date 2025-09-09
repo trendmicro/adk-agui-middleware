@@ -47,9 +47,9 @@ class AGUIUserHandler:
         session state management.
 
         Args:
-            running_handler: Handler for executing agent runs and event translation
-            user_message_handler: Handler for processing user messages and tool results
-            session_handler: Handler for session state management and HITL workflows
+            :param running_handler: Handler for executing agent runs and event translation
+            :param user_message_handler: Handler for processing user messages and tool results
+            :param session_handler: Handler for session state management and HITL workflows
         """
         self.running_handler = running_handler
         self.user_message_handler = user_message_handler
@@ -148,7 +148,7 @@ class AGUIUserHandler:
         results are processed. This is essential for HITL workflow management.
 
         Args:
-            event: AGUI BaseEvent to check for tool call information
+            :param event: AGUI BaseEvent to check for tool call information
         """
         if isinstance(event, ToolCallEndEvent):
             self.tool_call_ids.append(event.tool_call_id)

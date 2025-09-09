@@ -37,9 +37,9 @@ class UserMessageHandler:
         the HITL (Human-in-the-Loop) workflow state transitions.
 
         Args:
-            agui_content: Input containing agent execution parameters and messages
-            request: HTTP request for additional context and client information
-            initial_state: Optional initial state dictionary for session initialization
+            :param agui_content: Input containing agent execution parameters and messages
+            :param request: HTTP request for additional context and client information
+            :param initial_state: Optional initial state dictionary for session initialization
         """
         self.agui_content = agui_content
         self.request = request
@@ -84,8 +84,8 @@ class UserMessageHandler:
         agent processing, even when human input is malformed.
 
         Args:
-            content: Raw tool result content string from human input
-            tool_call_id: Identifier of the tool call for error logging and tracking
+            :param content: Raw tool result content string from human input
+            :param tool_call_id: Identifier of the tool call for error logging and tracking
 
         Returns:
             Dictionary containing parsed JSON, success result, or error information

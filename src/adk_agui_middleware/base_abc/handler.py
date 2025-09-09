@@ -29,7 +29,7 @@ class BaseTranslateHandler(metaclass=ABCMeta):
         Implementations can yield multiple events or modify translation behavior.
 
         Args:
-            adk_event: The ADK event to be translated
+            :param adk_event: The ADK event to be translated
 
         Yields:
             TranslateEvent objects containing translated AGUI events and control flags
@@ -58,7 +58,7 @@ class BaseADKEventHandler(metaclass=ABCMeta):
         generate multiple events from a single input event.
 
         Args:
-            event: The ADK event to process
+            :param event: The ADK event to process
 
         Yields:
             Processed ADK Event objects, or None to filter out the event
@@ -128,7 +128,7 @@ class BaseAGUIEventHandler(metaclass=ABCMeta):
         specific client requirements, or generate multiple events from a single input.
 
         Args:
-            event: The AGUI BaseEvent to process
+            :param event: The AGUI BaseEvent to process
 
         Yields:
             Processed AGUI BaseEvent objects, or None to filter out the event
@@ -158,7 +158,7 @@ class BaseAGUIStateSnapshotHandler(metaclass=ABCMeta):
         the structure. Return None to suppress state snapshot transmission.
 
         Args:
-            state_snapshot: Dictionary containing the current session state snapshot
+            :param state_snapshot: Dictionary containing the current session state snapshot
 
         Returns:
             Transformed state snapshot dictionary, or None to suppress the snapshot
@@ -187,8 +187,8 @@ class BaseInOutHandler(metaclass=ABCMeta):
         context for correlation with response data.
 
         Args:
-            agui_input: The agent input data to record
-            request: HTTP request containing client context and headers
+            :param agui_input: The agent input data to record
+            :param request: HTTP request containing client context and headers
 
         Raises:
             NotImplementedError: Must be implemented by subclasses
@@ -204,7 +204,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
         interaction history for analysis.
 
         Args:
-            agui_event: Dictionary containing SSE-formatted event data to record
+            :param agui_event: Dictionary containing SSE-formatted event data to record
 
         Raises:
             NotImplementedError: Must be implemented by subclasses
@@ -222,7 +222,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
         format conversion, field addition/removal, or content filtering.
 
         Args:
-            agui_event: Dictionary containing SSE-formatted event data to potentially modify
+            :param agui_event: Dictionary containing SSE-formatted event data to potentially modify
 
         Returns:
             Modified event dictionary (may be unchanged from input)
