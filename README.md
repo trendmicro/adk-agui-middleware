@@ -347,6 +347,132 @@ The middleware implements sophisticated HITL patterns:
 - `UserMessageHandler.is_tool_result_submission` - Detect completion state
 - `AGUIUserHandler.remove_pending_tool_call()` - Orchestrate completion flow
 
+## 🛠️ Development and Testing
+
+### Code Quality Standards
+
+This project maintains high code quality standards with:
+
+- **Type Safety**: Full type annotations throughout the codebase
+- **Documentation**: Comprehensive Google-style docstrings for all classes and functions
+- **Error Handling**: Robust error handling with structured logging
+- **Async Design**: Proper async/await patterns for optimal performance
+- **Security**: Input validation, secure error responses, and audit logging
+
+### Testing
+
+Run the test suite to ensure all components work correctly:
+
+```bash
+# Install test dependencies
+pip install -e ".[test]"
+
+# Run tests
+pytest tests/
+
+# Run with coverage
+pytest --cov=adk_agui_middleware tests/
+```
+
+### Code Formatting and Linting
+
+Maintain code quality with the provided tools:
+
+```bash
+# Format code
+ruff format .
+
+# Lint code
+ruff check .
+
+# Type checking
+mypy src/
+```
+
+## 🚀 Production Deployment
+
+### Configuration
+
+Set environment variables for production:
+
+```bash
+export LOG_LEVEL=INFO
+export LOG_ADK_EVENTS=false
+export LOG_AGUI_EVENTS=false
+```
+
+### Performance Considerations
+
+- **Session Services**: Use persistent session services (not in-memory) for production
+- **Connection Pooling**: Configure connection pooling for database and external services
+- **Rate Limiting**: Implement rate limiting for SSE endpoints
+- **Monitoring**: Set up comprehensive logging and monitoring for HITL workflows
+
+### Security Checklist
+
+- ✅ Use HTTPS in production
+- ✅ Implement proper authentication and authorization
+- ✅ Configure CORS policies appropriately
+- ✅ Monitor and log all HITL interactions
+- ✅ Validate all input through Pydantic models
+- ✅ Set up proper error tracking and alerting
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**SSE Connection Issues**
+- Verify client supports EventSource
+- Check CORS configuration
+- Ensure proper event encoding
+
+**HITL Workflow Problems**
+- Verify session state persistence
+- Check tool call ID tracking
+- Monitor pending_tool_calls in session state
+
+**Performance Issues**
+- Enable connection pooling for session services
+- Monitor memory usage during long conversations
+- Implement conversation history cleanup
+
+### Debug Logging
+
+Enable debug logging for detailed troubleshooting:
+
+```python
+import logging
+logging.getLogger("adk_agui_middleware").setLevel(logging.DEBUG)
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these guidelines:
+
+1. **Code Style**: Follow PEP 8 and use the provided linting tools
+2. **Documentation**: Add comprehensive docstrings for all new code
+3. **Testing**: Include tests for new features and bug fixes
+4. **Type Safety**: Maintain full type annotations
+5. **Error Handling**: Implement proper error handling with logging
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd adk-agui-middleware
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Install pre-commit hooks
+pre-commit install
+```
+
 ## 📄 License
 
 Licensed under the MIT License. See [LICENSE](LICENSE) file for details.

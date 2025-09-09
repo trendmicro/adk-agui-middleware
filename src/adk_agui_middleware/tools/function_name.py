@@ -11,8 +11,11 @@ def _should_skip_function(function_name: str) -> bool:
     to provide cleaner function name chains for debugging. This helps
     focus on business logic functions rather than infrastructure code.
 
-    :param function_name: Name of the function to evaluate
-    :return: True if the function should be skipped, False otherwise
+    Args:
+        function_name: Name of the function to evaluate
+
+    Returns:
+        True if the function should be skipped, False otherwise
     """
     # Functions to always skip (logging, wrappers, etc.)
     default_skip = {
@@ -57,9 +60,12 @@ def _format_function_name(function_name: str, frame_locals: dict[str, Any]) -> s
     class method, or standalone function and formats accordingly.
     This provides better context for debugging and logging.
 
-    :param function_name: Base function name
-    :param frame_locals: Local variables from the function's frame
-    :return: Formatted function name with class context (e.g., "ClassName.method_name")
+    Args:
+        function_name: Base function name
+        frame_locals: Local variables from the function's frame
+
+    Returns:
+        Formatted function name with class context (e.g., "ClassName.method_name")
     """
     # Instance method: has 'self' parameter
     if "self" in frame_locals:
@@ -82,8 +88,11 @@ def _collect_valid_functions(stack_frames: list[Any]) -> list[str]:
     filtering out internal functions and formatting with class context.
     This creates a clean representation of the execution path.
 
-    :param stack_frames: List of frame info objects from inspect.stack()
-    :return: List of formatted function names in call order
+    Args:
+        stack_frames: List of frame info objects from inspect.stack()
+
+    Returns:
+        List of formatted function names in call order
     """
     valid_functions = []
     for frame_info in stack_frames:
@@ -111,10 +120,13 @@ def extract_caller_name(
     and debugging, with options for full call chains and depth limiting.
     This is particularly useful for structured logging and error reporting.
 
-    :param full_chain: If True, return full call chain; if False, return just caller
-    :param separator: String used to separate function names in full chain
-    :param max_depth: Maximum number of functions to include (None for unlimited)
-    :return: Function name or call chain string, "unknown_function" if none found
+    Args:
+        full_chain: If True, return full call chain; if False, return just caller
+        separator: String used to separate function names in full chain
+        max_depth: Maximum number of functions to include (None for unlimited)
+
+    Returns:
+        Function name or call chain string, "unknown_function" if none found
 
     Examples:
         extract_caller_name() -> "MyClass.my_method"

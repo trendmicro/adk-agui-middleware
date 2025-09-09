@@ -36,9 +36,10 @@ class UserMessageHandler:
         Sets up the handler for processing user messages, tool results, and managing
         the HITL (Human-in-the-Loop) workflow state transitions.
 
-        :param agui_content: Input containing agent execution parameters and messages
-        :param request: HTTP request for additional context and client information
-        :param initial_state: Optional initial state dictionary for session initialization
+        Args:
+            agui_content: Input containing agent execution parameters and messages
+            request: HTTP request for additional context and client information
+            initial_state: Optional initial state dictionary for session initialization
         """
         self.agui_content = agui_content
         self.request = request
@@ -82,9 +83,12 @@ class UserMessageHandler:
         This ensures that tool results are always in a consistent format for
         agent processing, even when human input is malformed.
 
-        :param content: Raw tool result content string from human input
-        :param tool_call_id: Identifier of the tool call for error logging and tracking
-        :return: Dictionary containing parsed JSON, success result, or error information
+        Args:
+            content: Raw tool result content string from human input
+            tool_call_id: Identifier of the tool call for error logging and tracking
+
+        Returns:
+            Dictionary containing parsed JSON, success result, or error information
         """
         if not content or not content.strip():
             record_warning_log(
@@ -108,7 +112,8 @@ class UserMessageHandler:
         with non-empty content. This is used for new agent execution requests
         (not HITL completions).
 
-        :return: Google GenAI Content object for the latest user message, or None
+        Returns:
+            Google GenAI Content object for the latest user message, or None
         """
         if not self.agui_content.messages:
             return None
@@ -172,7 +177,8 @@ class UserMessageHandler:
         and creates function response parts in Google GenAI format for the agent
         to process. This enables seamless integration of human-provided tool results.
 
-        :return: Google GenAI Content object with function responses, or None if no tool results
+        Returns:
+            Google GenAI Content object with function responses, or None if no tool results
         """
         if not self.is_tool_result_submission:
             return None
@@ -199,6 +205,7 @@ class UserMessageHandler:
         returns tool results for HITL completions, or the latest user message for
         new agent execution requests.
 
-        :return: Google GenAI Content object for agent processing, or None
+        Returns:
+            Google GenAI Content object for agent processing, or None
         """
         return await self.process_tool_results() or await self.get_latest_message()

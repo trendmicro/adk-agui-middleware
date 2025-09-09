@@ -71,6 +71,13 @@ class HistoryHandler:
         )
 
     async def delete_session(self, session_id: str) -> None:
+        """Delete a specific session by ID.
+
+        Permanently removes the session and all associated conversation data.
+
+        Args:
+            session_id: Unique identifier for the session to delete
+        """
         await self.session_manager.delete_session(
             SessionParameter(
                 app_name=self.app_name,
@@ -126,6 +133,17 @@ class HistoryHandler:
         )
 
     async def get_state_snapshot(self, session_id: str) -> dict[str, Any]:
+        """Get the current state snapshot for a specific session.
+
+        Retrieves the complete state dictionary for the session,
+        returning an empty dictionary if the session is not found.
+
+        Args:
+            session_id: Unique identifier for the session
+
+        Returns:
+            Dictionary containing the session state, empty dict if session not found
+        """
         return (
             session.state
             if (session := await self.get_session(session_id=session_id))

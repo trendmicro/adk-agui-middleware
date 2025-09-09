@@ -59,8 +59,11 @@ class EventTranslator:
         function responses, state updates) and yields appropriate AGUI events.
         This is the main entry point for event translation in the middleware.
 
-        :param adk_event: ADK event to translate
-        :yields: BaseEvent objects in AGUI format
+        Args:
+            adk_event: ADK event to translate
+
+        Yields:
+            BaseEvent objects in AGUI format
         """
         try:
             # Skip user-authored events as they don't need translation
@@ -94,8 +97,11 @@ class EventTranslator:
         Ensures proper sequencing by closing any active streaming messages before
         processing tool calls, then translates the function calls to AGUI events.
 
-        :param adk_event: ADK event containing function calls
-        :yields: BaseEvent objects for function call handling
+        Args:
+            adk_event: ADK event containing function calls
+
+        Yields:
+            BaseEvent objects for function call handling
         """
         # Force close any active streaming message before handling function calls
         async for event in self.force_close_streaming_message():
@@ -114,8 +120,11 @@ class EventTranslator:
         Processes auxiliary data from ADK events including state updates
         and custom metadata, converting them to appropriate AGUI events.
 
-        :param adk_event: ADK event potentially containing additional data
-        :yields: BaseEvent objects for state updates and custom events
+        Args:
+            adk_event: ADK event potentially containing additional data
+
+        Yields:
+            BaseEvent objects for state updates and custom events
         """
         # Handle state delta updates
         if adk_event.actions and adk_event.actions.state_delta:
@@ -137,8 +146,11 @@ class EventTranslator:
         and message end events. Tracks streaming state to ensure proper event sequencing
         and supports both streaming and non-streaming text responses.
 
-        :param adk_event: ADK event containing text content to translate
-        :yields: AGUI text message events (start, content, end) for streaming text
+        Args:
+            adk_event: ADK event containing text content to translate
+
+        Yields:
+            AGUI text message events (start, content, end) for streaming text
         """
         if not (adk_event.content and adk_event.content.parts):
             return

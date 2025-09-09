@@ -95,9 +95,14 @@ def register_agui_endpoint(
         in the request path. This operation deletes all associated messages
         and session data for the specified conversation.
 
-        :param request: FastAPI request object containing thread_id in path and user context
-        :return: Dictionary containing deletion status confirmation
-        :raises HTTPException: If history service is not configured or thread not found
+        Args:
+            request: FastAPI request object containing thread_id in path and user context
+
+        Returns:
+            Dictionary containing deletion status confirmation
+
+        Raises:
+            HTTPException: If history service is not configured or thread not found
         """
         async with http_exception_handler(request):
             if history_service is None:

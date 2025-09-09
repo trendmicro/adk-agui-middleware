@@ -28,10 +28,15 @@ class BaseSSEService(metaclass=ABCMeta):
         and returns a configured runner function that generates agent events.
         This method handles all the setup required for agent execution.
 
-        :param agui_content: Input containing agent execution parameters and message content
-        :param request: HTTP request containing client context and headers
-        :return: Tuple containing the runner callable and optional input/output handler
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            agui_content: Input containing agent execution parameters and message content
+            request: HTTP request containing client context and headers
+
+        Returns:
+            Tuple containing the runner callable and optional input/output handler
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -47,9 +52,14 @@ class BaseSSEService(metaclass=ABCMeta):
         dictionaries suitable for Server-Sent Events transmission. Handles event
         encoding, error recovery, and optional input/output processing.
 
-        :param runner: Callable that returns an async generator of BaseEvent objects
-        :param inout_handler: Optional handler for input/output recording and transformation
-        :yields: Encoded event dictionaries ready for SSE transmission
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            runner: Callable that returns an async generator of BaseEvent objects
+            inout_handler: Optional handler for input/output recording and transformation
+
+        Yields:
+            Encoded event dictionaries ready for SSE transmission
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")

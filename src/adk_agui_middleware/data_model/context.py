@@ -27,7 +27,6 @@ from ..base_abc.handler import (
     BaseTranslateHandler,
 )
 
-
 T = TypeVar("T", BaseArtifactService, BaseMemoryService, BaseCredentialService)
 
 
@@ -94,7 +93,7 @@ class ConfigContext(BaseModel):
         default_session_id
     )
     extract_initial_state: (
-        Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
+            Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
     ) = None
 
 
@@ -223,8 +222,11 @@ class HistoryConfig(BaseModel):
     user_id: str | Callable[[Request], Awaitable[str]]
     session_id: str | Callable[[Request], Awaitable[str]]
     get_thread_list: (
-        Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
+            Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
     ) = None
     get_state: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None
 
     session_service: BaseSessionService = Field(default_factory=InMemorySessionService)
+    adk_event_handler: type[BaseADKEventHandler] | None = None
+    agui_event_handler: type[BaseAGUIEventHandler] | None = None
+    translate_handler: type[BaseTranslateHandler] | None = None

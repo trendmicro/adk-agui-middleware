@@ -68,10 +68,13 @@ class SSEService(BaseSSEService):
         that can extract values from the request context. This enables flexible
         multi-tenant configuration based on request characteristics.
 
-        :param config_attr: Name of the configuration attribute to retrieve
-        :param agui_content: Input containing agent execution parameters
-        :param request: HTTP request for context extraction
-        :return: Configuration value as string
+        Args:
+            config_attr: Name of the configuration attribute to retrieve
+            agui_content: Input containing agent execution parameters
+            request: HTTP request for context extraction
+
+        Returns:
+            Configuration value as string
         """
         value: Callable[[RunAgentInput, Request], Awaitable[str]] | str = getattr(
             self.config_context, config_attr
@@ -88,9 +91,12 @@ class SSEService(BaseSSEService):
         Creates an input/output record handler if configured and records the
         incoming AGUI content and request for audit trails and logging.
 
-        :param agui_content: Input containing agent execution parameters to record
-        :param request: HTTP request containing client context to record
-        :return: BaseInOutHandler instance if configured, None otherwise
+        Args:
+            agui_content: Input containing agent execution parameters to record
+            request: HTTP request containing client context to record
+
+        Returns:
+            BaseInOutHandler instance if configured, None otherwise
         """
         if self.handler_context.in_out_record_handler:
             in_out_record = self.handler_context.in_out_record_handler()
@@ -107,9 +113,12 @@ class SSEService(BaseSSEService):
         Records the output data through the configured handler and applies any
         transformations or modifications before sending to the client.
 
-        :param inout_handler: Optional handler for recording and transforming output
-        :param output_data: Dictionary containing SSE event data to process
-        :return: Processed output data (potentially modified by handler)
+        Args:
+            inout_handler: Optional handler for recording and transforming output
+            output_data: Dictionary containing SSE event data to process
+
+        Returns:
+            Processed output data (potentially modified by handler)
         """
         if inout_handler:
             await inout_handler.output_record(output_data)
@@ -124,9 +133,12 @@ class SSEService(BaseSSEService):
         Uses the configured app_name extractor to determine the application
         name for the current request, enabling multi-tenant deployments.
 
-        :param agui_content: Input containing agent execution parameters
-        :param request: HTTP request for context extraction
-        :return: Application name string
+        Args:
+            agui_content: Input containing agent execution parameters
+            request: HTTP request for context extraction
+
+        Returns:
+            Application name string
         """
         return await self._get_config_value("app_name", agui_content, request)
 
@@ -138,9 +150,12 @@ class SSEService(BaseSSEService):
         Uses the configured user_id extractor to determine the user
         identity for the current request, essential for session isolation.
 
-        :param agui_content: Input containing agent execution parameters
-        :param request: HTTP request for context extraction
-        :return: User identifier string
+        Args:
+            agui_content: Input containing agent execution parameters
+            request: HTTP request for context extraction
+
+        Returns:
+            User identifier string
         """
         return await self._get_config_value("user_id", agui_content, request)
 
@@ -152,9 +167,12 @@ class SSEService(BaseSSEService):
         Uses the configured session_id extractor to determine the session
         identity for the current request, enabling conversation persistence.
 
-        :param agui_content: Input containing agent execution parameters
-        :param request: HTTP request for context extraction
-        :return: Session identifier string
+        Args:
+            agui_content: Input containing agent execution parameters
+            request: HTTP request for context extraction
+
+        Returns:
+            Session identifier string
         """
         return await self._get_config_value("session_id", agui_content, request)
 
@@ -166,9 +184,12 @@ class SSEService(BaseSSEService):
         Uses the configured initial state extractor to determine any
         initial session state for new sessions, enabling context-aware initialization.
 
-        :param agui_content: Input containing agent execution parameters
-        :param request: HTTP request for context extraction
-        :return: Dictionary containing initial state key-value pairs, or None
+        Args:
+            agui_content: Input containing agent execution parameters
+            request: HTTP request for context extraction
+
+        Returns:
+            Dictionary containing initial state key-value pairs, or None
         """
         value = self.config_context.extract_initial_state
         if callable(value):
@@ -183,8 +204,11 @@ class SSEService(BaseSSEService):
         to error event encoding if the primary encoding fails. This ensures
         that clients always receive valid SSE events even when encoding errors occur.
 
-        :param event: Base event to be encoded
-        :return: Encoded event dictionary in SSE format, either successful encoding or error event
+        Args:
+            event: Base event to be encoded
+
+        Returns:
+            Encoded event dictionary in SSE format, either successful encoding or error event
         """
         try:
             return convert_agui_event_to_sse(event)

@@ -22,8 +22,11 @@ class AGUIEncoderError(Exception):
         to SSE format, creating a fallback error event that can be safely
         transmitted to clients.
 
-        :param e: Original exception that caused the encoding failure
-        :return: Encoded error event dictionary in SSE format
+        Args:
+            e: Original exception that caused the encoding failure
+
+        Returns:
+            Encoded error event dictionary in SSE format
         """
         error_event = RunErrorEvent(
             type=EventType.RUN_ERROR,
@@ -41,8 +44,11 @@ class AGUIEncoderError(Exception):
         a properly formatted error event that can be sent to clients
         to indicate the failure.
 
-        :param e: Original exception that caused the agent failure
-        :return: Encoded error event dictionary in SSE format
+        Args:
+            e: Original exception that caused the agent failure
+
+        Returns:
+            Encoded error event dictionary in SSE format
         """
         error_event = RunErrorEvent(
             type=EventType.RUN_ERROR,
@@ -68,8 +74,11 @@ class AGUIErrorEvent:
         Handles general exceptions that occur during agent workflow execution,
         providing a standardized error event for client consumption.
 
-        :param e: Exception that caused the execution failure
-        :return: RunErrorEvent for the execution error
+        Args:
+            e: Exception that caused the execution failure
+
+        Returns:
+            RunErrorEvent for the execution error
         """
         record_error_log("Error in new execution", e)
         return RunErrorEvent(
@@ -83,8 +92,11 @@ class AGUIErrorEvent:
         Handles HITL workflow errors where a tool result submission is detected
         but no actual tool results are found in the message content.
 
-        :param thread_id: ID of the thread where tool results were expected
-        :return: RunErrorEvent for missing tool results
+        Args:
+            thread_id: ID of the thread where tool results were expected
+
+        Returns:
+            RunErrorEvent for missing tool results
         """
         record_error_log(
             f"Tool result submission without tool results for thread {thread_id}"
@@ -102,8 +114,11 @@ class AGUIErrorEvent:
         Handles exceptions that occur during the processing of tool results
         in HITL workflows, such as parsing errors or session state updates.
 
-        :param e: Exception that occurred during tool result processing
-        :return: RunErrorEvent for the tool result processing error
+        Args:
+            e: Exception that occurred during tool result processing
+
+        Returns:
+            RunErrorEvent for the tool result processing error
         """
         record_error_log("Error handling tool results.", e)
         return RunErrorEvent(

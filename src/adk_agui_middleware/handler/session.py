@@ -31,8 +31,9 @@ class SessionHandler:
         Sets up the handler with the session manager and parameters needed
         to identify and manage the specific session for this interaction.
 
-        :param session_manager: Manager for low-level session operations
-        :param session_parameter: Parameters identifying the session (app, user, session ID)
+        Args:
+            session_manager: Manager for low-level session operations
+            session_parameter: Parameters identifying the session (app, user, session ID)
         """
         self.session_manager = session_manager
         self.session_parameter = session_parameter
@@ -91,7 +92,8 @@ class SessionHandler:
         Delegates to the session manager to retrieve the session identified
         by the current session parameters.
 
-        :return: Session object if found, None otherwise
+        Returns:
+            Session object if found, None otherwise
         """
         return await self.session_manager.get_session(self.session_parameter)
 
@@ -101,7 +103,8 @@ class SessionHandler:
         Retrieves the complete state dictionary from the session,
         which includes all persistent data for the session.
 
-        :return: Dictionary containing session state key-value pairs
+        Returns:
+            Dictionary containing session state key-value pairs
         """
         return await self.session_manager.get_session_state(self.session_parameter)
 
@@ -113,8 +116,11 @@ class SessionHandler:
         Implements the "get or create" pattern for sessions, ensuring a session
         always exists after this call. This is essential for session-based workflows.
 
-        :param initial_state: Optional initial state to set when creating a new session
-        :return: Session object (either existing or newly created)
+        Args:
+            initial_state: Optional initial state to set when creating a new session
+
+        Returns:
+            Session object (either existing or newly created)
         """
         return await self.session_manager.check_and_create_session(
             session_parameter=self.session_parameter, initial_state=initial_state
@@ -128,8 +134,11 @@ class SessionHandler:
         Applies the provided state updates to the current session,
         merging them with existing state data.
 
-        :param initial_state: Dictionary of state updates to apply
-        :return: True if update was successful, False otherwise
+        Args:
+            initial_state: Dictionary of state updates to apply
+
+        Returns:
+            True if update was successful, False otherwise
         """
         return await self.session_manager.update_session_state(
             session_parameter=self.session_parameter,

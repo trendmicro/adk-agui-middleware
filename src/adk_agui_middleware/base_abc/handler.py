@@ -28,9 +28,14 @@ class BaseTranslateHandler(metaclass=ABCMeta):
         over the translation process through TranslateEvent flags.
         Implementations can yield multiple events or modify translation behavior.
 
-        :param adk_event: The ADK event to be translated
-        :yields: TranslateEvent objects containing translated AGUI events and control flags
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            adk_event: The ADK event to be translated
+
+        Yields:
+            TranslateEvent objects containing translated AGUI events and control flags
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -52,9 +57,14 @@ class BaseADKEventHandler(metaclass=ABCMeta):
         Can be used to filter events (yield nothing), transform events, or
         generate multiple events from a single input event.
 
-        :param event: The ADK event to process
-        :yields: Processed ADK Event objects, or None to filter out the event
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            event: The ADK event to process
+
+        Yields:
+            Processed ADK Event objects, or None to filter out the event
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -75,8 +85,11 @@ class BaseADKEventTimeoutHandler(metaclass=ABCMeta):
         timeout fallback behavior. This allows dynamic timeout configuration
         based on context or processing requirements.
 
-        :return: Timeout duration in seconds
-        :raises NotImplementedError: Must be implemented by subclasses
+        Returns:
+            Timeout duration in seconds
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -88,8 +101,11 @@ class BaseADKEventTimeoutHandler(metaclass=ABCMeta):
         Should generate fallback events to handle the timeout gracefully,
         such as error events, timeout notifications, or recovery actions.
 
-        :yields: ADK Event objects to be processed as timeout fallback
-        :raises NotImplementedError: Must be implemented by subclasses
+        Yields:
+            ADK Event objects to be processed as timeout fallback
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -111,9 +127,14 @@ class BaseAGUIEventHandler(metaclass=ABCMeta):
         Can be used to filter events (yield nothing), transform events for
         specific client requirements, or generate multiple events from a single input.
 
-        :param event: The AGUI BaseEvent to process
-        :yields: Processed AGUI BaseEvent objects, or None to filter out the event
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            event: The AGUI BaseEvent to process
+
+        Yields:
+            Processed AGUI BaseEvent objects, or None to filter out the event
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -136,9 +157,14 @@ class BaseAGUIStateSnapshotHandler(metaclass=ABCMeta):
         filtering sensitive data, adding computed fields, or reformatting
         the structure. Return None to suppress state snapshot transmission.
 
-        :param state_snapshot: Dictionary containing the current session state snapshot
-        :return: Transformed state snapshot dictionary, or None to suppress the snapshot
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            state_snapshot: Dictionary containing the current session state snapshot
+
+        Returns:
+            Transformed state snapshot dictionary, or None to suppress the snapshot
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -160,9 +186,12 @@ class BaseInOutHandler(metaclass=ABCMeta):
         Can be used to log user interactions, track API usage, or store request
         context for correlation with response data.
 
-        :param agui_input: The agent input data to record
-        :param request: HTTP request containing client context and headers
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            agui_input: The agent input data to record
+            request: HTTP request containing client context and headers
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -174,8 +203,11 @@ class BaseInOutHandler(metaclass=ABCMeta):
         Can be used to track agent responses, monitor event patterns, or store
         interaction history for analysis.
 
-        :param agui_event: Dictionary containing SSE-formatted event data to record
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            agui_event: Dictionary containing SSE-formatted event data to record
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
@@ -189,8 +221,13 @@ class BaseInOutHandler(metaclass=ABCMeta):
         before transmission to clients. Can be used for data sanitization,
         format conversion, field addition/removal, or content filtering.
 
-        :param agui_event: Dictionary containing SSE-formatted event data to potentially modify
-        :return: Modified event dictionary (may be unchanged from input)
-        :raises NotImplementedError: Must be implemented by subclasses
+        Args:
+            agui_event: Dictionary containing SSE-formatted event data to potentially modify
+
+        Returns:
+            Modified event dictionary (may be unchanged from input)
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
         """
         raise NotImplementedError("This method should be implemented by subclasses.")

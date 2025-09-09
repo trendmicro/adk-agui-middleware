@@ -20,8 +20,11 @@ def convert_agui_event_to_sse(event: BaseEvent) -> dict[str, str]:
     - Providing event type for client-side event handling
     - Generating unique IDs for event correlation
 
-    :param event: AGUI BaseEvent to convert to SSE format
-    :return: Dictionary containing SSE-formatted event with 'data', 'event', and 'id' fields
+    Args:
+        event: AGUI BaseEvent to convert to SSE format
+
+    Returns:
+        Dictionary containing SSE-formatted event with 'data', 'event', and 'id' fields
     """
     # Add current timestamp in milliseconds for event tracking
     event.timestamp = int(time.time() * 1000)

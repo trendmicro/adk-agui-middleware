@@ -21,18 +21,16 @@ class HistoryService:
     context extraction.
     """
 
-    def __init__(self, history_config: HistoryConfig, handler_context: HandlerContext):
+    def __init__(self, history_config: HistoryConfig):
         """Initialize the history service.
 
         Args:
             history_config: Configuration for history access and context extraction
-            handler_context: Context containing event handlers for processing
         """
         self.history_config = history_config
         self.session_manager = SessionManager(
             session_service=self.history_config.session_service
         )
-        self.handler_context = handler_context
         self.state_event_util = StateEventUtil()
 
     def _create_history_handler(self, app_name: str, user_id: str) -> HistoryHandler:
@@ -47,7 +45,11 @@ class HistoryService:
         """
         return HistoryHandler(
             session_manager=self.session_manager,
-            running_handler=RunningHandler(handler_context=self.handler_context),
+            running_handler=RunningHandler(handler_context=HandlerContext(
+                adk_event_handler=self.history_config.adk_event_handler,
+                agui_event_handler=self.history_config.agui_event_handler,
+                translate_handler=self.history_config.translate_handler,
+            )),
             app_name=app_name,
             user_id=user_id,
         )
@@ -111,7 +113,7 @@ class HistoryService:
         return {"status": "deleted"}
 
     async def get_message_snapshot(
-        self, request: Request
+            self, request: Request
     ) -> CustomMessagesSnapshotEvent:
         """Get conversation history for a specific session.
 

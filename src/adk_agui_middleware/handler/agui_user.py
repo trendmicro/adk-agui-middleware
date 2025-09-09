@@ -46,9 +46,10 @@ class AGUIUserHandler:
         agent interaction workflow including execution, message processing, and
         session state management.
 
-        :param running_handler: Handler for executing agent runs and event translation
-        :param user_message_handler: Handler for processing user messages and tool results
-        :param session_handler: Handler for session state management and HITL workflows
+        Args:
+            running_handler: Handler for executing agent runs and event translation
+            user_message_handler: Handler for processing user messages and tool results
+            session_handler: Handler for session state management and HITL workflows
         """
         self.running_handler = running_handler
         self.user_message_handler = user_message_handler
@@ -119,7 +120,8 @@ class AGUIUserHandler:
         Creates a standardized run started event with the current session context.
         This event is sent to clients to indicate the beginning of agent processing.
 
-        :return: RunStartedEvent indicating the beginning of agent execution
+        Returns:
+            RunStartedEvent indicating the beginning of agent execution
         """
         return RunStartedEvent(
             type=EventType.RUN_STARTED, thread_id=self.session_id, run_id=self.run_id
@@ -131,7 +133,8 @@ class AGUIUserHandler:
         Creates a standardized run finished event with the current session context.
         This event is sent to clients to indicate the completion of agent processing.
 
-        :return: RunFinishedEvent indicating the completion of agent execution
+        Returns:
+            RunFinishedEvent indicating the completion of agent execution
         """
         return RunFinishedEvent(
             type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
@@ -144,7 +147,8 @@ class AGUIUserHandler:
         to the tracking list when tools are invoked and removing them when tool
         results are processed. This is essential for HITL workflow management.
 
-        :param event: AGUI BaseEvent to check for tool call information
+        Args:
+            event: AGUI BaseEvent to check for tool call information
         """
         if isinstance(event, ToolCallEndEvent):
             self.tool_call_ids.append(event.tool_call_id)
@@ -169,7 +173,8 @@ class AGUIUserHandler:
         4. Agent execution resumes with the human-provided tool results
         5. Workflow continues with human input incorporated
 
-        :return: RunErrorEvent if no tool results found or processing fails, None on success
+        Returns:
+            RunErrorEvent if no tool results found or processing fails, None on success
 
         Note:
             This is the critical completion step in HITL workflows, transforming
@@ -202,7 +207,8 @@ class AGUIUserHandler:
         This method implements the core agent execution loop with proper event
         translation, tool call tracking, and state management.
 
-        :yields: AGUI BaseEvent objects from agent execution and state management
+        Yields:
+            AGUI BaseEvent objects from agent execution and state management
         """
         async for adk_event in self.running_handler.run_async_with_adk(
             user_id=self.user_id,
@@ -231,7 +237,8 @@ class AGUIUserHandler:
         agent execution, pending tool call management, and run completion.
         This orchestrates the full lifecycle of an agent execution request.
 
-        :yields: AGUI BaseEvent objects for the complete workflow
+        Yields:
+            AGUI BaseEvent objects for the complete workflow
         """
         yield self.call_start()
         await self.session_handler.check_and_create_session(
@@ -260,7 +267,8 @@ class AGUIUserHandler:
         3. If new request: Execute agent and add any tool calls to pending state
         4. Handle errors and state transitions throughout the process
 
-        :yields: AGUI BaseEvent objects from the handler execution, including HITL state changes
+        Yields:
+            AGUI BaseEvent objects from the handler execution, including HITL state changes
 
         Note:
             This is the primary entry point for HITL workflow management, handling
