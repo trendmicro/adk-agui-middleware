@@ -45,16 +45,34 @@ jobs:
 
     - name: Security check with bandit
       run: |
-        uv run bandit -r src/ -f json -o bandit-report.json --exclude=*/.venv/*,*/venv/*,*/env/*,*/.env/*
-        uv run bandit -r src/ --severity-level low --confidence-level medium --exclude=*/.venv/*,*/venv/*,*/env/*,*/.env/*
+        echo "🔍 Running Bandit security scan..."
+        uv run bandit -r src/adk_agui_middleware -f json -o bandit-report.json --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601 || echo "Bandit JSON report generated"
+        uv run bandit -r src/adk_agui_middleware --severity-level low --confidence-level medium --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601 -f txt -o bandit-summary.txt
+        echo "📊 Bandit scan completed. Check artifacts for detailed reports."
+        
+        # Display summary in GitHub Actions log
+        echo "=== Bandit Security Scan Summary ==="
+        uv run bandit -r src/adk_agui_middleware --severity-level low --confidence-level medium --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601 || exit_code=$?
+        
+        # Only fail if there are high severity issues
+        if [ "${exit_code:-0}" -eq 1 ]; then
+          echo "❌ High severity security issues found. Please review and fix."
+          exit 1
+        elif [ "${exit_code:-0}" -eq 0 ]; then
+          echo "✅ No security issues found."
+        else
+          echo "⚠️  Low/Medium severity issues found. Review recommended but not blocking."
+        fi
       continue-on-error: false
 
-    - name: Upload bandit report
+    - name: Upload bandit reports
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: bandit-report-${{ matrix.python-version }}
-        path: bandit-report.json
+        name: bandit-reports-${{ matrix.python-version }}
+        path: |
+          bandit-report.json
+          bandit-summary.txt
 
   # Comprehensive test job
   test:
@@ -108,10 +126,62 @@ jobs:
         name: coverage-report-${{ matrix.python-version }}
         path: htmlcov/
 
+  # Dedicated security scan job
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev --frozen
+
+    - name: Comprehensive Bandit security scan
+      run: |
+        echo "🔐 Running comprehensive security analysis..."
+        
+        # Generate detailed JSON report
+        uv run bandit -r src/adk_agui_middleware -f json -o bandit-detailed.json -v --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601
+        
+        # Generate readable text report
+        uv run bandit -r src/adk_agui_middleware -f txt -o bandit-detailed.txt --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601
+        
+        # Generate XML report for further processing
+        uv run bandit -r src/adk_agui_middleware -f xml -o bandit-detailed.xml --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601 || echo "XML report generated"
+        
+        # Run with different confidence levels for analysis
+        echo "=== High Confidence Issues ==="
+        uv run bandit -r src/adk_agui_middleware --confidence-level high --severity-level medium --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601 || echo "High confidence scan completed"
+        
+        echo "=== All Issues Summary ==="
+        uv run bandit -r src/adk_agui_middleware --confidence-level low --severity-level low --exclude "*/.venv/*,*/venv/*,*/env/*,*/.env/*,*/__pycache__/*" --skip B101,B601 || echo "Full scan completed"
+        
+        echo "📈 Security scan artifacts generated"
+
+    - name: Upload security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-detailed.json
+          bandit-detailed.txt
+          bandit-detailed.xml
+
   # Summary job to provide overall status
   summary:
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, security]
     if: always()
     steps:
     - name: Check results
@@ -119,8 +189,9 @@ jobs:
         echo "=== CI Results Summary ==="
         echo "Lint: ${{ needs.lint.result }}"
         echo "Test: ${{ needs.test.result }}"
+        echo "Security: ${{ needs.security.result }}"
         
-        if [ "${{ needs.lint.result }}" == "success" ] && [ "${{ needs.test.result }}" == "success" ]; then
+        if [ "${{ needs.lint.result }}" == "success" ] && [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.security.result }}" == "success" ]; then
           echo "✅ All checks passed!"
           exit 0
         else

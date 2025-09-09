@@ -171,5 +171,12 @@ class HistoryHandler:
         session = await self.get_session(session_id=session_id)
         if session is None:
             return None
-        session.state = jsonpatch.apply_patch(session.state, state_patch)  # type: ignore
+        await self.session_manager.update_session_state(
+            SessionParameter(
+                app_name=self.app_name,
+                user_id=self.user_id,
+                session_id=session_id,
+            ),
+            jsonpatch.apply_patch(session.state, state_patch),
+        )
         return {"status": "updated"}

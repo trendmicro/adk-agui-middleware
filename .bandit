@@ -1,0 +1,37 @@
+# Bandit configuration file for adk-agui-middleware
+# This file configures security scanning for the project
+
+exclude_dirs:
+  - .venv
+  - venv
+  - env
+  - .env
+  - __pycache__
+  - .git
+  - .pytest_cache
+  - .mypy_cache
+  - .ruff_cache
+  - htmlcov
+  - dist
+  - build
+  - "*.egg-info"
+  - node_modules
+  - tests
+
+exclude:
+  - "*/test_*.py"
+  - "*/tests/*"
+  - "*/.venv/*"
+  - "*/venv/*"
+  - "*/env/*"
+  - "*/.env/*"
+  - "*/__pycache__/*"
+  - "*.pyc"
+  - "*.pyo"
+
+skips:
+  - B101  # assert_used - Common in type checking and debugging
+  - B601  # paramiko_calls - Not applicable to this project
+
+targets:
+  - src/adk_agui_middleware
