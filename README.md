@@ -1,12 +1,16 @@
 # ADK AGUI Python Middleware
 
-![CI](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/ci.yml/badge.svg)
-![CodeQL](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/codeql.yml/badge.svg)
-![PyPI](https://img.shields.io/pypi/v/adk-agui-middleware)
-![Python Versions](https://img.shields.io/pypi/pyversions/adk-agui-middleware)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-<!-- Optional: add Codecov if you enable it for this repo -->
-<!-- ![Coverage](https://codecov.io/gh/DennySORA/adk-agui-middleware/branch/main/graph/badge.svg) -->
+[![CI](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/ci.yml/badge.svg)](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/codeql.yml/badge.svg)](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/codeql.yml)
+[![Semgrep](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/semgrep.yml/badge.svg)](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/semgrep.yml)
+[![Gitleaks](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/gitleaks.yml)
+[![PyPI](https://img.shields.io/pypi/v/adk-agui-middleware)](https://pypi.org/project/adk-agui-middleware/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/adk-agui-middleware)](https://pypi.org/project/adk-agui-middleware/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+[![Type Checker: mypy](https://img.shields.io/badge/type_checker-mypy-blue.svg)](https://github.com/python/mypy)
+[![Codecov](https://codecov.io/gh/DennySORA/adk-agui-middleware/branch/main/graph/badge.svg)](https://codecov.io/gh/DennySORA/adk-agui-middleware)
 
 A high-performance Python 3.13 middleware library that bridges Google Agent Development Kit (ADK) agents with AGUI (Agent UI) protocol, providing enterprise-grade Server-Sent Events (SSE) streaming capabilities for real-time AI agent interactions.
 
