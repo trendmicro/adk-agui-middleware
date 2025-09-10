@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main, develop, "feat/**" ]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   # Full lint job with comprehensive checks
   lint:

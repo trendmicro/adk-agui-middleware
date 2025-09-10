@@ -32,7 +32,14 @@ jobs:
       run: |
         uv tool run --from build pyproject-build
 
+    - name: Verify build artifacts
+      run: |
+        ls -la dist/
+        uv tool install check-wheel-contents
+        uv tool run check-wheel-contents dist/*.whl
+
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         print-hash: true
+        verify-metadata: true
