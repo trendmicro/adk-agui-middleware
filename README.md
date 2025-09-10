@@ -1,5 +1,13 @@
 # ADK AGUI Python Middleware
 
+![CI](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/ci.yml/badge.svg)
+![CodeQL](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/codeql.yml/badge.svg)
+![PyPI](https://img.shields.io/pypi/v/adk-agui-middleware)
+![Python Versions](https://img.shields.io/pypi/pyversions/adk-agui-middleware)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+<!-- Optional: add Codecov if you enable it for this repo -->
+<!-- ![Coverage](https://codecov.io/gh/DennySORA/adk-agui-middleware/branch/main/graph/badge.svg) -->
+
 A high-performance Python 3.13 middleware library that bridges Google Agent Development Kit (ADK) agents with AGUI (Agent UI) protocol, providing enterprise-grade Server-Sent Events (SSE) streaming capabilities for real-time AI agent interactions.
 
 ## 🚀 Core Features
@@ -23,8 +31,8 @@ A high-performance Python 3.13 middleware library that bridges Google Agent Deve
 pip install adk-agui-middleware
 ```
 
-**Requirements:** 
-- Python 3.13+ (Optimized for Python 3.13 features)
+**Requirements:**
+- Python 3.10+ (optimized for Python 3.13 features)
 - Google ADK ≥1.9.0
 - AGUI Protocol ≥0.1.7
 - FastAPI ≥0.104.0
@@ -485,3 +493,13 @@ This project exemplifies modern Python development practices with comprehensive 
 ## 📄 License
 
 Licensed under the MIT License. See [LICENSE](LICENSE) file for details.
+
+## 🤝 Contributing & Conduct
+
+- Please see [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test, and propose changes.
+- This project follows a [Code of Conduct](CODE_OF_CONDUCT.md) to foster a welcoming community.
+
+## 🔐 Security
+
+- See [SECURITY.md](SECURITY.md) for reporting vulnerabilities, scanning, and dependency security.
+- Never commit secrets (tokens, API keys, passwords); use environment variables or secret managers.

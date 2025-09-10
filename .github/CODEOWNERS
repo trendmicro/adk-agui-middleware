@@ -1,0 +1,4 @@
+# Require reviews from code owners on protected branches (with branch protection).
+# Adjust handles as needed.
+* @DennySORA
+
