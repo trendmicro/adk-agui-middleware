@@ -1,0 +1,23 @@
+name: "CodeQL Configuration"
+
+disable-default-queries: false
+
+paths:
+  - src/
+
+paths-ignore:
+  - tests/
+  - .venv/
+  - venv/
+  - env/
+  - .env/
+  - __pycache__/
+  - "*.pyc"
+  - third_party/
+
+packs:
+  python:
+    - codeql/python-queries
+
+queries:
+  - uses: security-and-quality
