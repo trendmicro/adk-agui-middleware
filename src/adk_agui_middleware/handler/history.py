@@ -1,11 +1,11 @@
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
 import jsonpatch  # type: ignore
-from ag_ui.core import BaseEvent
-from ag_ui.core.types import UserMessage
+from ag_ui.core import BaseEvent, SystemMessage, UserMessage
 from google.adk.events import Event
 from google.adk.sessions import Session
+from google.genai import types
 
 from ..data_model.session import SessionParameter
 from ..event.agui_event import CustomMessagesSnapshotEvent
@@ -87,6 +87,31 @@ class HistoryHandler:
             )
         )
 
+    @staticmethod
+    def _check_raw_event_message_to_convert_agui(
+        adk_event: Event,
+    ) -> list[SystemMessage | UserMessage] | None:
+        if not (adk_event.content and adk_event.content.parts):
+            return None
+        message_mappings: dict[
+            str, Callable[[types.Part], UserMessage | SystemMessage]
+        ] = {
+            "user": lambda part: UserMessage(
+                role="user", id=adk_event.id, content=part.text
+            ),
+            "developer": lambda part: SystemMessage(
+                role="system", id=adk_event.id, content=part.text
+            ),
+        }
+        author_key = adk_event.author if adk_event.author in message_mappings else ""
+        role_key = (
+            adk_event.content.role if adk_event.content.role in message_mappings else ""
+        )
+        message_creator = message_mappings.get(author_key or role_key)
+        if not message_creator:
+            return None
+        return [message_creator(part) for part in adk_event.content.parts if part.text]
+
     async def get_message_snapshot(
         self, session_id: str
     ) -> CustomMessagesSnapshotEvent | None:
@@ -114,18 +139,10 @@ class HistoryHandler:
             for event in session.events:
                 yield event
 
-        agui_event_box: list[BaseEvent | UserMessage] = []
+        agui_event_box: list[BaseEvent | UserMessage | SystemMessage] = []
         async for adk_event in self.running_handler.run_async_with_history(running()):
-            if adk_event.author == "user":
-                agui_event_box.append(
-                    UserMessage(
-                        role="user",
-                        id=adk_event.id,
-                        content=adk_event.content.parts[0].text
-                        if adk_event.content and adk_event.content.parts
-                        else "",
-                    )
-                )
+            if agui_events := self._check_raw_event_message_to_convert_agui(adk_event):
+                agui_event_box.extend(agui_events)
                 continue
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 agui_event_box.append(agui_event)  # noqa: PERF401

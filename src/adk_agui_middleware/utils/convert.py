@@ -74,7 +74,9 @@ class ADKEventToAGUIMessageConverter:
         if key not in self.accumulator:
             self.accumulator[key] = {"type": "tool", "name": "", "arg": ""}
 
-    def _classify_and_merge(self, messages: list[BaseEvent | UserMessage]) -> None:
+    def _classify_and_merge(
+        self, messages: list[BaseEvent | UserMessage | SystemMessage]
+    ) -> None:
         """Classify events by type and accumulate their data.
 
         Processes each event in the input list and accumulates data based on
@@ -98,6 +100,8 @@ class ADKEventToAGUIMessageConverter:
                 self.accumulator[event.tool_call_id]["name"] = event.tool_call_name
             elif isinstance(event, UserMessage):
                 self.accumulator[event.id] = {"type": "user", "content": event}
+            elif isinstance(event, SystemMessage):
+                self.accumulator[event.id] = {"type": "system", "content": event}
             elif isinstance(event, ToolCallResultEvent):
                 self.accumulator[f"{event.tool_call_id}_result"] = {
                     "type": "tool_result",
@@ -107,7 +111,7 @@ class ADKEventToAGUIMessageConverter:
                 }
 
     @staticmethod
-    def _create_message(key: str, data: dict[str, Any]) -> Message | None:
+    def _create_message(key: str, data: dict[str, Any]) -> Message | None:  # noqa: PLR0911
         """Create a complete Message object from accumulated event data.
 
         Converts accumulated event data into the appropriate Message type
@@ -124,9 +128,11 @@ class ADKEventToAGUIMessageConverter:
         if msg_type == "thinking":
             return ThinkingMessage(role="thinking", id=key, content=data["content"])
         if msg_type == "message":
-            return SystemMessage(role="system", id=key, content=data["content"])
+            return AssistantMessage(role="assistant", id=key, content=data["content"])
         if msg_type == "user":
             return cast(UserMessage, data.get("content"))
+        if msg_type == "system":
+            return cast(SystemMessage, data.get("content"))
         if msg_type == "tool":
             return AssistantMessage(
                 role="assistant",
@@ -147,7 +153,9 @@ class ADKEventToAGUIMessageConverter:
             )
         return None
 
-    def convert(self, messages: list[BaseEvent | UserMessage]) -> list[Message]:
+    def convert(
+        self, messages: list[BaseEvent | UserMessage | SystemMessage]
+    ) -> list[Message]:
         """Convert a list of events into structured AGUI messages.
 
         Takes a sequence of BaseEvent and UserMessage objects and converts them
