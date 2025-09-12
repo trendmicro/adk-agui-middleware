@@ -139,6 +139,7 @@ class ADKEventToAGUIMessageConverter:
                 id=key,
                 tool_calls=[
                     ToolCall(
+                        type="function",
                         id=key,
                         function=FunctionCall(name=data["name"], arguments=data["arg"]),
                     )
