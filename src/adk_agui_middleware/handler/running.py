@@ -214,7 +214,7 @@ class RunningHandler:
             Translation function appropriate for the event type
         """
 
-        if adk_event.is_final_response() and  adk_event.long_running_tool_ids:
+        if adk_event.is_final_response() and adk_event.long_running_tool_ids:
             return self.event_translator.translate_long_running_function_calls
         return self.event_translator.translate
 
