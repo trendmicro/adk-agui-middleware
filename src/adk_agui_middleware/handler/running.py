@@ -213,12 +213,10 @@ class RunningHandler:
         Returns:
             Translation function appropriate for the event type
         """
-        has_content = adk_event.content and adk_event.content.parts
-        is_incomplete_response = not adk_event.is_final_response()
 
-        if is_incomplete_response or has_content:
-            return self.event_translator.translate
-        return self.event_translator.translate_long_running_function_calls
+        if adk_event.is_final_response() and  adk_event.long_running_tool_ids:
+            return self.event_translator.translate_long_running_function_calls
+        return self.event_translator.translate
 
     async def _translate_adk_to_agui_async(
         self, adk_event: Event
