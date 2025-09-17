@@ -8,7 +8,7 @@ from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
 
 from .base_abc.sse_service import BaseSSEService
-from .data_model.context import PathConfig
+from .data_model.config import PathConfig
 from .event.agui_event import CustomMessagesSnapshotEvent
 from .loggers.exception import http_exception_handler
 from .service.history_service import HistoryService

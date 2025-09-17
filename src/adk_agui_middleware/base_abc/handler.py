@@ -4,11 +4,29 @@ from abc import ABCMeta, abstractmethod
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from ag_ui.core import BaseEvent, RunAgentInput
-from fastapi import Request
+from ag_ui.core import BaseEvent, RunErrorEvent
 from google.adk.events import Event
 
+from ..data_model.common import InputInfo
 from ..data_model.event import TranslateEvent
+
+
+class SessionLockHandler(metaclass=ABCMeta):
+    @abstractmethod
+    async def lock(self, input_info: InputInfo) -> bool:
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
+    async def unlock(self, input_info: InputInfo) -> None:
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
+    async def check_locked(self, input_info: InputInfo) -> bool:
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
+    async def get_locked_message(self, input_info: InputInfo) -> RunErrorEvent:
+        raise NotImplementedError("This method should be implemented by subclasses.")
 
 
 class BaseTranslateHandler(metaclass=ABCMeta):
@@ -179,7 +197,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    async def input_record(self, agui_input: RunAgentInput, request: Request) -> None:
+    async def input_record(self, input_info: InputInfo) -> None:
         """Record incoming AGUI input for logging or audit purposes.
 
         Records incoming request data for audit trails, debugging, or analytics.
@@ -187,8 +205,6 @@ class BaseInOutHandler(metaclass=ABCMeta):
         context for correlation with response data.
 
         Args:
-            :param agui_input: The agent input data to record
-            :param request: HTTP request containing client context and headers
 
         Raises:
             NotImplementedError: Must be implemented by subclasses

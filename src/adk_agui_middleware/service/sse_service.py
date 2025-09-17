@@ -14,7 +14,9 @@ from google.adk.agents import BaseAgent
 
 from ..base_abc.handler import BaseInOutHandler
 from ..base_abc.sse_service import BaseSSEService
-from ..data_model.context import ConfigContext, HandlerContext, RunnerConfig
+from ..data_model.common import InputInfo
+from ..data_model.config import RunnerConfig
+from ..data_model.context import ConfigContext, HandlerContext
 from ..data_model.session import SessionParameter
 from ..event.error_event import AGUIEncoderError
 from ..handler.agui_user import AGUIUserHandler
@@ -58,6 +60,9 @@ class SSEService(BaseSSEService):
         self.config_context = config_context
         self.handler_context = handler_context or HandlerContext()
         self.shutdown_handler = ShutdownHandler()
+        self.session_lock_handler = self.handler_context.session_lock_handler(  # type: ignore[call-arg]
+            config_context.session_lock_config
+        )
 
     async def _get_config_value(
         self, config_attr: str, agui_content: RunAgentInput, request: Request
@@ -84,7 +89,7 @@ class SSEService(BaseSSEService):
         return value
 
     async def _create_and_record_message(
-        self, agui_content: RunAgentInput, request: Request
+        self, input_info: InputInfo
     ) -> BaseInOutHandler | None:
         """Create and record incoming message for audit and logging purposes.
 
@@ -92,15 +97,13 @@ class SSEService(BaseSSEService):
         incoming AGUI content and request for audit trails and logging.
 
         Args:
-            agui_content: Input containing agent execution parameters to record
-            request: HTTP request containing client context to record
 
         Returns:
             BaseInOutHandler instance if configured, None otherwise
         """
         if self.handler_context.in_out_record_handler:
             in_out_record = self.handler_context.in_out_record_handler()
-            await in_out_record.input_record(agui_content, request)
+            await in_out_record.input_record(input_info)
             return in_out_record
         return None
 
@@ -243,7 +246,11 @@ class SSEService(BaseSSEService):
 
     async def get_runner(
         self, agui_content: RunAgentInput, request: Request
-    ) -> tuple[Callable[[], AsyncGenerator[BaseEvent]], BaseInOutHandler | None]:
+    ) -> tuple[
+        Callable[[], AsyncGenerator[BaseEvent]],
+        InputInfo,
+        BaseInOutHandler | None,
+    ]:
         """Create a configured runner function for the given request.
 
         Extracts context from the request, creates necessary handlers and managers,
@@ -257,41 +264,53 @@ class SSEService(BaseSSEService):
             Callable that returns an async generator of BaseEvent objects
         """
 
+        input_info = InputInfo(
+            agui_content=agui_content,
+            request=request,
+            app_name=await self.extract_app_name(agui_content, request),
+            user_id=await self.extract_user_id(agui_content, request),
+            session_id=await self.extract_session_id(agui_content, request),
+            initial_state=await self.extract_initial_state(agui_content, request),
+        )
+
         async def runner() -> AsyncGenerator[BaseEvent]:
             """Internal runner function that executes the agent and yields events.
 
             Yields:
                 BaseEvent objects representing agent execution events
             """
-            app_name = await self.extract_app_name(agui_content, request)
-            user_id = await self.extract_user_id(agui_content, request)
-            session_id = await self.extract_session_id(agui_content, request)
-            initial_state = await self.extract_initial_state(agui_content, request)
+            if not await self.session_lock_handler.lock(input_info):
+                yield await self.session_lock_handler.get_locked_message(input_info)
+                return
+
             user_handler = AGUIUserHandler(
                 RunningHandler(
-                    runner=await self._create_runner(app_name),
+                    runner=await self._create_runner(input_info.app_name),
                     run_config=self.runner_config.run_config,
                     handler_context=self.handler_context,
                 ),
                 user_message_handler=UserMessageHandler(
-                    agui_content, request, initial_state
+                    agui_content, request, input_info.initial_state
                 ),
                 session_handler=SessionHandler(
                     session_manager=self.session_manager,
                     session_parameter=SessionParameter(
-                        app_name=app_name, user_id=user_id, session_id=session_id
+                        app_name=input_info.app_name,
+                        user_id=input_info.user_id,
+                        session_id=input_info.session_id,
                     ),
                 ),
             )
             async for event in user_handler.run():
                 yield event
 
-        in_out_record = await self._create_and_record_message(agui_content, request)
-        return runner, in_out_record
+        in_out_record = await self._create_and_record_message(input_info)
+        return runner, input_info, in_out_record
 
     async def event_generator(
         self,
         runner: Callable[[], AsyncGenerator[BaseEvent]],
+        input_info: InputInfo,
         inout_handler: BaseInOutHandler | None = None,
     ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.
@@ -322,6 +341,8 @@ class SSEService(BaseSSEService):
                 yield await self._record_output_message(
                     inout_handler, AGUIEncoderError.create_agent_error_event(e)
                 )
+            finally:
+                await self.session_lock_handler.unlock(input_info)
 
         return _generate()
 

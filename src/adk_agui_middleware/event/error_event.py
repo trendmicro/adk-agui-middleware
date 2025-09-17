@@ -126,3 +126,14 @@ class AGUIErrorEvent:
             message=f"Failed to process tool results: {repr(e)}",
             code="TOOL_RESULT_PROCESSING_ERROR",
         )
+
+    @staticmethod
+    def create_is_locked_error(thread_id: str) -> RunErrorEvent:
+        record_error_log(
+            f"Thread {thread_id} is currently locked and cannot be accessed"
+        )
+        return RunErrorEvent(
+            type=EventType.RUN_ERROR,
+            message="Thread is currently locked",
+            code="THREAD_IS_LOCKED",
+        )

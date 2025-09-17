@@ -7,6 +7,7 @@ from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
 
 from ..base_abc.handler import BaseInOutHandler
+from ..data_model.common import InputInfo
 
 
 class BaseSSEService(metaclass=ABCMeta):
@@ -21,7 +22,11 @@ class BaseSSEService(metaclass=ABCMeta):
     @abstractmethod
     async def get_runner(
         self, agui_content: RunAgentInput, request: Request
-    ) -> tuple[Callable[[], AsyncGenerator[BaseEvent]], BaseInOutHandler | None]:
+    ) -> tuple[
+        Callable[[], AsyncGenerator[BaseEvent]],
+        InputInfo,
+        BaseInOutHandler | None,
+    ]:
         """Create and configure an agent runner for the given request.
 
         Extracts context from the request, initializes handlers and managers,
@@ -44,6 +49,7 @@ class BaseSSEService(metaclass=ABCMeta):
     async def event_generator(
         self,
         runner: Callable[[], AsyncGenerator[BaseEvent]],
+        input_info: InputInfo,
         inout_handler: BaseInOutHandler | None = None,
     ) -> AsyncGenerator[dict[str, str]]:
         """Generate encoded event strings from the agent runner.

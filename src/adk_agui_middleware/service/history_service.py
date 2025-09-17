@@ -6,7 +6,8 @@ from typing import Any
 from ag_ui.core import StateSnapshotEvent
 from fastapi import Request
 
-from ..data_model.context import HandlerContext, HistoryConfig
+from ..data_model.config import HistoryConfig
+from ..data_model.context import HandlerContext
 from ..event.agui_event import CustomMessagesSnapshotEvent
 from ..handler.history import HistoryHandler
 from ..handler.running import RunningHandler
