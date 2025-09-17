@@ -5,7 +5,7 @@ from typing import Any
 
 from ag_ui.core import RunAgentInput
 from fastapi import Request
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from ..base_abc.handler import (
     BaseADKEventHandler,
@@ -18,6 +18,10 @@ from ..base_abc.handler import (
 )
 from ..handler.session_lock_handler import DefaultSessionLockHandler
 from .common import SessionLockConfig, default_session_id
+
+
+def _get_default_session_lock_handler() -> type[SessionLockHandler]:
+    return DefaultSessionLockHandler
 
 
 class HandlerContext(BaseModel):
@@ -38,7 +42,9 @@ class HandlerContext(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    session_lock_handler: type[SessionLockHandler] = DefaultSessionLockHandler
+    session_lock_handler: type[SessionLockHandler] = Field(
+        default_factory=_get_default_session_lock_handler
+    )
     adk_event_handler: type[BaseADKEventHandler] | None = None
     adk_event_timeout_handler: type[BaseADKEventTimeoutHandler] | None = None
     agui_event_handler: type[BaseAGUIEventHandler] | None = None

@@ -9,7 +9,8 @@ from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
 
-from adk_agui_middleware.data_model.context import ConfigContext, RunnerConfig
+from adk_agui_middleware.data_model.config import RunnerConfig
+from adk_agui_middleware.data_model.context import ConfigContext
 from adk_agui_middleware.data_model.session import SessionParameter
 from adk_agui_middleware.service.sse_service import SSEService
 

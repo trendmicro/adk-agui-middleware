@@ -8,7 +8,7 @@ from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
 
 from adk_agui_middleware.base_abc.sse_service import BaseSSEService
-from adk_agui_middleware.data_model.context import PathConfig
+from adk_agui_middleware.data_model.config import PathConfig
 from adk_agui_middleware.endpoint import register_agui_endpoint
 
 

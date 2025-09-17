@@ -2,7 +2,7 @@ from typing import Any
 
 from ag_ui.core import RunAgentInput
 from fastapi import Request
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class SessionLockConfig(BaseModel):
@@ -12,6 +12,8 @@ class SessionLockConfig(BaseModel):
 
 
 class InputInfo(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     agui_content: RunAgentInput
     request: Request
     app_name: str

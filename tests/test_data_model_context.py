@@ -8,11 +8,9 @@ from fastapi import Request
 from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
 
-from adk_agui_middleware.data_model.context import (
-    ConfigContext,
-    RunnerConfig,
-    default_session_id,
-)
+from adk_agui_middleware.data_model.common import default_session_id
+from adk_agui_middleware.data_model.config import RunnerConfig
+from adk_agui_middleware.data_model.context import ConfigContext
 
 
 class TestDefaultSessionId:

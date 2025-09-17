@@ -16,7 +16,8 @@ from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
 from google.adk.sessions import Session
 
-from adk_agui_middleware.data_model.context import ConfigContext, RunnerConfig
+from adk_agui_middleware.data_model.config import RunnerConfig
+from adk_agui_middleware.data_model.context import ConfigContext
 from adk_agui_middleware.data_model.session import SessionParameter
 
 
