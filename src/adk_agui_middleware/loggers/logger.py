@@ -25,10 +25,10 @@ class JsonFormatter(log.Formatter):
         """Initialize the JSON formatter.
 
         Args:
-            fmt_dict: Mapping of JSON field names to LogRecord attributes
-            time_format: Format string for timestamp formatting
-            msec_format: Format string for millisecond precision
-            cls: JSON encoder class for custom serialization
+            :param fmt_dict: Mapping of JSON field names to LogRecord attributes
+            :param time_format: Format string for timestamp formatting
+            :param msec_format: Format string for millisecond precision
+            :param cls: JSON encoder class for custom serialization
         """
         super().__init__()
         self.cls = cls
@@ -49,7 +49,7 @@ class JsonFormatter(log.Formatter):
         """Format log record into a dictionary based on format configuration.
 
         Args:
-            record: Log record to format
+            :param record: Log record to format
 
         Returns:
             Dictionary containing formatted log fields
@@ -67,7 +67,7 @@ class JsonFormatter(log.Formatter):
         stack traces, and formats everything as a JSON object.
 
         Args:
-            record: Log record to format
+            :param record: Log record to format
 
         Returns:
             JSON string representation of the log record
@@ -104,8 +104,8 @@ def create_logger(name: str, fmt_dict: dict[str, str] | None = None) -> log.Logg
     log messages. The log level is determined from configuration.
 
     Args:
-        name: Name for the logger instance
-        fmt_dict: Optional format dictionary for JSON field mapping
+        :param name: Name for the logger instance
+        :param fmt_dict: Optional format dictionary for JSON field mapping
 
     Returns:
         Configured logger instance with JSON formatter

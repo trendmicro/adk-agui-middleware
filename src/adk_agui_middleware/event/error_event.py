@@ -129,6 +129,18 @@ class AGUIErrorEvent:
 
     @staticmethod
     def create_is_locked_error(thread_id: str) -> RunErrorEvent:
+        """Create an error event when a thread/session is locked.
+
+        Handles scenarios where a session is currently locked by another request
+        and cannot be accessed. This occurs in concurrent access scenarios where
+        session locking is used to prevent data race conditions.
+
+        Args:
+            :param thread_id: ID of the thread/session that is locked
+
+        Returns:
+            RunErrorEvent indicating the thread is locked
+        """
         record_error_log(
             f"Thread {thread_id} is currently locked and cannot be accessed"
         )

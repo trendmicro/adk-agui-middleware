@@ -27,10 +27,10 @@ def register_agui_endpoint(  # noqa: C901
     lifecycle from request processing to stream generation with proper error handling.
 
     Args:
-        app: FastAPI application instance to register the endpoint on
-        sse_service: Service implementing BaseSSEService for handling SSE streams
-        path_config: Configuration for endpoint paths (main, chat list, history)
-        history_service: Optional service for handling conversation history endpoints
+        :param app: FastAPI application instance to register the endpoint on
+        :param sse_service: Service implementing BaseSSEService for handling SSE streams
+        :param path_config: Configuration for endpoint paths (main, chat list, history)
+        :param history_service: Optional service for handling conversation history endpoints
 
     Raises:
         Exception: Various exceptions are handled by exception_http_handler
@@ -47,8 +47,8 @@ def register_agui_endpoint(  # noqa: C901
         Uses the SSE service to create an agent runner and generate events.
 
         Args:
-            agui_content: Input containing agent execution parameters and configuration
-            request: FastAPI request object containing headers and client information
+            :param agui_content: Input containing agent execution parameters and configuration
+            :param request: FastAPI request object containing headers and client information
 
         Returns:
             EventSourceResponse containing encoded agent events with appropriate media type
@@ -73,7 +73,7 @@ def register_agui_endpoint(  # noqa: C901
         user based on context extracted from the request.
 
         Args:
-            request: FastAPI request object containing user context
+            :param request: FastAPI request object containing user context
 
         Returns:
             List of dictionaries containing thread information
@@ -97,7 +97,7 @@ def register_agui_endpoint(  # noqa: C901
         and session data for the specified conversation.
 
         Args:
-            request: FastAPI request object containing thread_id in path and user context
+            :param request: FastAPI request object containing thread_id in path and user context
 
         Returns:
             Dictionary containing deletion status confirmation
@@ -124,8 +124,8 @@ def register_agui_endpoint(  # noqa: C901
         session context across multiple interactions.
 
         Args:
-            request: FastAPI request object containing session context in path
-            state_patch: List of JSON patch operations to apply to session state
+            :param request: FastAPI request object containing session context in path
+            :param state_patch: List of JSON patch operations to apply to session state
 
         Returns:
             Dictionary containing operation status confirmation
@@ -148,7 +148,7 @@ def register_agui_endpoint(  # noqa: C901
         in the request path, returning it as an AGUI messages snapshot.
 
         Args:
-            request: FastAPI request object containing session context in path
+            :param request: FastAPI request object containing session context in path
 
         Returns:
             MessagesSnapshotEvent containing the conversation history
@@ -166,13 +166,13 @@ def register_agui_endpoint(  # noqa: C901
         """Get current state snapshot for a specific session.
 
         Retrieves the current state snapshot for a session specified
-        in the request path, returning it as a dictionary.
+        in the request path, returning it as a StateSnapshotEvent.
 
         Args:
-            request: FastAPI request object containing session context in path
+            :param request: FastAPI request object containing session context in path
 
         Returns:
-            Dictionary containing the current state snapshot
+            StateSnapshotEvent containing the current state snapshot
 
         Raises:
             HTTPException: If history service is not configured or session not found

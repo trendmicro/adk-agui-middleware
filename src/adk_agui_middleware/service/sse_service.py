@@ -45,10 +45,10 @@ class SSEService(BaseSSEService):
         """Initialize SSE service with agent and configuration.
 
         Args:
-            agent: Base agent implementation for processing requests
-            runner_config: Configuration for agent runners and services
-            config_context: Configuration for extracting context from requests
-            handler_context: Optional context containing event handlers for processing
+            :param agent: Base agent implementation for processing requests
+            :param runner_config: Configuration for agent runners and services
+            :param config_context: Configuration for extracting context from requests
+            :param handler_context: Optional context containing event handlers for processing
         """
         self.agent = agent
         self.runner_config = runner_config
@@ -60,7 +60,7 @@ class SSEService(BaseSSEService):
         self.config_context = config_context
         self.handler_context = handler_context or HandlerContext()
         self.shutdown_handler = ShutdownHandler()
-        self.session_lock_handler = self.handler_context.session_lock_handler(  # type: ignore[call-arg]
+        self.session_lock_handler = self.handler_context.session_lock_handler(
             config_context.session_lock_config
         )
 
@@ -137,8 +137,8 @@ class SSEService(BaseSSEService):
         name for the current request, enabling multi-tenant deployments.
 
         Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+            :param agui_content: Input containing agent execution parameters
+            :param request: HTTP request for context extraction
 
         Returns:
             Application name string
@@ -154,8 +154,8 @@ class SSEService(BaseSSEService):
         identity for the current request, essential for session isolation.
 
         Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+            :param agui_content: Input containing agent execution parameters
+            :param request: HTTP request for context extraction
 
         Returns:
             User identifier string
@@ -171,8 +171,8 @@ class SSEService(BaseSSEService):
         identity for the current request, enabling conversation persistence.
 
         Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+            :param agui_content: Input containing agent execution parameters
+            :param request: HTTP request for context extraction
 
         Returns:
             Session identifier string
@@ -188,8 +188,8 @@ class SSEService(BaseSSEService):
         initial session state for new sessions, enabling context-aware initialization.
 
         Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+            :param agui_content: Input containing agent execution parameters
+            :param request: HTTP request for context extraction
 
         Returns:
             Dictionary containing initial state key-value pairs, or None
@@ -257,8 +257,8 @@ class SSEService(BaseSSEService):
         and returns a runner function that generates agent events.
 
         Args:
-            agui_content: Input containing agent execution parameters
-            request: HTTP request containing client context
+            :param agui_content: Input containing agent execution parameters
+            :param request: HTTP request containing client context
 
         Returns:
             Callable that returns an async generator of BaseEvent objects
@@ -319,8 +319,9 @@ class SSEService(BaseSSEService):
         handling any errors that occur during execution or encoding.
 
         Args:
-            runner: Callable that returns an async generator of events
-            inout_handler: Optional handler for input/output recording and transformation
+            :param runner: Callable that returns an async generator of events
+            :param input_info: Input information containing session and context details
+            :param inout_handler: Optional handler for input/output recording and transformation
 
         Yields:
             Encoded event dictionaries ready for SSE transmission

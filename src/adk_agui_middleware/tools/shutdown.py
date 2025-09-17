@@ -34,7 +34,7 @@ class ShutdownHandler(metaclass=Singleton):
         operations like closing database connections, stopping runners, etc.
 
         Args:
-            shutdown_function: Async function to call during shutdown process
+            :param shutdown_function: Async function to call during shutdown process
         """
         self._shutdown_list.append(shutdown_function)
 
@@ -55,8 +55,8 @@ class ShutdownHandler(metaclass=Singleton):
         cleaned up before the application exits.
 
         Args:
-            signum: Signal number that was received
-            frame: Current stack frame (unused)
+            :param signum: Signal number that was received
+            :param frame: Current stack frame (unused)
         """
         if self._shutdown_in_progress:
             return

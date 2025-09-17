@@ -7,25 +7,71 @@ from typing import Any
 from ag_ui.core import BaseEvent, RunErrorEvent
 from google.adk.events import Event
 
-from ..data_model.common import InputInfo
+from ..data_model.common import InputInfo, SessionLockConfig
 from ..data_model.event import TranslateEvent
 
 
 class SessionLockHandler(metaclass=ABCMeta):
+    """Abstract base class for session locking mechanism handlers.
+
+    Defines the interface for handlers that manage session locking to prevent
+    concurrent modifications and ensure data consistency in multi-request scenarios.
+    Implementations should provide thread-safe locking mechanisms for session access.
+    """
+
+    @abstractmethod
+    def __init__(self, lock_config: SessionLockConfig):
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
     @abstractmethod
     async def lock(self, input_info: InputInfo) -> bool:
+        """Acquire a lock for the session identified in the input info.
+
+        Attempts to acquire an exclusive lock for the session to prevent
+        concurrent access and ensure data consistency during processing.
+
+        Args:
+            :param input_info: Input information containing session identifiers
+
+        Returns:
+            True if lock was successfully acquired, False otherwise
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
     async def unlock(self, input_info: InputInfo) -> None:
-        raise NotImplementedError("This method should be implemented by subclasses.")
+        """Release the lock for the session identified in the input info.
 
-    @abstractmethod
-    async def check_locked(self, input_info: InputInfo) -> bool:
+        Releases the exclusive lock previously acquired for the session,
+        allowing other requests to access the session.
+
+        Args:
+            :param input_info: Input information containing session identifiers
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
     async def get_locked_message(self, input_info: InputInfo) -> RunErrorEvent:
+        """Generate an error event indicating that the session is locked.
+
+        Creates an appropriate error event to return to clients when a session
+        is locked and cannot be accessed at the moment.
+
+        Args:
+            :param input_info: Input information containing session identifiers
+
+        Returns:
+            RunErrorEvent indicating the session is locked
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
 
@@ -205,6 +251,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
         context for correlation with response data.
 
         Args:
+            :param input_info: InputInfo object containing request data and context
 
         Raises:
             NotImplementedError: Must be implemented by subclasses

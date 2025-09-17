@@ -21,7 +21,7 @@ def convert_agui_event_to_sse(event: BaseEvent) -> dict[str, str]:
     - Generating unique IDs for event correlation
 
     Args:
-        event: AGUI BaseEvent to convert to SSE format
+        :param event: AGUI BaseEvent to convert to SSE format
 
     Returns:
         Dictionary containing SSE-formatted event with 'data', 'event', and 'id' fields

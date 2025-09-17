@@ -22,7 +22,7 @@ class SessionManager:
         """Initialize the session manager with an ADK session service.
 
         Args:
-            session_service: ADK session service implementation for session operations
+            :param session_service: ADK session service implementation for session operations
         """
         self.session_service = session_service
 
@@ -33,8 +33,8 @@ class SessionManager:
         and user, useful for conversation history and session management.
 
         Args:
-            app_name: Name of the application
-            user_id: Identifier for the user
+            :param app_name: Name of the application
+            :param user_id: Identifier for the user
 
         Returns:
             List of Session objects
@@ -50,7 +50,7 @@ class SessionManager:
         returning None if the session doesn't exist.
 
         Args:
-            session_parameter: Parameters identifying the session (app, user, session ID)
+            :param session_parameter: Parameters identifying the session (app, user, session ID)
 
         Returns:
             Session object if found, None otherwise
@@ -72,8 +72,8 @@ class SessionManager:
         always exists after this call.
 
         Args:
-            session_parameter: Parameters identifying the session
-            initial_state: Optional initial state for new sessions
+            :param session_parameter: Parameters identifying the session
+            :param initial_state: Optional initial state for new sessions
 
         Returns:
             Session object (either existing or newly created)
@@ -98,7 +98,7 @@ class SessionManager:
         and state data for the specified session.
 
         Args:
-            session_parameter: Parameters identifying the session to delete (app, user, session ID)
+            :param session_parameter: Parameters identifying the session to delete (app, user, session ID)
         """
         await self.session_service.delete_session(
             session_id=session_parameter.session_id,
@@ -118,8 +118,8 @@ class SessionManager:
         mechanism for persisting state changes including HITL workflow data.
 
         Args:
-            session_parameter: Parameters identifying the session to update
-            state_updates: Dictionary of state changes to apply
+            :param session_parameter: Parameters identifying the session to update
+            :param state_updates: Dictionary of state changes to apply
 
         Returns:
             True if update was successful, False if session not found or no updates
@@ -152,7 +152,7 @@ class SessionManager:
         provides access to all persistent session data including HITL state.
 
         Args:
-            session_parameter: Parameters identifying the session
+            :param session_parameter: Parameters identifying the session
 
         Returns:
             Dictionary containing session state, empty dict if session not found or error
@@ -181,9 +181,9 @@ class SessionManager:
         state flags or values like pending tool calls.
 
         Args:
-            session_parameter: Parameters identifying the session
-            key: State key to retrieve
-            default: Default value to return if key not found or session missing
+            :param session_parameter: Parameters identifying the session
+            :param key: State key to retrieve
+            :param default: Default value to return if key not found or session missing
 
         Returns:
             Value for the specified key, or default if not found

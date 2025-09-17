@@ -12,7 +12,7 @@ def _should_skip_function(function_name: str) -> bool:
     focus on business logic functions rather than infrastructure code.
 
     Args:
-        function_name: Name of the function to evaluate
+        :param function_name: Name of the function to evaluate
 
     Returns:
         True if the function should be skipped, False otherwise
@@ -61,8 +61,8 @@ def _format_function_name(function_name: str, frame_locals: dict[str, Any]) -> s
     This provides better context for debugging and logging.
 
     Args:
-        function_name: Base function name
-        frame_locals: Local variables from the function's frame
+        :param function_name: Base function name
+        :param frame_locals: Local variables from the function's frame
 
     Returns:
         Formatted function name with class context (e.g., "ClassName.method_name")
@@ -89,7 +89,7 @@ def _collect_valid_functions(stack_frames: list[Any]) -> list[str]:
     This creates a clean representation of the execution path.
 
     Args:
-        stack_frames: List of frame info objects from inspect.stack()
+        :param stack_frames: List of frame info objects from inspect.stack()
 
     Returns:
         List of formatted function names in call order
@@ -121,9 +121,9 @@ def extract_caller_name(
     This is particularly useful for structured logging and error reporting.
 
     Args:
-        full_chain: If True, return full call chain; if False, return just caller
-        separator: String used to separate function names in full chain
-        max_depth: Maximum number of functions to include (None for unlimited)
+        :param full_chain: If True, return full call chain; if False, return just caller
+        :param separator: String used to separate function names in full chain
+        :param max_depth: Maximum number of functions to include (None for unlimited)
 
     Returns:
         Function name or call chain string, "unknown_function" if none found

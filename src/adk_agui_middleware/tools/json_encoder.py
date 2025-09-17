@@ -20,7 +20,7 @@ class PydanticJsonEncoder(json.JSONEncoder):
         cannot process, including Pydantic models and bytes.
 
         Args:
-            o: Object to serialize
+            :param o: Object to serialize
 
         Returns:
             JSON-serializable representation of the object
