@@ -1,4 +1,4 @@
-# ADK AGUI Python Middleware
+# ADK AGUI Middleware
 
 [![CI](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/ci.yml/badge.svg)](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/codeql.yml/badge.svg)](https://github.com/DennySORA/adk-agui-middleware/actions/workflows/codeql.yml)
@@ -9,17 +9,21 @@
 [![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 [![Type Checker: mypy](https://img.shields.io/badge/type_checker-mypy-blue.svg)](https://github.com/python/mypy)
 
-A production-ready Python 3.13 middleware that bridges Google's Agent Development Kit (ADK) with the AGUI protocol, providing enterprise-grade Server-Sent Events streaming and Human-in-the-Loop capabilities.
+**Enterprise-grade Python 3.13+ middleware that seamlessly bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing high-performance Server-Sent Events streaming and Human-in-the-Loop (HITL) workflow orchestration.**
 
-## Features
+## Overview
 
-- **🚀 Real-time Streaming**: High-performance SSE with async/await patterns
-- **🤝 HITL Workflows**: Complete Human-in-the-Loop tool call management  
-- **🏗️ Enterprise Architecture**: Modular design with dependency injection
-- **🔐 Session Management**: Persistent conversation state with multi-tenant support
-- **🔄 Event Translation**: Bidirectional ADK ↔ AGUI event conversion
-- **⚡ Type Safety**: Full Python 3.13 type annotations with Pydantic v2
-- **🛡️ Error Handling**: Comprehensive exception management and recovery
+ADK AGUI Middleware is a production-ready Python 3.13+ library engineered for enterprise-scale integration between Google's Agent Development Kit and AGUI (Agent User Interface) protocol. The middleware provides a robust foundation for building AI agent applications with real-time streaming capabilities, concurrent session management, and sophisticated Human-in-the-Loop (HITL) workflows.
+
+### Architecture Highlights
+
+- **🏗️ Enterprise Architecture**: Modular design with dependency injection, abstract base classes, and clean separation of concerns
+- **⚡ High-Performance SSE**: Asynchronous Server-Sent Events streaming with event translation pipeline
+- **🔒 Concurrent Session Management**: Thread-safe session locking with configurable timeout and retry mechanisms
+- **🤝 HITL Workflows**: Complete orchestration of Human-in-the-Loop tool call workflows with state persistence
+- **🔄 Event Translation Engine**: Bidirectional ADK ↔ AGUI event conversion with streaming message management
+- **🛡️ Production-Ready**: Comprehensive error handling, structured logging, and graceful shutdown mechanisms
+- **🎯 Type Safety**: Full Python 3.13 type annotations with strict mypy validation and Pydantic data models
 
 ## Installation
 
@@ -27,575 +31,241 @@ A production-ready Python 3.13 middleware that bridges Google's Agent Developmen
 pip install adk-agui-middleware
 ```
 
-**Requirements:**
-- Python 3.10+ (optimized for Python 3.13)
-- Google ADK ≥1.9.0
-- AGUI Protocol ≥0.1.7
-- FastAPI ≥0.104.0
+### Requirements
 
-## Quick Start
+- Python 3.13+ (recommended 3.13.3+)
+- Google ADK >= 1.9.0
+- AGUI Protocol >= 0.1.7
+- FastAPI >= 0.104.0
 
-```python
-from fastapi import FastAPI, Request
-from google.adk.agents import BaseAgent
-from adk_agui_middleware import register_agui_endpoint, SSEService
-from adk_agui_middleware.data_model.context import (
-    RunnerConfig, ConfigContext, HandlerContext
-)
-
-app = FastAPI()
-
-# Define your agent
-class MyAgent(BaseAgent):
-    def __init__(self):
-        super().__init__()
-        self.instructions = "You are a helpful assistant."
-
-# Extract context from requests
-async def extract_user_id(agui_content, request: Request) -> str:
-    return request.headers.get("X-User-ID", "default-user")
-
-# Configure middleware
-context_config = ConfigContext(
-    user_id=extract_user_id,
-    session_id=lambda content, req: content.thread_id,
-)
-
-runner_config = RunnerConfig()
-sse_service = SSEService(MyAgent(), runner_config, context_config)
-
-# Register endpoints
-register_agui_endpoint(app, sse_service)
-```
-
-## Architecture
-
-The middleware implements a layered architecture optimized for enterprise AI agent deployments:
+## Core Architecture
 
 ### System Architecture
 
 ```mermaid
 graph TB
     subgraph "Client Layer"
-        Client[Web/Mobile Clients]
+        WEB[Web Clients<br/>React/Vue/Angular]
+        MOB[Mobile Apps<br/>iOS/Android]
+        API[API Clients<br/>REST/WebSocket]
     end
 
-    subgraph "API Gateway"
-        FastAPI[FastAPI Application]
-        Endpoints[AGUI Endpoints]
+    subgraph "Gateway Layer"
+        ENDPOINT[FastAPI Endpoint<br/>register_agui_endpoint]
+        SSE_SVC[SSE Service<br/>Event Orchestration]
     end
 
-    subgraph "Service Layer"
-        SSEService[SSE Service<br/>Session Lock Integration]
-        HistoryService[History Service]
+    subgraph "Session Management"
+        LOCK[Session Lock Handler<br/>DefaultSessionLockHandler]
+        SESS_MGR[Session Manager<br/>Lifecycle & State]
+        HIST_SVC[History Service<br/>Message Persistence]
     end
 
-    subgraph "Handler Layer"
-        AGUIHandler[AGUI User Handler<br/>HITL Orchestration]
-        RunningHandler[Running Handler<br/>Event Processing]
-        SessionHandler[Session Handler<br/>State Management]
-        UserMsgHandler[User Message Handler<br/>Tool Result Processing]
-        SessionLockHandler[Session Lock Handler<br/>Concurrency Control]
+    subgraph "HITL Workflow Engine"
+        AGUI_USER[AGUI User Handler<br/>Workflow Orchestration]
+        USER_MSG[User Message Handler<br/>Tool Result Processing]
+        SESS_HANDLER[Session Handler<br/>State Persistence]
     end
 
-    subgraph "Translation Engine"
-        EventTranslator[Event Translator<br/>ADK ↔ AGUI]
-        FunctionUtil[Function Call Util]
-        MessageUtil[Message Util]
-        StateUtil[State Util]
-        ThinkingUtil[Thinking Util]
+    subgraph "Agent Execution"
+        RUN_HANDLER[Running Handler<br/>ADK Agent Execution]
+        RUNNER[ADK Runner<br/>Agent Instance]
+        AGENT[BaseAgent<br/>Custom Implementation]
+    end
+
+    subgraph "Event Translation Pipeline"
+        TRANSLATOR[Event Translator<br/>ADK ↔ AGUI]
+        FUNC_UTIL[Function Call Utils<br/>Tool Event Translation]
+        MSG_UTIL[Message Utils<br/>Streaming Text Events]
+        STATE_UTIL[State Utils<br/>Delta & Snapshot Events]
     end
 
     subgraph "Infrastructure"
-        SessionManager[Session Manager]
-        LogSystem[Logging System]
-        ShutdownHandler[Shutdown Handler]
-        LockStore[In-Memory Lock Store<br/>Timeout Management]
+        SHUTDOWN[Shutdown Handler<br/>Graceful Cleanup]
+        LOGGER[Structured Logging<br/>Request/Response Tracking]
+        CONVERT[Event Converter<br/>SSE Format]
     end
 
-    subgraph "External Systems"
-        ADK[Google ADK]
-        SessionService[Session Service]
-        MemoryService[Memory Service]
-        ArtifactService[Artifact Service]
+    subgraph "External Services"
+        ADK_SESS[ADK Session Service<br/>Conversation Persistence]
+        ARTIFACTS[Artifact Service<br/>File Management]
+        MEMORY[Memory Service<br/>RAG Context]
+        CREDS[Credential Service<br/>API Key Management]
     end
 
-    Client --> FastAPI
-    FastAPI --> Endpoints
-    Endpoints --> SSEService
-    Endpoints --> HistoryService
+    %% Client connections
+    WEB --> ENDPOINT
+    MOB --> ENDPOINT
+    API --> ENDPOINT
 
-    SSEService --> SessionLockHandler
-    SSEService --> AGUIHandler
-    SessionLockHandler --> LockStore
+    %% Core flow
+    ENDPOINT --> SSE_SVC
+    SSE_SVC --> LOCK
+    LOCK --> AGUI_USER
 
-    AGUIHandler --> RunningHandler
-    AGUIHandler --> SessionHandler
-    AGUIHandler --> UserMsgHandler
+    %% HITL workflow
+    AGUI_USER --> USER_MSG
+    AGUI_USER --> SESS_HANDLER
+    AGUI_USER --> RUN_HANDLER
 
-    RunningHandler --> EventTranslator
-    EventTranslator --> FunctionUtil
-    EventTranslator --> MessageUtil
-    EventTranslator --> StateUtil
-    EventTranslator --> ThinkingUtil
+    %% Agent execution
+    RUN_HANDLER --> RUNNER
+    RUNNER --> AGENT
+    RUN_HANDLER --> TRANSLATOR
 
-    SessionHandler --> SessionManager
-    SessionManager --> SessionService
-    RunningHandler --> ADK
+    %% Event translation
+    TRANSLATOR --> FUNC_UTIL
+    TRANSLATOR --> MSG_UTIL
+    TRANSLATOR --> STATE_UTIL
 
-    classDef client fill:#e3f2fd
-    classDef service fill:#e8f5e8
-    classDef handler fill:#fff3e0
-    classDef translation fill:#fce4ec
-    classDef infra fill:#f1f8e9
-    classDef external fill:#fafafa
-    classDef security fill:#ffebee
+    %% Session management
+    SESS_HANDLER --> SESS_MGR
+    SESS_MGR --> ADK_SESS
+    SSE_SVC --> HIST_SVC
 
-    class Client client
-    class SSEService,HistoryService service
-    class AGUIHandler,RunningHandler,SessionHandler,UserMsgHandler,SessionLockHandler handler
-    class EventTranslator,FunctionUtil,MessageUtil,StateUtil,ThinkingUtil translation
-    class SessionManager,LogSystem,ShutdownHandler,LockStore infra
-    class ADK,SessionService,MemoryService,ArtifactService external
-    class SessionLockHandler security
+    %% Infrastructure
+    SSE_SVC --> SHUTDOWN
+    RUN_HANDLER --> LOGGER
+    TRANSLATOR --> CONVERT
+
+    %% External services
+    RUNNER --> ARTIFACTS
+    RUNNER --> MEMORY
+    RUNNER --> CREDS
+
+    classDef client fill:#e3f2fd,color:#000,stroke:#1976d2
+    classDef gateway fill:#e8f5e8,color:#000,stroke:#388e3c
+    classDef session fill:#fff3e0,color:#000,stroke:#f57c00
+    classDef workflow fill:#fce4ec,color:#000,stroke:#c2185b
+    classDef execution fill:#f3e5f5,color:#000,stroke:#7b1fa2
+    classDef translation fill:#e1f5fe,color:#000,stroke:#0288d1
+    classDef infra fill:#f1f8e9,color:#000,stroke:#689f38
+    classDef external fill:#fafafa,color:#000,stroke:#616161
+
+    class WEB,MOB,API client
+    class ENDPOINT,SSE_SVC gateway
+    class LOCK,SESS_MGR,HIST_SVC session
+    class AGUI_USER,USER_MSG,SESS_HANDLER workflow
+    class RUN_HANDLER,RUNNER,AGENT execution
+    class TRANSLATOR,FUNC_UTIL,MSG_UTIL,STATE_UTIL translation
+    class SHUTDOWN,LOGGER,CONVERT infra
+    class ADK_SESS,ARTIFACTS,MEMORY,CREDS external
 ```
 
-### HITL Workflow
+## Quick Start
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant API as FastAPI
-    participant AGUI as AGUI Handler
-    participant Session as Session Handler
-    participant Running as Running Handler
-    participant ADK as Google ADK
-    
-    Note over C,ADK: Human-in-the-Loop Tool Execution
-    
-    C->>+API: POST / (User Message)
-    API->>+AGUI: Process Request
-    
-    AGUI->>+Session: Check Pending Tools
-    Session-->>-AGUI: No Pending Tools
-    
-    AGUI->>+Running: Execute Agent
-    Running->>+ADK: Run with Message
-    
-    loop Agent Processing
-        ADK-->>Running: Events (text/function calls)
-        Running-->>AGUI: Translated Events
-        AGUI-->>API: Stream Events
-        API-->>C: SSE Response
-    end
-    
-    alt Tool Calls Generated
-        ADK-->>Running: Function Call Events
-        Running-->>AGUI: Tool Call Events
-        AGUI->>Session: Add Pending Tools
-        Session-->>AGUI: Tools Marked Pending
-        Note right of Session: Agent execution paused
-        AGUI-->>API: Tool Call Events
-        API-->>C: Requires Human Input
-    else Normal Completion
-        ADK-->>Running: Final Response
-        Running-->>AGUI: Completion Events
-        AGUI-->>API: Run Finished
-        API-->>-C: Stream Complete
-    end
-    
-    Note over C,ADK: Human provides tool results
-    
-    C->>+API: POST / (Tool Results)
-    API->>+AGUI: Process Tool Results
-    
-    AGUI->>+Session: Remove Pending Tools
-    Session-->>-AGUI: Tools Cleared
-    
-    AGUI->>+Running: Resume with Results
-    Running->>+ADK: Continue Execution
-    
-    ADK-->>Running: Final Response
-    Running-->>AGUI: Completion Events
-    AGUI-->>API: Run Finished
-    API-->>-C: Stream Complete
-```
-
-## Core Components
-
-### Event Processing Pipeline
-
-The middleware processes events through a sophisticated translation engine:
-
-- **`EventTranslator`**: Converts ADK events to AGUI format with streaming support
-- **`RunningHandler`**: Manages agent execution and event processing pipelines
-- **`AGUIUserHandler`**: Orchestrates HITL workflows and session management
-
-### Session Management
-
-Sessions provide persistent conversation state and HITL coordination:
-
-- **`SessionManager`**: Low-level session operations and state persistence
-- **`SessionHandler`**: High-level session interface with HITL support
-- **Pending Tool Calls**: Tracks tools awaiting human intervention
-
-### Session Locking Mechanism
-
-The middleware implements a robust session locking system to prevent concurrent access and ensure data consistency:
-
-#### `DefaultSessionLockHandler`
+### Basic Implementation
 
 ```python
-class DefaultSessionLockHandler(SessionLockHandler):
-    """Thread-safe session locking with automatic timeout and cleanup."""
-
-    def __init__(self, lock_config: SessionLockConfig):
-        self.lock_config = lock_config
-        self.locks: dict[str, dict[str, Any]] = {}
-        self.internal_lock = asyncio.Lock()
-```
-
-**Key Features:**
-- **Automatic Timeout**: Locks expire after configured duration (default: 300 seconds)
-- **Retry Logic**: Configurable retry attempts with intervals (default: 3 retries, 10s intervals)
-- **Thread Safety**: Uses asyncio.Lock for concurrent access protection
-- **Cleanup**: Automatic expired lock removal during operations
-- **Error Handling**: Graceful lock failure with standardized error events
-
-#### Lock Configuration
-
-```python
-@dataclass
-class SessionLockConfig:
-    lock_timeout: int | None = 300      # Lock expiration in seconds
-    lock_retry_times: int = 3           # Maximum retry attempts
-    lock_retry_interval: float = 10.0   # Delay between retries in seconds
-```
-
-#### Lock Workflow
-
-```mermaid
-sequenceDiagram
-    participant Client as Client Request
-    participant SSE as SSE Service
-    participant Lock as Session Lock Handler
-    participant Agent as Agent Handler
-    participant Session as Session State
-
-    Note over Client,Session: Session Lock Workflow
-
-    Client->>+SSE: Request Agent Execution
-    SSE->>+Lock: lock(input_info)
-
-    Lock->>Lock: _cleanup_expired_lock()
-    Lock->>Lock: Check if session locked
-
-    alt Session Available
-        Lock->>Lock: Acquire lock with timestamp
-        Lock-->>SSE: Lock acquired (True)
-
-        SSE->>+Agent: Create and execute agent
-        Agent->>Session: Read/Write session state
-        Agent-->>SSE: Stream events to client
-        SSE-->>Client: SSE stream with events
-
-        Note over Agent,Session: Agent execution protected by lock
-
-        Agent-->>-SSE: Execution complete
-        SSE->>Lock: unlock(input_info)
-        Lock->>Lock: Remove session lock
-        Lock-->>SSE: Lock released
-        SSE-->>-Client: Stream complete
-
-    else Session Locked
-        Lock-->>SSE: Lock failed (False)
-        SSE->>Lock: get_locked_message(input_info)
-        Lock-->>SSE: RunErrorEvent (THREAD_IS_LOCKED)
-        SSE-->>-Client: Error: Thread is locked
-    end
-
-    alt Lock Retry Logic
-        Note over Lock: If initial lock fails
-        Loop: retry_times (3)
-            Lock->>Lock: sleep(retry_interval)
-            Lock->>Lock: _try_acquire_lock()
-            alt Lock Available
-                Lock-->>SSE: Lock acquired
-            else Still Locked
-                Lock->>Lock: Continue retry loop
-            end
-        end
-
-        Note over Lock: After all retries failed
-        Lock-->>SSE: Lock failed (False)
-    end
-```
-
-#### Lock Usage Pattern
-
-The locking mechanism is automatically applied in the SSE service:
-
-```python
-# In SSEService.get_runner()
-async def runner() -> AsyncGenerator[BaseEvent]:
-    # 1. Attempt to acquire session lock
-    if not await self.session_lock_handler.lock(input_info):
-        # 2. If lock fails, return error event immediately
-        yield await self.session_lock_handler.get_locked_message(input_info)
-        return
-
-    try:
-        # 3. Execute agent with exclusive session access
-        user_handler = AGUIUserHandler(...)
-        async for event in user_handler.start():
-            yield event
-
-    except Exception as e:
-        # 4. Handle execution errors
-        yield AGUIEncoderError.create_agent_error_event(e)
-    finally:
-        # 5. Always release lock in finally block
-        await self.session_lock_handler.unlock(input_info)
-```
-
-**Lock Lifecycle:**
-1. **Acquisition**: `lock(input_info)` attempts to acquire exclusive access
-2. **Validation**: Automatic cleanup of expired locks before acquisition
-3. **Protection**: Critical section executes with guaranteed exclusive access
-4. **Error Handling**: Lock failures return `THREAD_IS_LOCKED` error events
-5. **Release**: `unlock(input_info)` in finally block ensures cleanup
-
-**Concurrency Benefits:**
-- **Data Consistency**: Prevents race conditions in session state updates
-- **HITL Integrity**: Ensures tool call sequences aren't corrupted by concurrent access
-- **Resource Protection**: Guards against simultaneous agent executions on same session
-- **Graceful Degradation**: Clients receive clear error messages for locked sessions
-
-### Translation Utilities
-
-Specialized utilities handle different event types:
-
-- **`FunctionCallEventUtil`**: Tool call translation and HITL integration
-- **`MessageEventUtil`**: Text streaming and message processing
-- **`StateEventUtil`**: State delta updates and snapshots
-
-## Configuration
-
-### Context Configuration
-
-```python
+from fastapi import FastAPI, Request
+from google.adk.agents import BaseAgent
+from adk_agui_middleware import SSEService, register_agui_endpoint
+from adk_agui_middleware.data_model.config import RunnerConfig
 from adk_agui_middleware.data_model.context import ConfigContext
 
-async def extract_user_from_jwt(agui_content, request):
-    # Extract user from JWT token
+# Initialize FastAPI application
+app = FastAPI(
+    title="AI Agent Service",
+    description="Enterprise ADK-AGUI middleware service",
+    version="1.0.0"
+)
+
+# Define your custom ADK agent
+class EnterpriseAgent(BaseAgent):
+    """Custom enterprise agent with HITL capabilities."""
+
+    def __init__(self):
+        super().__init__()
+        self.instructions = """
+        You are an enterprise AI assistant with access to various tools.
+
+        Key behaviors:
+        - Always ask for human approval before executing high-impact operations
+        - Provide clear explanations for tool usage and reasoning
+        - Handle errors gracefully and inform users of any issues
+        - Maintain conversation context across multiple interactions
+        """
+
+# Context extraction functions for multi-tenant deployment
+async def extract_user_id(content, request: Request) -> str:
+    """Extract user ID from JWT token or API headers."""
+    # Production: Implement JWT token validation
     auth_header = request.headers.get("Authorization", "")
-    # ... JWT validation logic
-    return user_id
+    if auth_header.startswith("Bearer "):
+        # Decode JWT and extract user_id
+        pass
 
-async def extract_app_from_subdomain(agui_content, request):
-    # Extract app name from subdomain
-    host = request.headers.get("host", "")
-    return host.split(".")[0] if "." in host else "default"
+    # Fallback to header-based user identification
+    return request.headers.get("X-User-ID", "anonymous")
 
-config = ConfigContext(
-    app_name=extract_app_from_subdomain,
-    user_id=extract_user_from_jwt,
+async def extract_app_name(content, request: Request) -> str:
+    """Extract application name from subdomain or headers."""
+    host = request.headers.get("Host", "localhost")
+    if "." in host:
+        subdomain = host.split(".")[0]
+        return f"enterprise-{subdomain}"
+    return "enterprise-default"
+
+# Configure middleware context
+config_context = ConfigContext(
+    app_name=extract_app_name,
+    user_id=extract_user_id,
     session_id=lambda content, req: content.thread_id,
-    extract_initial_state=lambda content, req: {
-        "user_preferences": {"theme": "dark"},
-        "feature_flags": {"enable_hitl": True}
-    }
 )
-```
 
-### Service Configuration
-
-```python
-from adk_agui_middleware.data_model.context import RunnerConfig
-from google.adk.agents.run_config import StreamingMode
-from google.adk.agents import RunConfig
-
+# Configure runner with production settings
 runner_config = RunnerConfig(
-    use_in_memory_services=False,  # Use persistent services
-    run_config=RunConfig(
-        streaming_mode=StreamingMode.SSE,
-        max_iterations=50
+    use_in_memory_services=True  # Set to False for production persistence
+)
+
+# Initialize and register services
+agent = EnterpriseAgent()
+sse_service = SSEService(agent, runner_config, config_context)
+register_agui_endpoint(app, sse_service)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+        access_log=True
     )
-)
 ```
 
-### Session Lock Configuration
+## API Reference
 
-```python
-from adk_agui_middleware.data_model.common import SessionLockConfig
-from adk_agui_middleware.handler.session_lock_handler import DefaultSessionLockHandler
-from adk_agui_middleware.data_model.context import HandlerContext
+### Endpoints
 
-# Configure session locking
-lock_config = SessionLockConfig(
-    lock_timeout=300,           # Lock expiration time (5 minutes)
-    lock_retry_times=3,         # Maximum retry attempts
-    lock_retry_interval=10.0    # Wait between retries (10 seconds)
-)
+| Method | Endpoint | Description | Authentication |
+|--------|----------|-------------|----------------|
+| `POST` | `/` | Execute agent with streaming response | Required |
+| `GET` | `/thread/list` | List user's conversation threads | Required |
+| `DELETE` | `/thread/{thread_id}` | Delete conversation thread | Required |
+| `GET` | `/message_snapshot/{thread_id}` | Get conversation history | Required |
+| `GET` | `/state_snapshot/{thread_id}` | Get session state snapshot | Required |
+| `PATCH` | `/state/{thread_id}` | Update session state | Required |
 
-# Use custom lock configuration
-handler_context = HandlerContext(
-    session_lock_handler=DefaultSessionLockHandler,
-    session_lock_config=lock_config
-)
+## Performance & Monitoring
 
-# For high-concurrency environments
-high_concurrency_config = SessionLockConfig(
-    lock_timeout=60,            # Shorter timeout for fast turnover
-    lock_retry_times=5,         # More aggressive retries
-    lock_retry_interval=2.0     # Faster retry intervals
-)
+### Key Metrics
 
-# For long-running operations
-long_running_config = SessionLockConfig(
-    lock_timeout=1800,          # 30-minute timeout
-    lock_retry_times=2,         # Fewer retries
-    lock_retry_interval=30.0    # Longer intervals
-)
-```
+- **Session Lock Acquisition Time**: Monitor lock contention
+- **Event Translation Latency**: Track ADK→AGUI conversion performance
+- **Concurrent Session Count**: Monitor resource utilization
+- **HITL Resolution Time**: Track human intervention workflows
+- **Error Rate by Type**: Monitor system health
 
-### Custom Handlers
+## License
 
-```python
-from adk_agui_middleware.base_abc.handler import BaseAGUIEventHandler
-from adk_agui_middleware.data_model.context import HandlerContext
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-class CustomEventFilter(BaseAGUIEventHandler):
-    async def process(self, event):
-        # Filter or modify events before transmission
-        if event.type == EventType.TEXT_MESSAGE_CONTENT:
-            # Apply custom filtering logic
-            yield event
-        else:
-            yield event
+## Contributing
 
-handler_context = HandlerContext(
-    agui_event_handler=CustomEventFilter
-)
-```
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-## API Endpoints
+## Security
 
-The middleware registers the following endpoints:
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/` | Main agent interaction with SSE streaming |
-| `GET` | `/thread/list` | List conversation threads |
-| `DELETE` | `/thread/{thread_id}` | Delete conversation thread |
-| `GET` | `/message_snapshot/{thread_id}` | Get conversation history |
-| `GET` | `/state_snapshot/{thread_id}` | Get session state |
-| `PATCH` | `/state/{thread_id}` | Update session state |
-
-## HITL (Human-in-the-Loop) Workflows
-
-The middleware provides comprehensive HITL support for enterprise AI deployments:
-
-### Tool Call Management
-
-When agents generate tool calls requiring human approval:
-
-1. **Tool Detection**: Agent generates function calls during execution
-2. **Pause Execution**: Tool calls are marked as pending in session state
-3. **Human Intervention**: External systems query pending tools and present to users
-4. **Result Submission**: Humans provide tool results via API
-5. **Resume Execution**: Agent continues with human-provided input
-
-### State Persistence
-
-HITL workflows maintain state across async interactions:
-
-```python
-# Check pending tools for a session
-pending_tools = await session_handler.get_pending_tool_calls()
-
-# Add tools requiring human input  
-await session_handler.add_pending_tool_call(["tool_call_123"])
-
-# Remove tools after human provides results
-await session_handler.check_and_remove_pending_tool_call(["tool_call_123"])
-```
-
-## Error Handling
-
-The middleware provides comprehensive error handling with structured logging:
-
-### Session Lock Error Handling
-
-```python
-# Session lock timeout error
-{
-    "type": "RUN_ERROR",
-    "message": "Thread is currently locked",
-    "code": "THREAD_IS_LOCKED"
-}
-
-# Lock acquisition with error handling
-if not await self.session_lock_handler.lock(input_info):
-    # Returns standardized locked session error
-    yield await self.session_lock_handler.get_locked_message(input_info)
-    return
-
-# Automatic lock cleanup on errors
-try:
-    async for event in agent_runner():
-        yield event
-except Exception as e:
-    yield AGUIErrorEvent.create_execution_error_event(e)
-finally:
-    # Always release lock, even on errors
-    await self.session_lock_handler.unlock(input_info)
-```
-
-### General Error Recovery
-
-```python
-# Automatic error recovery for encoding failures
-try:
-    return convert_agui_event_to_sse(event)
-except Exception as e:
-    return AGUIEncoderError.create_encoding_error_event(e)
-
-# Graceful agent execution error handling
-try:
-    async for event in agent_runner():
-        yield event
-except Exception as e:
-    yield AGUIErrorEvent.create_execution_error_event(e)
-
-# Tool result processing errors
-try:
-    await process_tool_results(tool_results)
-except Exception as e:
-    yield AGUIErrorEvent.create_tool_processing_error_event(e)
-```
-
-### Error Event Types
-
-| Error Code | Description | Trigger Condition |
-|------------|-------------|-------------------|
-| `THREAD_IS_LOCKED` | Session currently locked by another request | Concurrent access attempt |
-| `EXECUTION_ERROR` | General agent execution failure | Agent runtime errors |
-| `ENCODING_ERROR` | Event serialization failure | SSE format conversion errors |
-| `TOOL_RESULT_PROCESSING_ERROR` | Tool result handling failure | HITL workflow errors |
-| `NO_TOOL_RESULTS` | Missing tool results in submission | Malformed HITL requests |
-| `AGENT_ERROR` | Agent-specific execution error | Agent internal failures |
-
-## Production Deployment
-
-Licensed under the MIT License. See [LICENSE](LICENSE) file for details.
-
-## 🤝 Contributing & Conduct
-
-- Please see [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test, and propose changes.
-- This project follows a [Code of Conduct](CODE_OF_CONDUCT.md) to foster a welcoming community.
-
-## 🔐 Security
-
-- See [SECURITY.md](SECURITY.md) for reporting vulnerabilities, scanning, and dependency security.
-- Never commit secrets (tokens, API keys, passwords); use environment variables or secret managers.
+See [SECURITY.md](SECURITY.md) for our security policy and vulnerability reporting process.
