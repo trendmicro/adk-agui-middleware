@@ -135,8 +135,8 @@ class DefaultSessionLockHandler(SessionLockHandler):
             :param input_info: Input information containing session identifiers
         """
         async with self.internal_lock:
-            # Cleanup handles lock removal if it exists and is valid
-            self._cleanup_expired_lock(input_info.session_id)
+            if input_info.session_id in self.locks:
+                del self.locks[input_info.session_id]
 
     async def get_locked_message(self, input_info: InputInfo) -> RunErrorEvent:
         """Generate an error event indicating that the session is locked.
