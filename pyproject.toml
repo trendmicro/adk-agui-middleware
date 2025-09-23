@@ -6,10 +6,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [
-    {name = "DennySORA", email = "dennysora.main@gmail.com"},
+    {name = "denny_lee", email = "denny_lee@trendmicro.com"},
 ]
 maintainers = [
-    {name = "DennySORA", email = "dennysora.main@gmail.com"},
+    {name = "denny_lee", email = "denny_lee@trendmicro.com"},
 ]
 keywords = ["agent", "middleware", "sse", "fastapi", "google-adk", "agui"]
 classifiers = [
@@ -49,10 +49,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/DennySORA/adk-agui-middleware"
-Repository = "https://github.com/DennySORA/adk-agui-middleware.git"
-Documentation = "https://github.com/DennySORA/adk-agui-middleware#readme"
-"Bug Tracker" = "https://github.com/DennySORA/adk-agui-middleware/issues"
+Homepage = "https://github.com/trendmicro/adk-agui-middleware"
+Repository = "https://github.com/trendmicro/adk-agui-middleware.git"
+Documentation = "https://github.com/trendmicro/adk-agui-middleware#readme"
+"Bug Tracker" = "https://github.com/trendmicro/adk-agui-middleware/issues"
 
 [build-system]
 requires = ["hatchling"]
