@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Structured logging functions for recording application events and errors."""
 
 import json

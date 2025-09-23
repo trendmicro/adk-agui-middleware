@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Unit tests for adk_agui_middleware.tools.convert module."""
 
 import unittest

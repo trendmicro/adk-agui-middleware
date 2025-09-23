@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Conversion utilities for transforming ADK events into AGUI message format.
 
 This module provides functionality to convert a sequence of ADK events into

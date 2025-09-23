@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Handler for managing AGUI user interactions and agent execution workflow."""
 
 from collections.abc import AsyncGenerator

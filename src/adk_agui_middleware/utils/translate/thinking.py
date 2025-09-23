@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Utility functions for creating thinking events and message sequences in AGUI format."""
 
 import uuid

@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """JSON logging formatter and logger configuration for AGUI middleware."""
 
 import json

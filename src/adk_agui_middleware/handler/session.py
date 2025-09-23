@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Session handler for managing user session state and tool call lifecycle."""
 
 from typing import Any, cast

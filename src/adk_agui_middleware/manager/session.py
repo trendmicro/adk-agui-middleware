@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Session manager for handling ADK session operations and state management."""
 
 import time

@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 

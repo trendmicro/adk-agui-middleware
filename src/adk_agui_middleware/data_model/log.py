@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Data model for structured log messages in AGUI middleware."""
 
 from typing import Any

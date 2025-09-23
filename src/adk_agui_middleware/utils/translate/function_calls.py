@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Utility functions for handling function call events in AGUI format.
 
 This module provides utilities for converting function calls and responses

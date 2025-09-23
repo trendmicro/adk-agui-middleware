@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Additional unit tests for adk_agui_middleware.manager.session module to increase coverage."""
 
 import unittest

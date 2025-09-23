@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Abstract base classes for event and state handlers in the middleware."""
 
 from abc import ABCMeta, abstractmethod

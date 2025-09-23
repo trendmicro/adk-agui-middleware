@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Default implementation of session locking for preventing concurrent access."""
 
 import asyncio

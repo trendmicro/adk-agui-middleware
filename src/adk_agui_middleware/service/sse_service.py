@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Concrete implementation of Server-Sent Events service for AGUI middleware."""
 
 import asyncio

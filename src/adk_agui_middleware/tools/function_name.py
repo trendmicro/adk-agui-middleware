@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Function name extraction utilities for debugging and logging."""
 
 import inspect

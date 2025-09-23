@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """AGUI-specific message types and union definitions.
 
 This module extends the standard AGUI message types with custom message types

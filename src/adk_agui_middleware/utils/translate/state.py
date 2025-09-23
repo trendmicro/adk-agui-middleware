@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Utility functions for creating state-related AGUI events."""
 
 from typing import Any

@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Handler for managing agent execution and event translation between ADK and AGUI formats."""
 
 import asyncio
@@ -242,6 +243,8 @@ class RunningHandler:
                     self._check_is_long_tool(adk_event, translate_event.agui_event)
                 if translate_event.is_retune:
                     return
+                if translate_event.adk_event and translate_event.is_replace:
+                    adk_event = translate_event.adk_event
 
         translate_func = self._select_translation_function(adk_event)
         async for agui_event in translate_func(adk_event):

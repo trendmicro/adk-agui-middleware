@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Request logging utilities for HTTP request and error tracking."""
 
 import traceback

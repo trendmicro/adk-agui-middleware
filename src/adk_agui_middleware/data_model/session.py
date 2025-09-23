@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Data model for session parameters in AGUI middleware."""
 
 from pydantic import BaseModel

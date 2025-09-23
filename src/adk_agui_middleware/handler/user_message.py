@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Handler for processing user messages and tool results in AGUI middleware."""
 
 import json

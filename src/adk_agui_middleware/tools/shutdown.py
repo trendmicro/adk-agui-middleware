@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Graceful shutdown handler for managing application cleanup and signal handling."""
 
 import asyncio

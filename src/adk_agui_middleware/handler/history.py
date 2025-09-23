@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
@@ -91,6 +92,19 @@ class HistoryHandler:
     def _check_raw_event_message_to_convert_agui(
         adk_event: Event,
     ) -> list[SystemMessage | UserMessage] | None:
+        """Convert ADK event to AGUI message format if it contains user or developer content.
+
+        Examines an ADK event to determine if it contains user or developer authored content
+        that should be converted directly to AGUI message format. This bypasses the normal
+        event translation pipeline for specific event types that map directly to messages.
+
+        Args:
+            :param adk_event: ADK Event to examine for direct message conversion
+
+        Returns:
+            List of SystemMessage or UserMessage objects if conversion is applicable,
+            None if event should go through normal translation pipeline
+        """
         if not (adk_event.content and adk_event.content.parts):
             return None
         message_mappings: dict[

@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Utility functions for creating text message events in AGUI format.
 
 This module provides utilities for generating complete text message event sequences

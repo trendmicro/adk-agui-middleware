@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Logging configuration settings for AGUI middleware."""
 
 from pydantic_settings import BaseSettings

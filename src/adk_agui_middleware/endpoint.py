@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """FastAPI endpoint registration for AGUI middleware service."""
 
 from http.client import InvalidURL

@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Shared test utilities and fixtures for all test modules."""
 
 from typing import Any

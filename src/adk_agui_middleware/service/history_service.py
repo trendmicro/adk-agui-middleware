@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """History service for managing conversation history and session retrieval."""
 
 from collections.abc import Awaitable, Callable
@@ -36,12 +37,35 @@ class HistoryService:
         self.state_event_util = StateEventUtil()
 
     async def _get_user_id_and_app_name(self, request: Request) -> dict[str, str]:
+        """Extract user ID and application name from request context.
+
+        Uses configured extractors to obtain user identity and application context
+        from the HTTP request, providing the essential context for session operations.
+
+        Args:
+            :param request: HTTP request containing user and application context
+
+        Returns:
+            Dictionary containing 'app_name' and 'user_id' extracted from request
+        """
         return {
             "app_name": await self._get_config_value("app_name", request),
             "user_id": await self._get_config_value("user_id", request),
         }
 
     async def _get_session_id(self, request: Request) -> str:
+        """Extract session identifier from request context.
+
+        Uses configured session ID extractor to obtain the session identifier
+        from the HTTP request, essential for conversation persistence and
+        session-specific operations.
+
+        Args:
+            :param request: HTTP request containing session context
+
+        Returns:
+            Session identifier string extracted from request context
+        """
         return await self._get_config_value("session_id", request)
 
     async def _create_history_handler(self, request: Request) -> HistoryHandler:
@@ -164,6 +188,22 @@ class HistoryService:
     async def patch_state(
         self, request: Request, state_patch: list[dict[str, Any]]
     ) -> dict[str, str]:
+        """Apply JSON patch operations to update session state.
+
+        Extracts session context from the request and applies the provided JSON patch
+        operations to update the session state incrementally. This enables partial
+        state updates without replacing the entire state dictionary.
+
+        Args:
+            :param request: HTTP request containing session context
+            :param state_patch: List of JSON Patch operations to apply to the session state
+
+        Returns:
+            Dictionary containing operation status confirmation
+
+        Raises:
+            ValueError: If the specified session is not found
+        """
         result = await (await self._create_history_handler(request)).patch_state(
             session_id=await self._get_session_id(request), state_patch=state_patch
         )

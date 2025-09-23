@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Abstract base class for Server-Sent Events service implementations."""
 
 from abc import ABCMeta, abstractmethod

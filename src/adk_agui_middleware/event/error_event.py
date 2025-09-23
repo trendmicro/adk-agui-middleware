@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Error event classes for handling encoding and execution errors in AGUI middleware."""
 
 from ag_ui.core import EventType, RunErrorEvent

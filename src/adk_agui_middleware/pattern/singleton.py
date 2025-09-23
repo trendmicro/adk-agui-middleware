@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Singleton design pattern implementation using metaclass."""
 
 from typing import Any

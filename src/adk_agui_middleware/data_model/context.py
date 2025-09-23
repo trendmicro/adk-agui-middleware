@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Configuration models for AGUI middleware context and runner setup."""
 
 from collections.abc import Awaitable, Callable

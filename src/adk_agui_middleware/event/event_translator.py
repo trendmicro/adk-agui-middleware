@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Event translation service for converting ADK events to AGUI format with streaming support."""
 
 import uuid

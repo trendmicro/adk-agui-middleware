@@ -1,6 +1,8 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Event translation data models for ADK to AGUI event conversion."""
 
 from ag_ui.core import BaseEvent
+from google.adk.events import Event
 from pydantic import BaseModel
 
 
@@ -22,4 +24,6 @@ class TranslateEvent(BaseModel):
     """
 
     agui_event: BaseEvent | None = None
+    adk_event: Event | None = None
     is_retune: bool = False
+    is_replace: bool = False

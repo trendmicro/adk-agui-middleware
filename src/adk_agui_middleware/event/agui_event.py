@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Custom AGUI thinking event implementations with enhanced tracking capabilities."""
 
 from typing import Literal

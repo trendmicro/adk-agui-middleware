@@ -1,3 +1,4 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 from typing import Any
 
 from ag_ui.core import RunAgentInput
