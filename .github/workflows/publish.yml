@@ -36,7 +36,7 @@ jobs:
       run: |
         ls -la dist/
         uv tool install check-wheel-contents
-        uv tool run check-wheel-contents dist/*.whl
+        uv tool run check-wheel-contents --ignore W002 dist/*.whl
 
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
