@@ -4,23 +4,14 @@
 import asyncio
 import json
 import unittest
-from unittest.mock import AsyncMock, Mock, patch
 import uuid
+from unittest.mock import AsyncMock, Mock, patch
 
-from ag_ui.core import (
-    BaseEvent,
-    CustomEvent,
-    EventType,
-    StateDeltaEvent,
-    StateSnapshotEvent,
-    TextMessageContentEvent,
-    TextMessageEndEvent,
-    TextMessageStartEvent,
-    ToolCallArgsEvent,
-    ToolCallEndEvent,
-    ToolCallResultEvent,
-    ToolCallStartEvent,
-)
+from ag_ui.core import (BaseEvent, CustomEvent, EventType, StateDeltaEvent,
+                        StateSnapshotEvent, TextMessageContentEvent,
+                        TextMessageEndEvent, TextMessageStartEvent,
+                        ToolCallArgsEvent, ToolCallEndEvent,
+                        ToolCallResultEvent, ToolCallStartEvent)
 from google.adk.events import Event as ADKEvent
 from google.genai import types
 
@@ -37,7 +28,7 @@ class TestEventTranslator(unittest.TestCase):
     def test_init(self):
         """Test EventTranslator initialization."""
         self.assertEqual(self.translator._streaming_message_id, {})
-        self.assertEqual(self.translator.long_running_tool_ids, [])
+        self.assertEqual(self.translator.long_running_tool_ids, {})
 
     @patch("adk_agui_middleware.tools.event_translator.record_error_log")
     async def test_translate_user_authored_event(self, mock_record_error):

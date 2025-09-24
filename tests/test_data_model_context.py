@@ -1,15 +1,15 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Unit tests for adk_agui_middleware.data_model.context module."""
 
-import pytest
 from unittest.mock import Mock
 
+import pytest
 from ag_ui.core import RunAgentInput
 from fastapi import Request
 from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode
 
-from adk_agui_middleware.data_model.common import default_session_id
+from adk_agui_middleware.tools.default_session_id import default_session_id
 from adk_agui_middleware.data_model.config import RunnerConfig
 from adk_agui_middleware.data_model.context import ConfigContext
 

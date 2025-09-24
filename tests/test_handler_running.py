@@ -5,20 +5,19 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
 
-from ag_ui.core import BaseEvent, EventType, StateSnapshotEvent, ToolCallEndEvent
+from ag_ui.core import (BaseEvent, EventType, StateSnapshotEvent,
+                        ToolCallEndEvent)
 from google.adk import Runner
 from google.adk.agents import RunConfig
 from google.adk.events import Event
 
+from adk_agui_middleware.base_abc.handler import (BaseADKEventHandler,
+                                                  BaseADKEventTimeoutHandler,
+                                                  BaseAGUIEventHandler,
+                                                  BaseAGUIStateSnapshotHandler,
+                                                  BaseTranslateHandler)
 from adk_agui_middleware.data_model.context import HandlerContext
 from adk_agui_middleware.handler.running import RunningHandler
-from adk_agui_middleware.base_abc.handler import (
-    BaseADKEventHandler,
-    BaseADKEventTimeoutHandler,
-    BaseAGUIEventHandler,
-    BaseAGUIStateSnapshotHandler,
-    BaseTranslateHandler,
-)
 
 
 class TestRunningHandler(unittest.TestCase):
@@ -71,7 +70,8 @@ class TestRunningHandler(unittest.TestCase):
         
         class MockTranslateHandler(BaseTranslateHandler):
             async def translate(self, event): 
-                from adk_agui_middleware.data_model.context import TranslateEvent
+                from adk_agui_middleware.data_model.context import \
+                    TranslateEvent
                 yield TranslateEvent(agui_event=None, is_retune=False)
         
         context = HandlerContext(

@@ -1,18 +1,10 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Unit tests for adk_agui_middleware.handler.user_message module."""
 
-import json
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock
 
-from ag_ui.core import (
-    AssistantMessage,
-    FunctionCall,
-    RunAgentInput,
-    ToolCall,
-    ToolMessage,
-    UserMessage,
-)
+from ag_ui.core import RunAgentInput, ToolMessage, UserMessage
 from fastapi import Request
 from google.genai import types
 
@@ -58,26 +50,30 @@ class TestUserMessageHandler(unittest.TestCase):
         self.assertEqual(handler.thread_id, "custom_thread")
 
     def test_is_tool_result_submission_true(self):
-        """Test is_tool_result_submission returns True for tool messages."""
+        """Test is_tool_result_submission returns ToolMessage for tool messages."""
         tool_message = ToolMessage(
             id="1", role="tool", tool_call_id="call_1", content="tool result"
         )
         handler = self.create_handler(messages=[tool_message])
 
-        self.assertTrue(handler.is_tool_result_submission)
+        result = handler.is_tool_result_submission
+        self.assertIsInstance(result, ToolMessage)
+        self.assertEqual(result, tool_message)
 
     def test_is_tool_result_submission_false_user_message(self):
-        """Test is_tool_result_submission returns False for user messages."""
+        """Test is_tool_result_submission returns None for user messages."""
         user_message = UserMessage(id="1", role="user", content="Hello")
         handler = self.create_handler(messages=[user_message])
 
-        self.assertFalse(handler.is_tool_result_submission)
+        result = handler.is_tool_result_submission
+        self.assertIsNone(result)
 
     def test_is_tool_result_submission_false_empty_messages(self):
-        """Test is_tool_result_submission returns False for empty messages."""
+        """Test is_tool_result_submission returns None for empty messages."""
         handler = self.create_handler(messages=[])
 
-        self.assertFalse(handler.is_tool_result_submission)
+        result = handler.is_tool_result_submission
+        self.assertIsNone(result)
 
     def test_is_tool_result_submission_mixed_messages(self):
         """Test is_tool_result_submission with mixed message types."""
@@ -87,61 +83,49 @@ class TestUserMessageHandler(unittest.TestCase):
         ]
         handler = self.create_handler(messages=messages)
 
-        self.assertTrue(handler.is_tool_result_submission)
+        result = handler.is_tool_result_submission
+        self.assertIsInstance(result, ToolMessage)
+        self.assertEqual(result.tool_call_id, "call_1")
 
-    @patch("adk_agui_middleware.handler.user_message.record_warning_log")
-    def test_parse_tool_content_empty_content(self, mock_warning):
-        """Test _parse_tool_content with empty content."""
-        result = UserMessageHandler._parse_tool_content("", "call_1")
+    async def test_init_with_convert_function(self):
+        """Test init method with convert_run_agent_input function."""
+        convert_mock = AsyncMock()
+        converted_content = Mock()
+        convert_mock.return_value = converted_content
 
-        expected = {"success": True, "result": None}
-        self.assertEqual(result, expected)
-        mock_warning.assert_called_once()
-        self.assertIn("Empty tool result content", mock_warning.call_args[0][0])
+        handler = self.create_handler()
+        handler.convert_run_agent_input = convert_mock
 
-    @patch("adk_agui_middleware.handler.user_message.record_warning_log")
-    def test_parse_tool_content_whitespace_only(self, mock_warning):
-        """Test _parse_tool_content with whitespace-only content."""
-        result = UserMessageHandler._parse_tool_content("   \n\t  ", "call_1")
+        tool_call_info = {"tool_1": "function_1"}
+        await handler.init(tool_call_info)
 
-        expected = {"success": True, "result": None}
-        self.assertEqual(result, expected)
-        mock_warning.assert_called_once()
+        convert_mock.assert_called_once_with(handler.agui_content, tool_call_info)
+        self.assertEqual(handler.agui_content, converted_content)
 
-    def test_parse_tool_content_valid_json(self):
-        """Test _parse_tool_content with valid JSON."""
-        content = json.dumps({"success": True, "data": "test"})
-        result = UserMessageHandler._parse_tool_content(content, "call_1")
+    async def test_init_without_convert_function(self):
+        """Test init method without convert_run_agent_input function."""
+        handler = self.create_handler()
+        original_content = handler.agui_content
 
-        expected = {"success": True, "data": "test"}
-        self.assertEqual(result, expected)
+        tool_call_info = {"tool_1": "function_1"}
+        await handler.init(tool_call_info)
 
-    @patch("adk_agui_middleware.handler.user_message.record_error_log")
-    def test_parse_tool_content_invalid_json(self, mock_error):
-        """Test _parse_tool_content with invalid JSON."""
-        invalid_json = "{ invalid json }"
-        result = UserMessageHandler._parse_tool_content(invalid_json, "call_1")
+        # Content should remain unchanged
+        self.assertEqual(handler.agui_content, original_content)
 
-        self.assertIn("error", result)
-        self.assertIn("raw_content", result)
-        self.assertIn("error_type", result)
-        self.assertEqual(result["raw_content"], invalid_json)
-        self.assertEqual(result["error_type"], "JSON_DECODE_ERROR")
-        mock_error.assert_called_once()
-
-    async def test_get_latest_message_user_message(self):
+    def test_get_latest_message_user_message(self):
         """Test get_latest_message returns user message content."""
         user_message = UserMessage(id="1", role="user", content="Hello, how are you?")
         handler = self.create_handler(messages=[user_message])
 
-        result = await handler.get_latest_message()
+        result = handler.get_latest_message()
 
         self.assertIsInstance(result, types.Content)
         self.assertEqual(result.role, "user")
         self.assertEqual(len(result.parts), 1)
         self.assertEqual(result.parts[0].text, "Hello, how are you?")
 
-    async def test_get_latest_message_multiple_messages(self):
+    def test_get_latest_message_multiple_messages(self):
         """Test get_latest_message returns latest user message."""
         messages = [
             UserMessage(id="1", role="user", content="First message"),
@@ -150,11 +134,11 @@ class TestUserMessageHandler(unittest.TestCase):
         ]
         handler = self.create_handler(messages=messages)
 
-        result = await handler.get_latest_message()
+        result = handler.get_latest_message()
 
         self.assertEqual(result.parts[0].text, "Latest message")
 
-    async def test_get_latest_message_empty_content(self):
+    def test_get_latest_message_empty_content(self):
         """Test get_latest_message skips messages with empty content."""
         messages = [
             UserMessage(id="1", role="user", content="Valid message"),
@@ -163,277 +147,66 @@ class TestUserMessageHandler(unittest.TestCase):
         ]
         handler = self.create_handler(messages=messages)
 
-        result = await handler.get_latest_message()
+        result = handler.get_latest_message()
 
         self.assertEqual(result.parts[0].text, "Valid message")
 
-    async def test_get_latest_message_no_user_messages(self):
+    def test_get_latest_message_no_user_messages(self):
         """Test get_latest_message returns None when no user messages."""
         tool_message = ToolMessage(
             id="1", role="tool", tool_call_id="call_1", content="tool result"
         )
         handler = self.create_handler(messages=[tool_message])
 
-        result = await handler.get_latest_message()
+        result = handler.get_latest_message()
 
         self.assertIsNone(result)
 
-    async def test_get_latest_message_empty_messages(self):
+    def test_get_latest_message_empty_messages(self):
         """Test get_latest_message returns None for empty messages."""
         handler = self.create_handler(messages=[])
 
-        result = await handler.get_latest_message()
+        result = handler.get_latest_message()
 
         self.assertIsNone(result)
 
-    @patch("adk_agui_middleware.handler.user_message.record_log")
-    async def test_extract_tool_results_with_tool_message(self, mock_log):
-        """Test extract_tool_results extracts tool results correctly."""
-        # Create assistant message with tool calls
-        tool_call = ToolCall(
-            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
-        )
-        assistant_msg = AssistantMessage(
-            id="1", role="assistant", content="Using tool", tool_calls=[tool_call]
-        )
+    def test_convert_run_agent_input_property(self):
+        """Test that convert_run_agent_input is properly stored."""
+        convert_func = AsyncMock()
 
-        # Create tool message with result
-        tool_msg = ToolMessage(
-            id="2", role="tool", tool_call_id="call_1", content='{"success": true}'
+        agui_content = RunAgentInput(
+            thread_id="test_thread",
+            run_id="test_run",
+            state={},
+            messages=[],
+            tools=[],
+            context=[],
+            forwarded_props={},
         )
 
-        messages = [assistant_msg, tool_msg]
-        handler = self.create_handler(messages=messages)
-
-        result = await handler.extract_tool_results()
-
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["tool_name"], "test_function")
-        self.assertEqual(result[0]["message"], tool_msg)
-        mock_log.assert_called_once()
-
-    async def test_extract_tool_results_unknown_tool(self):
-        """Test extract_tool_results with unknown tool call ID."""
-        tool_msg = ToolMessage(
-            id="1",
-            role="tool",
-            tool_call_id="unknown_call",
-            content='{"result": "data"}',
-        )
-        handler = self.create_handler(messages=[tool_msg])
-
-        result = await handler.extract_tool_results()
-
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["tool_name"], "unknown")
-
-    async def test_extract_tool_results_no_tool_messages(self):
-        """Test extract_tool_results returns empty list when no tool messages."""
-        user_msg = UserMessage(id="1", role="user", content="Hello")
-        handler = self.create_handler(messages=[user_msg])
-
-        result = await handler.extract_tool_results()
-
-        self.assertEqual(result, [])
-
-    async def test_extract_tool_results_multiple_tool_messages(self):
-        """Test extract_tool_results returns only the most recent tool message."""
-        # Create multiple tool messages
-        tool_call1 = ToolCall(
-            id="call_1", function=FunctionCall(name="function_1", arguments="{}")
-        )
-        tool_call2 = ToolCall(
-            id="call_2", function=FunctionCall(name="function_2", arguments="{}")
-        )
-        
-        assistant_msg1 = AssistantMessage(
-            id="1", role="assistant", content="First tool call", tool_calls=[tool_call1]
-        )
-        tool_msg1 = ToolMessage(
-            id="2", role="tool", tool_call_id="call_1", content='{"result": "first"}'
-        )
-        assistant_msg2 = AssistantMessage(
-            id="3", role="assistant", content="Second tool call", tool_calls=[tool_call2]
-        )
-        tool_msg2 = ToolMessage(
-            id="4", role="tool", tool_call_id="call_2", content='{"result": "second"}'
-        )
-        
-        messages = [assistant_msg1, tool_msg1, assistant_msg2, tool_msg2]
-        handler = self.create_handler(messages=messages)
-
-        result = await handler.extract_tool_results()
-
-        # Should return only the most recent tool message (tool_msg2)
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]["tool_name"], "function_2")
-        self.assertEqual(result[0]["message"], tool_msg2)
-
-    async def test_process_tool_results_not_tool_submission(self):
-        """Test process_tool_results returns None for non-tool submissions."""
-        user_msg = UserMessage(id="1", role="user", content="Hello")
-        handler = self.create_handler(messages=[user_msg])
-
-        result = await handler.process_tool_results()
-
-        self.assertIsNone(result)
-
-    async def test_process_tool_results_with_tool_submission(self):
-        """Test process_tool_results processes tool results correctly."""
-        # Setup tool call and result
-        tool_call = ToolCall(
-            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
-        )
-        assistant_msg = AssistantMessage(
-            id="1", role="assistant", content="", tool_calls=[tool_call]
-        )
-        tool_msg = ToolMessage(
-            id="2",
-            role="tool",
-            tool_call_id="call_1",
-            content='{"success": true, "data": "test"}',
+        handler = UserMessageHandler(
+            agui_content=agui_content,
+            request=self.request,
+            initial_state=self.initial_state,
+            convert_run_agent_input=convert_func,
         )
 
-        messages = [assistant_msg, tool_msg]
-        handler = self.create_handler(messages=messages)
+        self.assertEqual(handler.convert_run_agent_input, convert_func)
 
-        result = await handler.process_tool_results()
+    def test_handler_attributes(self):
+        """Test that all handler attributes are properly set."""
+        handler = self.create_handler()
 
-        self.assertIsInstance(result, types.Content)
-        self.assertEqual(result.role, "user")
-        self.assertEqual(len(result.parts), 1)
+        # Test all attributes exist
+        self.assertTrue(hasattr(handler, "agui_content"))
+        self.assertTrue(hasattr(handler, "request"))
+        self.assertTrue(hasattr(handler, "initial_state"))
+        self.assertTrue(hasattr(handler, "convert_run_agent_input"))
 
-        function_response = result.parts[0].function_response
-        self.assertEqual(function_response.id, "call_1")
-        self.assertEqual(function_response.name, "test_function")
-        self.assertEqual(function_response.response["success"], True)
-        self.assertEqual(function_response.response["data"], "test")
-
-    async def test_process_tool_results_with_empty_content(self):
-        """Test process_tool_results handles empty tool content."""
-        tool_call = ToolCall(
-            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
-        )
-        assistant_msg = AssistantMessage(
-            id="1", role="assistant", content="", tool_calls=[tool_call]
-        )
-        tool_msg = ToolMessage(
-            id="2",
-            role="tool",
-            tool_call_id="call_1",
-            content="",  # Empty content
-        )
-
-        messages = [assistant_msg, tool_msg]
-        handler = self.create_handler(messages=messages)
-
-        result = await handler.process_tool_results()
-
-        self.assertIsInstance(result, types.Content)
-        function_response = result.parts[0].function_response
-        self.assertEqual(function_response.response["success"], True)
-        self.assertIsNone(function_response.response["result"])
-
-    async def test_process_tool_results_with_invalid_json(self):
-        """Test process_tool_results handles invalid JSON in tool content."""
-        tool_call = ToolCall(
-            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
-        )
-        assistant_msg = AssistantMessage(
-            id="1", role="assistant", content="", tool_calls=[tool_call]
-        )
-        tool_msg = ToolMessage(
-            id="2",
-            role="tool",
-            tool_call_id="call_1",
-            content="{invalid json}",  # Invalid JSON
-        )
-
-        messages = [assistant_msg, tool_msg]
-        handler = self.create_handler(messages=messages)
-
-        result = await handler.process_tool_results()
-
-        self.assertIsInstance(result, types.Content)
-        function_response = result.parts[0].function_response
-        self.assertIn("error", function_response.response)
-        self.assertEqual(function_response.response["error_type"], "JSON_DECODE_ERROR")
-        self.assertEqual(function_response.response["raw_content"], "{invalid json}")
-
-    async def test_get_message_tool_result_priority(self):
-        """Test get_message returns tool results when available."""
-        # Setup messages with both user message and tool result
-        tool_call = ToolCall(
-            id="call_1", function=FunctionCall(name="test_function", arguments="{}")
-        )
-        messages = [
-            UserMessage(id="1", role="user", content="User message"),
-            AssistantMessage(
-                id="2", role="assistant", content="", tool_calls=[tool_call]
-            ),
-            ToolMessage(
-                id="3", role="tool", tool_call_id="call_1", content='{"result": "data"}'
-            ),
-        ]
-        handler = self.create_handler(messages=messages)
-
-        result = await handler.get_message()
-
-        # Should return tool result, not user message
-        self.assertIsInstance(result, types.Content)
-        self.assertEqual(result.role, "user")
-        self.assertTrue(hasattr(result.parts[0], "function_response"))
-
-    async def test_get_message_user_message_fallback(self):
-        """Test get_message returns user message when no tool results."""
-        user_msg = UserMessage(id="1", role="user", content="Hello")
-        handler = self.create_handler(messages=[user_msg])
-
-        result = await handler.get_message()
-
-        self.assertIsInstance(result, types.Content)
-        self.assertEqual(result.role, "user")
-        self.assertEqual(result.parts[0].text, "Hello")
-
-    async def test_get_message_returns_none(self):
-        """Test get_message returns None when no valid messages."""
-        handler = self.create_handler(messages=[])
-
-        result = await handler.get_message()
-
-        self.assertIsNone(result)
-
-    def test_multiple_tool_calls_mapping(self):
-        """Test tool call mapping with multiple tool calls."""
-        tool_call1 = ToolCall(
-            id="call_1", function=FunctionCall(name="function_1", arguments="{}")
-        )
-        tool_call2 = ToolCall(
-            id="call_2", function=FunctionCall(name="function_2", arguments="{}")
-        )
-
-        assistant_msg = AssistantMessage(
-            id="1", role="assistant", content="", tool_calls=[tool_call1, tool_call2]
-        )
-
-        tool_msg = ToolMessage(
-            id="2", role="tool", tool_call_id="call_2", content='{"result": "data"}'
-        )
-
-        messages = [assistant_msg, tool_msg]
-        handler = self.create_handler(messages=messages)
-
-        # Test the tool call mapping functionality
-        agui_content = handler.agui_content
-        tool_call_map = {
-            tool_call.id: tool_call.function.name
-            for msg in agui_content.messages
-            if isinstance(msg, AssistantMessage) and msg.tool_calls
-            for tool_call in msg.tool_calls
-        }
-
-        self.assertEqual(tool_call_map["call_1"], "function_1")
-        self.assertEqual(tool_call_map["call_2"], "function_2")
+        # Test attribute values
+        self.assertEqual(handler.request, self.request)
+        self.assertEqual(handler.initial_state, self.initial_state)
+        self.assertIsNone(handler.convert_run_agent_input)
 
 
 if __name__ == "__main__":

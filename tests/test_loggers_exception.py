@@ -7,10 +7,8 @@ from unittest.mock import AsyncMock, Mock, patch
 from fastapi import HTTPException, Request
 
 from adk_agui_middleware.loggers.exception import (
-    create_common_http_exception,
-    create_internal_server_error_exception,
-    http_exception_handler,
-)
+    create_common_http_exception, create_internal_server_error_exception,
+    http_exception_handler)
 
 
 class TestHTTPExceptionHandling(unittest.TestCase):

@@ -4,14 +4,8 @@
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
-from ag_ui.core import (
-    AssistantMessage,
-    FunctionCall,
-    RunAgentInput,
-    ToolCall,
-    ToolMessage,
-    UserMessage,
-)
+from ag_ui.core import (AssistantMessage, FunctionCall, RunAgentInput,
+                        ToolCall, ToolMessage, UserMessage)
 from fastapi import Request
 from google.adk.agents import RunConfig
 from google.adk.agents.run_config import StreamingMode

@@ -1,9 +1,9 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Additional unit tests for adk_agui_middleware.manager.session module to increase coverage."""
 
+import time
 import unittest
 from unittest.mock import AsyncMock, Mock, patch
-import time
 
 from google.adk.events import Event, EventActions
 from google.adk.sessions import BaseSessionService, Session

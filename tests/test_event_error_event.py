@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch
 
 from ag_ui.core import EventType, RunErrorEvent
 
-from adk_agui_middleware.event.error_event import AGUIEncoderError, AGUIErrorEvent
+from adk_agui_middleware.event.error_event import (AGUIEncoderError,
+                                                   AGUIErrorEvent)
 
 
 class TestAGUIEncoderError(unittest.TestCase):

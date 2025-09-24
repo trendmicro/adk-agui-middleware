@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 from ag_ui.core import BaseEvent, EventType
 
-from adk_agui_middleware.tools.convert import convert_agui_event_to_sse
+from adk_agui_middleware.utils.convert.agui_event_to_sse import convert_agui_event_to_sse
 
 
 class TestAGUIToSSE(unittest.TestCase):

@@ -5,7 +5,6 @@ import os
 import sys
 import unittest
 
-
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
@@ -34,7 +33,6 @@ sys.modules["pydantic"].BaseModel = MockBaseModel
 # Now we need to import the module directly without going through __init__.py
 # Let's import the specific module file
 import importlib.util
-
 
 # Load the session module directly
 spec = importlib.util.spec_from_file_location(
