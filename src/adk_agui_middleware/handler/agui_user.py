@@ -68,9 +68,6 @@ class AGUIUserHandler:
         setting up long-running tool IDs from pending tool calls in session state.
         This is crucial for resuming HITL workflows correctly.
         """
-        await self._initialize_long_running_tools()
-
-    async def _initialize_long_running_tools(self) -> None:
         self.tool_call_info = await self.session_handler.get_pending_tool_calls()
         self.running_handler.set_long_running_tool_ids(self.tool_call_info)
         await self.user_message_handler.init(self.tool_call_info)
