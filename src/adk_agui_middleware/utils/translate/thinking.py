@@ -4,11 +4,7 @@
 import uuid
 from collections.abc import AsyncGenerator
 
-from ag_ui.core import (
-    EventType,
-    ThinkingEndEvent,
-    ThinkingStartEvent,
-)
+from ag_ui.core import EventType, ThinkingEndEvent, ThinkingStartEvent
 
 from ...data_model.event import TranslateEvent
 from ...event.agui_event import (

@@ -12,7 +12,7 @@ from ..data_model.session import SessionParameter
 from ..event.agui_event import CustomMessagesSnapshotEvent
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
-from ..utils.convert import ADKEventToAGUIMessageConverter
+from ..utils.convert.adk_event_to_agui_message import ADKEventToAGUIMessageConverter
 from ..utils.translate import MessageEventUtil
 
 

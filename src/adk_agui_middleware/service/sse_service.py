@@ -5,10 +5,7 @@ import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any
 
-from ag_ui.core import (
-    BaseEvent,
-    RunAgentInput,
-)
+from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
@@ -25,8 +22,8 @@ from ..handler.running import RunningHandler
 from ..handler.session import SessionHandler
 from ..handler.user_message import UserMessageHandler
 from ..manager.session import SessionManager
-from ..tools.convert import convert_agui_event_to_sse
 from ..tools.shutdown import ShutdownHandler
+from ..utils.convert.agui_event_to_sse import convert_agui_event_to_sse
 
 
 class SSEService(BaseSSEService):

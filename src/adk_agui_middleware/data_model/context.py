@@ -18,7 +18,8 @@ from ..base_abc.handler import (
     SessionLockHandler,
 )
 from ..handler.session_lock_handler import DefaultSessionLockHandler
-from .common import SessionLockConfig, default_session_id
+from ..tools.default_session_id import default_session_id
+from .common import SessionLockConfig
 
 
 def _get_default_session_lock_handler() -> type[SessionLockHandler]:

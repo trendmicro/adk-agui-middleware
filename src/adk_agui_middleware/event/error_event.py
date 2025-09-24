@@ -4,7 +4,7 @@
 from ag_ui.core import EventType, RunErrorEvent
 
 from ..loggers.record_log import record_error_log
-from ..tools.convert import convert_agui_event_to_sse
+from ..utils.convert.agui_event_to_sse import convert_agui_event_to_sse
 
 
 class AGUIEncoderError(Exception):
@@ -106,6 +106,15 @@ class AGUIErrorEvent:
             type=EventType.RUN_ERROR,
             message="No tool results found in submission",
             code="NO_TOOL_RESULTS",
+        )
+
+    @staticmethod
+    def create_no_input_message_error(thread_id: str) -> RunErrorEvent:
+        record_error_log(f"Input message missing for thread {thread_id}")
+        return RunErrorEvent(
+            type=EventType.RUN_ERROR,
+            message="Input message is missing",
+            code="NO_INPUT_MESSAGE",
         )
 
     @staticmethod

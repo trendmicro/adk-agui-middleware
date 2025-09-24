@@ -251,7 +251,7 @@ class RunningHandler:
             yield agui_event
             self._check_is_long_tool(adk_event, agui_event)
 
-    def set_long_running_tool_ids(self, long_running_tool_ids: list[str]) -> None:
+    def set_long_running_tool_ids(self, long_running_tool_ids: dict[str, str]) -> None:
         """Set long-running tool IDs in the event translator.
 
         Configures the event translator with the list of tool call IDs that are

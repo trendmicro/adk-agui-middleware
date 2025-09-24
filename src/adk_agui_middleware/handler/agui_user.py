@@ -9,12 +9,14 @@ from ag_ui.core import (
     RunErrorEvent,
     RunFinishedEvent,
     RunStartedEvent,
-    ToolCallEndEvent,
-    ToolCallResultEvent,
 )
+from google.adk.events import Event
+from google.genai import types
 
 from ..event.error_event import AGUIErrorEvent
-from ..loggers.record_log import record_log
+from ..utils.convert.agui_tool_message_to_adk_function_response import (
+    convert_agui_tool_message_to_adk_function_response,
+)
 from .running import RunningHandler
 from .session import SessionHandler
 from .user_message import UserMessageHandler
@@ -52,11 +54,12 @@ class AGUIUserHandler:
             :param user_message_handler: Handler for processing user messages and tool results
             :param session_handler: Handler for session state management and HITL workflows
         """
+        self.input_message: types.Content | None = None
         self.running_handler = running_handler
         self.user_message_handler = user_message_handler
         self.session_handler = session_handler
 
-        self.tool_call_ids: list[str] = []
+        self.tool_call_info: dict[str, str] = {}
 
     async def _async_init(self) -> None:
         """Initialize asynchronous components of the handler.
@@ -68,16 +71,8 @@ class AGUIUserHandler:
         await self._initialize_long_running_tools()
 
     async def _initialize_long_running_tools(self) -> None:
-        """Initialize long-running tool IDs from session state.
-
-        Retrieves pending tool calls from session state and configures the running
-        handler to properly handle these long-running operations. This ensures that
-        tool calls marked as pending in previous requests are handled correctly
-        in the current execution context.
-        """
-        self.running_handler.set_long_running_tool_ids(
-            await self.session_handler.get_pending_tool_calls()
-        )
+        self.tool_call_info = await self.session_handler.get_pending_tool_calls()
+        self.running_handler.set_long_running_tool_ids(self.tool_call_info)
 
     @property
     def app_name(self) -> str:
@@ -141,61 +136,44 @@ class AGUIUserHandler:
             type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
         )
 
-    def check_tools_event(self, event: BaseEvent) -> None:
-        """Track tool call events for pending tool call management.
+    def check_tools_event(self, event: Event) -> None:
+        for function_call in event.get_function_calls():
+            if function_call.id and function_call.name:
+                self.tool_call_info[function_call.id] = function_call.name
+        for function_response in event.get_function_responses():
+            if function_response.id:
+                self.tool_call_info.pop(function_response.id, None)
 
-        Monitors agent events to track tool call lifecycle, adding tool call IDs
-        to the tracking list when tools are invoked and removing them when tool
-        results are processed. This is essential for HITL workflow management.
-
-        Args:
-            :param event: AGUI BaseEvent to check for tool call information
-        """
-        if isinstance(event, ToolCallEndEvent):
-            self.tool_call_ids.append(event.tool_call_id)
-        if (
-            isinstance(event, ToolCallResultEvent)
-            and event.tool_call_id in self.tool_call_ids
-        ):
-            self.tool_call_ids.remove(event.tool_call_id)
-
-    async def remove_pending_tool_call(self) -> RunErrorEvent | None:
-        """Remove pending tool calls from session state after processing tool results.
-
-        This method completes the HITL (Human-in-the-Loop) workflow by processing
-        human-provided tool results and removing the corresponding pending tool calls
-        from session state. This allows the agent execution to resume with the
-        human-provided input.
-
-        HITL Completion Flow:
-        1. Human provides tool results via API (tool result submission)
-        2. This method extracts tool results from the user message
-        3. Removes corresponding tool_call_ids from pending_tool_calls in session
-        4. Agent execution resumes with the human-provided tool results
-        5. Workflow continues with human input incorporated
-
-        Returns:
-            RunErrorEvent if no tool results found or processing fails, None on success
-
-        Note:
-            This is the critical completion step in HITL workflows, transforming
-            pending human interventions back into active agent execution flow.
-        """
-        tool_results = await self.user_message_handler.extract_tool_results()
-        if not tool_results:
-            return AGUIErrorEvent.create_no_tool_results_error(
-                self.user_message_handler.thread_id
-            )
+    async def process_tool_result(self) -> RunErrorEvent | types.Content:
         try:
-            for tool_result in tool_results:
-                await self.session_handler.check_and_remove_pending_tool_call(
-                    [tool_result["message"].tool_call_id]
+            tool_message = self.user_message_handler.is_tool_result_submission
+            if not tool_message:
+                user_message = self.user_message_handler.get_latest_message()
+                return (
+                    user_message
+                    if user_message
+                    else AGUIErrorEvent.create_no_input_message_error(self.session_id)
                 )
-            record_log(
-                f"Starting new execution for tool result in thread {self.session_id}"
+            tool_call_name = self.tool_call_info.pop(tool_message.tool_call_id, None)
+            if not tool_call_name:
+                return AGUIErrorEvent.create_no_tool_results_error(self.session_id)
+            await self.session_handler.overwrite_pending_tool_calls(self.tool_call_info)
+            return types.Content(
+                parts=[
+                    convert_agui_tool_message_to_adk_function_response(
+                        tool_message, tool_call_name
+                    )
+                ],
+                role="user",
             )
         except Exception as e:
             return AGUIErrorEvent.create_tool_processing_error_event(e)
+
+    async def set_user_input(self) -> RunErrorEvent | None:
+        result = await self.process_tool_result()
+        if isinstance(result, RunErrorEvent):
+            return result
+        self.input_message = result
         return None
 
     async def _run_async(self) -> AsyncGenerator[BaseEvent]:
@@ -214,11 +192,11 @@ class AGUIUserHandler:
         async for adk_event in self.running_handler.run_async_with_adk(
             user_id=self.user_id,
             session_id=self.session_id,
-            new_message=await self.user_message_handler.get_message(),
+            new_message=self.input_message,
         ):
+            self.check_tools_event(adk_event)
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 yield agui_event
-                self.check_tools_event(agui_event)
         if self.running_handler.is_long_running_tool:
             return
         async for ag_ui_event in self.running_handler.force_close_streaming_message():
@@ -250,35 +228,12 @@ class AGUIUserHandler:
         )
         async for event in self._run_async():
             yield event
-        # Add any uncompleted tool calls to pending state for HITL workflow
-        await self.session_handler.add_pending_tool_call(self.tool_call_ids)
+        await self.session_handler.overwrite_pending_tool_calls(self.tool_call_info)
         yield self.call_finished()
 
     async def run(self) -> AsyncGenerator[BaseEvent]:
-        """Main entry point for running the AGUI user handler.
-
-        Orchestrates the complete HITL (Human-in-the-Loop) workflow by determining
-        if the incoming request is completing a previous HITL interaction (tool result
-        submission) or starting a new agent execution. Manages the transition between
-        HITL states and agent execution flow.
-
-        HITL Workflow Logic:
-        1. Check if request contains tool results (HITL completion)
-        2. If tool results: Remove pending tool calls and resume execution
-        3. If new request: Execute agent and add any tool calls to pending state
-        4. Handle errors and state transitions throughout the process
-
-        Yields:
-            AGUI BaseEvent objects from the handler execution, including HITL state changes
-
-        Note:
-            This is the primary entry point for HITL workflow management, handling
-            both initiation and completion of human intervention cycles.
-        """
         await self._async_init()
-        if self.user_message_handler.is_tool_result_submission and (
-            error := await self.remove_pending_tool_call()
-        ):
+        if error := await self.set_user_input():
             yield error
             return
         try:

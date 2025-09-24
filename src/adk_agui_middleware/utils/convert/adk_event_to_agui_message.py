@@ -25,8 +25,8 @@ from ag_ui.core.types import (
     UserMessage,
 )
 
-from ..event.agui_event import CustomThinkingTextMessageContentEvent
-from ..event.agui_type import Message, ThinkingMessage
+from ...event.agui_event import CustomThinkingTextMessageContentEvent
+from ...event.agui_type import Message, ThinkingMessage
 
 
 class ADKEventToAGUIMessageConverter:

@@ -18,11 +18,7 @@ from ag_ui.core import (
 from google.adk.events import Event as ADKEvent
 from google.genai import types
 
-from ..loggers.record_log import (
-    record_debug_log,
-    record_error_log,
-    record_warning_log,
-)
+from ..loggers.record_log import record_debug_log, record_error_log, record_warning_log
 from ..utils.translate import FunctionCallEventUtil, MessageEventUtil, StateEventUtil
 
 
@@ -48,7 +44,7 @@ class EventTranslator:
         and utility classes for different types of event translation.
         """
         self._streaming_message_id: dict[str, str] = {}
-        self.long_running_tool_ids: list[str] = []  # IDs of long-running tools
+        self.long_running_tool_ids: dict[str, str] = {}  # IDs of long-running tools
         self.state_event_util = StateEventUtil()
         self.function_call_event_util = FunctionCallEventUtil()
         self.message_event_util = MessageEventUtil()
@@ -216,7 +212,7 @@ class EventTranslator:
                 or part.function_call.id not in (adk_event.long_running_tool_ids or [])
             ):
                 continue
-            self.long_running_tool_ids.append(part.function_call.id)
+            self.long_running_tool_ids[part.function_call.id] = part.function_call.name
             async for (
                 agui_event
             ) in self.function_call_event_util.generate_function_call_event(
@@ -228,20 +224,9 @@ class EventTranslator:
         self,
         function_response: list[types.FunctionResponse],
     ) -> AsyncGenerator[BaseEvent]:
-        """Translate Google GenAI function responses to AGUI tool result events.
-
-        Converts function responses from Google GenAI format to AGUI tool result events,
-        excluding responses from long-running tools which are handled separately.
-
-        Args:
-            :param function_response: List of Google GenAI function responses to translate
-
-        Yields:
-            AGUI tool call result events for completed function calls
-        """
         for func_response in function_response:
             tool_call_id = func_response.id or str(uuid.uuid4())
-            if tool_call_id not in self.long_running_tool_ids:
+            if not self.long_running_tool_ids.get(tool_call_id):
                 yield self.function_call_event_util.create_function_result_event(
                     tool_call_id=tool_call_id, content=func_response.response
                 )

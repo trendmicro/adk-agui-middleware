@@ -1,6 +1,4 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
-"""Event conversion utilities for Server-Sent Events format."""
-
 import time
 import uuid
 
