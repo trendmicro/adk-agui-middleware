@@ -1,6 +1,7 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Handler for processing user messages and tool results in AGUI middleware."""
 
+from collections.abc import Awaitable, Callable
 from typing import Any
 
 from ag_ui.core import RunAgentInput, ToolMessage, UserMessage
@@ -14,10 +15,15 @@ class UserMessageHandler:
         agui_content: RunAgentInput,
         request: Request,
         initial_state: dict[str, Any] | None = None,
+        convert_input_message: Callable[
+            [RunAgentInput, dict[str, str]], Awaitable[RunAgentInput]
+        ]
+        | None = None,
     ):
         self.agui_content = agui_content
         self.request = request
         self.initial_state = initial_state
+        self.convert_input_message = convert_input_message
 
     @property
     def thread_id(self) -> str:
@@ -51,6 +57,12 @@ class UserMessageHandler:
             if isinstance(self.agui_content.messages[-1], ToolMessage)
             else None
         )
+
+    async def init(self, tool_call_info: dict[str, str]) -> None:
+        if self.convert_input_message:
+            self.agui_content = await self.convert_input_message(
+                self.agui_content, tool_call_info
+            )
 
     def get_latest_message(self) -> types.Content | None:
         if not self.agui_content.messages:
