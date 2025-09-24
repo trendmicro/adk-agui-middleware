@@ -15,7 +15,7 @@ class UserMessageHandler:
         agui_content: RunAgentInput,
         request: Request,
         initial_state: dict[str, Any] | None = None,
-        convert_input_message: Callable[
+        convert_run_agent_input: Callable[
             [RunAgentInput, dict[str, str]], Awaitable[RunAgentInput]
         ]
         | None = None,
@@ -23,7 +23,7 @@ class UserMessageHandler:
         self.agui_content = agui_content
         self.request = request
         self.initial_state = initial_state
-        self.convert_input_message = convert_input_message
+        self.convert_run_agent_input = convert_run_agent_input
 
     @property
     def thread_id(self) -> str:
@@ -59,8 +59,8 @@ class UserMessageHandler:
         )
 
     async def init(self, tool_call_info: dict[str, str]) -> None:
-        if self.convert_input_message:
-            self.agui_content = await self.convert_input_message(
+        if self.convert_run_agent_input:
+            self.agui_content = await self.convert_run_agent_input(
                 self.agui_content, tool_call_info
             )
 

@@ -80,7 +80,7 @@ class ConfigContext(BaseModel):
     extract_initial_state: (
         Callable[[RunAgentInput, Request], Awaitable[dict[str, Any]]] | None
     ) = None
-    convert_input_message: (
+    convert_run_agent_input: (
         Callable[[RunAgentInput, dict[str, str]], Awaitable[RunAgentInput]] | None
     ) = None
     session_lock_config: SessionLockConfig = SessionLockConfig()

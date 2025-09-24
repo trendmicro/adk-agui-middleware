@@ -5,7 +5,7 @@ import asyncio
 from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
-from ag_ui.core import BaseEvent, EventType, StateSnapshotEvent
+from ag_ui.core import BaseEvent, StateSnapshotEvent
 from google.adk import Runner
 from google.adk.agents import RunConfig
 from google.adk.events import Event
@@ -62,7 +62,6 @@ class RunningHandler:
         self.runner: Runner | None = runner
         self.run_config: RunConfig | None = run_config
         self.event_translator = EventTranslator()
-        self.is_long_running_tool = False
 
         self.adk_event_handler: BaseADKEventHandler | None = None
         self.adk_event_timeout_handler: BaseADKEventTimeoutHandler | None = None
@@ -185,20 +184,6 @@ class RunningHandler:
             async for fallback_event in self._handle_timeout_fallback():
                 yield fallback_event
 
-    def _check_is_long_tool(self, adk_event: Event, agui_event: BaseEvent) -> None:
-        """Check if the event indicates a long-running tool and set flag accordingly.
-
-        Determines if the current event combination indicates a long-running tool
-        by checking if the ADK event is a final response and the AGUI event is
-        a tool call end event.
-
-        Args:
-            :param adk_event: ADK event to check for final response status
-            :param agui_event: AGUI event to check for tool call end type
-        """
-        if adk_event.is_final_response() and agui_event.type == EventType.TOOL_CALL_END:
-            self.is_long_running_tool = True
-
     def _select_translation_function(
         self, adk_event: Event
     ) -> Callable[[Event], AsyncGenerator[BaseEvent]]:
@@ -240,7 +225,6 @@ class RunningHandler:
             ):
                 if translate_event.agui_event is not None:
                     yield translate_event.agui_event
-                    self._check_is_long_tool(adk_event, translate_event.agui_event)
                 if translate_event.is_retune:
                     return
                 if translate_event.adk_event and translate_event.is_replace:
@@ -249,7 +233,6 @@ class RunningHandler:
         translate_func = self._select_translation_function(adk_event)
         async for agui_event in translate_func(adk_event):
             yield agui_event
-            self._check_is_long_tool(adk_event, agui_event)
 
     def set_long_running_tool_ids(self, long_running_tool_ids: dict[str, str]) -> None:
         """Set long-running tool IDs in the event translator.

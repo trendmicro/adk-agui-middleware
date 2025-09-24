@@ -288,7 +288,10 @@ class SSEService(BaseSSEService):
                     handler_context=self.handler_context,
                 ),
                 user_message_handler=UserMessageHandler(
-                    agui_content, request, input_info.initial_state
+                    agui_content,
+                    request,
+                    input_info.initial_state,
+                    self.config_context.convert_run_agent_input,
                 ),
                 session_handler=SessionHandler(
                     session_manager=self.session_manager,

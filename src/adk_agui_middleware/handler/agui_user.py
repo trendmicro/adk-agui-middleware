@@ -137,13 +137,18 @@ class AGUIUserHandler:
             type=EventType.RUN_FINISHED, thread_id=self.session_id, run_id=self.run_id
         )
 
-    def check_tools_event(self, event: Event) -> None:
-        for function_call in event.get_function_calls():
-            if function_call.id and function_call.name:
-                self.tool_call_info[function_call.id] = function_call.name
-        for function_response in event.get_function_responses():
-            if function_response.id:
-                self.tool_call_info.pop(function_response.id, None)
+    def check_is_long_running_tool(self, adk_event: Event) -> bool:
+        if not adk_event.long_running_tool_ids:
+            return False
+        for func_call in adk_event.get_function_calls():
+            if (
+                func_call.id in adk_event.long_running_tool_ids
+                and func_call.id
+                and func_call.name
+            ):
+                self.tool_call_info[func_call.id] = func_call.name
+                return True
+        return False
 
     async def process_tool_result(self) -> RunErrorEvent | types.Content:
         try:
@@ -195,11 +200,10 @@ class AGUIUserHandler:
             session_id=self.session_id,
             new_message=self.input_message,
         ):
-            self.check_tools_event(adk_event)
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 yield agui_event
-        if self.running_handler.is_long_running_tool:
-            return
+                if self.check_is_long_running_tool(adk_event):
+                    return
         async for ag_ui_event in self.running_handler.force_close_streaming_message():
             yield ag_ui_event
         final_state = await self.session_handler.get_session_state()
