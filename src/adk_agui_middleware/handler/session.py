@@ -128,6 +128,15 @@ class SessionHandler:
     async def overwrite_pending_tool_calls(
         self, tool_call_info: dict[str, str]
     ) -> None:
+        """Update the session state with current pending tool calls.
+
+        Stores the current list of pending tool calls in the session state,
+        which is essential for HITL workflow management. These pending calls
+        are used to resume agent execution after human tool result submission.
+
+        Args:
+            :param tool_call_info: Dictionary mapping tool call IDs to function names
+        """
         if not tool_call_info:
             return
         record_log(
@@ -148,6 +157,16 @@ class SessionHandler:
             )
 
     async def get_pending_tool_calls(self) -> dict[str, str]:
+        """Retrieve pending tool calls from session state.
+
+        Gets the list of tool calls that are awaiting human results, which
+        is crucial for resuming HITL workflows correctly. These pending calls
+        represent long-running operations that have been submitted to humans
+        for completion.
+
+        Returns:
+            Dictionary mapping tool call IDs to function names for pending tools
+        """
         try:
             session_state = await self.session_manager.get_session_state(
                 self.session_parameter

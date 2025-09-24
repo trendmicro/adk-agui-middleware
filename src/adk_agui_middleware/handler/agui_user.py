@@ -135,6 +135,18 @@ class AGUIUserHandler:
         )
 
     def check_is_long_running_tool(self, adk_event: Event) -> bool:
+        """Check if the ADK event contains long-running tool calls.
+
+        Examines the event for function calls that are marked as long-running operations
+        and updates the internal tool call tracking. This is critical for HITL workflow
+        management as it determines when to pause agent execution and wait for human input.
+
+        Args:
+            :param adk_event: ADK event to examine for long-running tool calls
+
+        Returns:
+            True if the event contains long-running tool calls that should pause execution
+        """
         if not adk_event.long_running_tool_ids:
             return False
         for func_call in adk_event.get_function_calls():
@@ -148,6 +160,19 @@ class AGUIUserHandler:
         return False
 
     async def process_tool_result(self) -> RunErrorEvent | types.Content:
+        """Process tool result submission or extract user message for agent processing.
+
+        Determines whether the incoming message is a tool result completion (HITL) or
+        a regular user message, then processes accordingly. For tool results, validates
+        the tool call ID and converts the result to ADK format. For user messages,
+        extracts the latest user input for agent processing.
+
+        Returns:
+            Either a RunErrorEvent if validation fails, or Content object for agent processing
+
+        Raises:
+            Exception: Handled internally and converted to error event
+        """
         try:
             tool_message = self.user_message_handler.is_tool_result_submission
             if not tool_message:
@@ -173,6 +198,15 @@ class AGUIUserHandler:
             return AGUIErrorEvent.create_tool_processing_error_event(e)
 
     async def set_user_input(self) -> RunErrorEvent | None:
+        """Set the user input message for agent processing.
+
+        Processes the incoming message to determine user input and sets it for
+        agent execution. Returns error if message processing fails, otherwise
+        stores the processed input internally for use by the agent.
+
+        Returns:
+            RunErrorEvent if message processing fails, None if successful
+        """
         result = await self.process_tool_result()
         if isinstance(result, RunErrorEvent):
             return result
@@ -234,6 +268,19 @@ class AGUIUserHandler:
         yield self.call_finished()
 
     async def run(self) -> AsyncGenerator[BaseEvent]:
+        """Execute the complete AGUI user interaction workflow.
+
+        Main entry point for processing user requests through the middleware.
+        Handles initialization, input processing, workflow execution, and error handling.
+        This method orchestrates the entire agent execution lifecycle from request
+        processing to response generation.
+
+        Yields:
+            BaseEvent objects representing the complete agent interaction workflow
+
+        Raises:
+            Exception: All exceptions are caught and converted to error events
+        """
         await self._async_init()
         if error := await self.set_user_input():
             yield error
