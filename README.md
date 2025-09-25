@@ -26,6 +26,20 @@ ADK AGUI Middleware is a production-ready Python 3.13+ library engineered for en
 - **🛡️ Production-Ready**: Comprehensive error handling, structured logging, and graceful shutdown mechanisms
 - **🎯 Type Safety**: Full Python 3.13 type annotations with strict mypy validation and Pydantic data models
 
+### Highlights
+
+- **Modernized foundation**: The core was redesigned from the ground up, replacing the legacy implementation and closing logic gaps that previously prevented outbound data from being delivered.
+- **Conversation lifecycle APIs**: Fresh helpers&mdash;`get_agui_thread_list`, `delete_agui_thread`, `patch_agui_state`, `get_agui_message_snapshot`, and `get_agui_state_snapshot`&mdash;simplify querying, updating, and auditing multi-thread conversations.
+- **Lifecycle-aware middleware plugins**: Each request instantiates a stateful middleware class that can coordinate message pipelines, convert accumulated events, and execute custom workflows across ADK↔ADK, ADK↔AGUI, and AGUI↔AGUI translations while handling timeouts gracefully.
+- **Pluggable concurrency control**: A lock abstraction (memory-backed by default) allows swapping in providers such as Redis and tweaking retry behavior, enabling reliable operation across multiple Kubernetes pods without leaking in-memory state.
+- **Observability extensions**: Input/output logging plugins capture request context, store conversation histories, and reshape final payloads&mdash;for example, mapping unexpected errors to standard error codes before responses reach clients.
+- **Adaptive context extraction**: `app_name`, `user_id`, `session_id`, and `extract_initial_state` now accept request objects so headers and other metadata can populate runtime context beyond the standard `RunAgentInput` fields.
+- **AGUI input transformers**: Custom plugins can modify inbound AGUI payloads, including promoting queued names and IDs and remapping selected user messages into tool invocations for long-running ADK tools.
+- **Extension-ready craftsmanship**: The codebase follows SOLID principles, keeps functions compact, and exposes extensible base classes, making overrides straightforward when bespoke behavior is required.
+- **Strict static analysis**: Comprehensive typing paired with rigorous mypy enforcement keeps the codebase close to statically checked reliability.
+- **Utility-rich toolkit**: Dedicated utility modules streamline complex conversion logic, including support for ThinkingMessage and Thinking mode plus standards-compliant SSE encoding.
+- **Revamped HITL pipeline**: The Human-in-the-Loop experience was rebuilt to leverage long-running tools for high-throughput, operator-friendly workflows.
+
 ## Installation
 
 ```bash
@@ -113,7 +127,9 @@ graph TB
     %% Session operations
     SESSION --> SESS_MGR
     SESS_MGR --> ADK_SESS
-    SSE_SVC --> HIST_SVC
+    ENDPOINT --> HIST_SVC
+    HIST_SVC --> SESS_MGR
+    HIST_SVC --> RUNNING
 
     %% Infrastructure
     SSE_SVC --> SHUTDOWN
@@ -224,186 +240,83 @@ graph LR
 ### Basic Enterprise Implementation
 
 ```python
-import asyncio
 from fastapi import FastAPI, Request
 from google.adk.agents import BaseAgent
 from adk_agui_middleware import SSEService, register_agui_endpoint
-from adk_agui_middleware.data_model.config import RunnerConfig, PathConfig
+from adk_agui_middleware.data_model.config import RunnerConfig
 from adk_agui_middleware.data_model.context import ConfigContext
-from adk_agui_middleware.service.history_service import HistoryService
 
 # Initialize FastAPI application
 app = FastAPI(
-    title="Enterprise AI Agent Service",
-    description="Production ADK-AGUI middleware with HITL capabilities",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    title="AI Agent Service",
+    description="Enterprise ADK-AGUI middleware service",
+    version="1.0.0"
 )
 
+# Define your custom ADK agent
 class EnterpriseAgent(BaseAgent):
-    """Production-ready agent with comprehensive tool support and HITL workflows."""
+    """Custom enterprise agent with HITL capabilities."""
 
     def __init__(self):
         super().__init__()
         self.instructions = """
-        You are an enterprise AI assistant with advanced reasoning capabilities.
+        You are an enterprise AI assistant with access to various tools.
 
-        Core Behaviors:
-        - Always request human approval for high-impact operations (data deletion, financial transactions, system changes)
-        - Provide clear explanations for tool usage and decision-making processes
-        - Handle errors gracefully and inform users of any issues or limitations
-        - Maintain conversation context and reference previous interactions when relevant
-        - Use appropriate tools efficiently and explain their selection criteria
-
-        Security Guidelines:
-        - Never expose sensitive information in logs or responses
-        - Validate all inputs and sanitize outputs appropriately
-        - Follow principle of least privilege for all operations
-        - Report any suspicious activities or potential security concerns
+        Key behaviors:
+        - Always ask for human approval before executing high-impact operations
+        - Provide clear explanations for tool usage and reasoning
+        - Handle errors gracefully and inform users of any issues
+        - Maintain conversation context across multiple interactions
         """
 
-# Advanced context extraction for multi-tenant enterprise deployment
+# Context extraction functions for multi-tenant deployment
 async def extract_user_id(content, request: Request) -> str:
-    """Extract user ID from JWT token with enterprise authentication."""
-    # Production implementation should include:
-    # - JWT token validation and parsing
-    # - RBAC (Role-Based Access Control) integration
-    # - Audit trail logging for compliance
+    """Extract user ID from JWT token or API headers."""
+    # Production: Implement JWT token validation
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
-        # Implement JWT validation here
-        # token = auth_header[7:]
-        # decoded = jwt.decode(token, secret_key, algorithms=["HS256"])
-        # return decoded.get("user_id")
+        # Decode JWT and extract user_id
         pass
 
-    # Fallback for development/testing
+    # Fallback to header-based user identification
     return request.headers.get("X-User-ID", "anonymous")
 
 async def extract_app_name(content, request: Request) -> str:
-    """Extract application name from request context for multi-tenant routing."""
-    # Extract from subdomain for tenant isolation
+    """Extract application name from subdomain or headers."""
     host = request.headers.get("Host", "localhost")
-    if "." in host and not host.startswith("localhost"):
-        tenant = host.split(".")[0]
-        return f"enterprise-{tenant}"
-
-    # Extract from custom header for API-based routing
-    if app_header := request.headers.get("X-App-Name"):
-        return f"enterprise-{app_header}"
-
+    if "." in host:
+        subdomain = host.split(".")[0]
+        return f"enterprise-{subdomain}"
     return "enterprise-default"
 
-async def extract_initial_state(content, request: Request) -> dict[str, str] | None:
-    """Extract initial session state from request headers for context-aware initialization."""
-    initial_state = {}
-
-    # Extract user roles and permissions
-    if user_role := request.headers.get("X-User-Role"):
-        initial_state["user_role"] = user_role
-
-    # Extract department or team context
-    if department := request.headers.get("X-Department"):
-        initial_state["department"] = department
-
-    # Extract session preferences
-    if preferences := request.headers.get("X-Session-Preferences"):
-        initial_state["preferences"] = preferences
-
-    return initial_state if initial_state else None
-
-# Configure middleware with enterprise context
+# Configure middleware context
 config_context = ConfigContext(
     app_name=extract_app_name,
     user_id=extract_user_id,
     session_id=lambda content, req: content.thread_id,
-    extract_initial_state=extract_initial_state,
 )
 
-# Configure runner with production-grade settings
+# Configure runner with production settings
 runner_config = RunnerConfig(
-    use_in_memory_services=False,  # Use persistent services in production
-    # Configure external services for production:
-    # session_service=CloudSessionService(),
-    # artifact_service=S3ArtifactService(),
-    # memory_service=VectorMemoryService(),
-    # credential_service=VaultCredentialService(),
+    use_in_memory_services=True  # Set to False for production persistence
 )
 
-# Configure custom endpoint paths for enterprise deployment
-path_config = PathConfig(
-    agui_main_path="/v1/agent/execute",
-    agui_thread_list_path="/v1/conversations",
-    agui_thread_delete_path="/v1/conversations/{thread_id}",
-    agui_message_snapshot_path="/v1/conversations/{thread_id}/messages",
-    agui_state_snapshot_path="/v1/conversations/{thread_id}/state",
-    agui_patch_state_path="/v1/conversations/{thread_id}/state",
-)
-
-# Initialize services
+# Initialize and register services
 agent = EnterpriseAgent()
 sse_service = SSEService(agent, runner_config, config_context)
-history_service = HistoryService(config_context, runner_config.session_service)
+register_agui_endpoint(app, sse_service)
 
-# Register enterprise endpoints
-register_agui_endpoint(
-    app,
-    sse_service,
-    path_config=path_config,
-    history_service=history_service
-)
-
-# Add enterprise middleware for monitoring and security
-@app.middleware("http")
-async def enterprise_middleware(request: Request, call_next):
-    """Enterprise middleware for monitoring, security, and compliance."""
-    # Add request tracking and monitoring
-    start_time = asyncio.get_event_loop().time()
-
-    # Add security headers
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-
-    # Log request metrics for monitoring
-    process_time = asyncio.get_event_loop().time() - start_time
-    response.headers["X-Process-Time"] = str(process_time)
-
-    return response
-
-# Health check endpoint for load balancers
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring and load balancing."""
-    return {
-        "status": "healthy",
-        "version": "1.0.0",
-        "middleware": "adk-agui-middleware",
-        "timestamp": asyncio.get_event_loop().time()
-    }
-
-# Graceful shutdown handling
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Graceful shutdown with proper resource cleanup."""
-    await sse_service.close()
 
 if __name__ == "__main__":
     import uvicorn
-
-    # Production configuration
     uvicorn.run(
         app,
         host="0.0.0.0",
         port=8000,
-        workers=1,  # Use multiple workers in production with reverse proxy
         log_level="info",
-        access_log=True,
-        reload=False,  # Disable reload in production
-        loop="asyncio"
+        access_log=True
     )
+
 ```
 
 
@@ -445,91 +358,6 @@ All events are converted to Server-Sent Events format:
   "id": "unique_id"       // UUID for event correlation
 }
 ```
-
-## Architecture Patterns
-
-### Dependency Injection & Extensibility
-
-The middleware employs dependency injection patterns for maximum extensibility:
-
-```python
-# Abstract base classes define contracts
-from adk_agui_middleware.base_abc.handler import BaseAGUIEventHandler
-
-# Implement custom handlers
-class CustomEventProcessor(BaseAGUIEventHandler):
-    async def process(self, event: BaseEvent) -> list[BaseEvent]:
-        # Custom event processing logic
-        return [event]
-
-# Inject into handler context
-handler_context = HandlerContext(
-    agui_event_handler=CustomEventProcessor
-)
-```
-
-### Session Management & State Persistence
-
-Session management follows enterprise patterns with proper state isolation:
-
-```python
-from adk_agui_middleware.manager.session import SessionManager
-from adk_agui_middleware.data_model.session import SessionParameter
-
-# Session operations are thread-safe and persistent
-session_manager = SessionManager(session_service)
-session_param = SessionParameter(
-    app_name="enterprise-app",
-    user_id="user123",
-    session_id="conversation456"
-)
-
-# Get or create session with initial state
-session = await session_manager.check_and_create_session(
-    session_param,
-    initial_state={"user_role": "admin"}
-)
-```
-
-### Event Translation Pipeline
-
-The event translation system uses a sophisticated pipeline:
-
-```python
-from adk_agui_middleware.event.event_translator import EventTranslator
-
-# Event translator handles complex ADK→AGUI conversion
-translator = EventTranslator()
-
-# Supports streaming text, tool calls, and state management
-async for agui_event in translator.translate(adk_event):
-    # Process translated AGUI events
-    yield agui_event
-```
-
-## Production Deployment
-
-### Performance Considerations
-
-- **Concurrent Sessions**: The middleware supports thousands of concurrent sessions with proper session locking
-- **Memory Management**: Configurable in-memory vs persistent services for different deployment scales
-- **Event Streaming**: Optimized SSE streaming with minimal latency and proper error handling
-- **Resource Cleanup**: Automatic cleanup of resources and graceful shutdown handling
-
-### Monitoring & Observability
-
-```python
-# Built-in structured logging for enterprise monitoring
-from adk_agui_middleware.loggers.record_log import record_event_raw_log
-
-# Custom metrics integration
-class MetricsHandler(BaseAGUIEventHandler):
-    async def process(self, event: BaseEvent) -> list[BaseEvent]:
-        # Send metrics to monitoring system
-        await self.send_metrics(event.type, event.timestamp)
-        return [event]
-```
-
 ### Security Best Practices
 
 - **Authentication**: JWT token validation and RBAC integration
