@@ -38,8 +38,7 @@ class TestRunningHandler(unittest.TestCase):
         self.assertEqual(self.handler.runner, self.mock_runner)
         self.assertEqual(self.handler.run_config, self.mock_run_config)
         self.assertIsNotNone(self.handler.event_translator)
-        self.assertFalse(self.handler.is_long_running_tool)
-        
+
         # All handlers should be None by default
         self.assertIsNone(self.handler.adk_event_handler)
         self.assertIsNone(self.handler.adk_event_timeout_handler)
@@ -205,38 +204,14 @@ class TestRunningHandler(unittest.TestCase):
         self.assertEqual(events, [])
         mock_warning_log.assert_called_once()
 
-    def test_check_is_long_tool(self):
-        """Test checking for long-running tools."""
-        mock_adk_event = Mock(spec=Event)
-        mock_adk_event.is_final_response.return_value = True
-        
-        mock_agui_event = Mock(spec=BaseEvent)
-        mock_agui_event.type = EventType.TOOL_CALL_END
-        
-        self.handler._check_is_long_tool(mock_adk_event, mock_agui_event)
-        self.assertTrue(self.handler.is_long_running_tool)
+    def test_set_long_running_tool_ids(self):
+        """Test setting long-running tool IDs."""
+        tool_ids = {"tool-1": "function_1", "tool-2": "function_2"}
 
-    def test_check_is_long_tool_not_final_response(self):
-        """Test check when not final response."""
-        mock_adk_event = Mock(spec=Event)
-        mock_adk_event.is_final_response.return_value = False
-        
-        mock_agui_event = Mock(spec=BaseEvent)
-        mock_agui_event.type = EventType.TOOL_CALL_END
-        
-        self.handler._check_is_long_tool(mock_adk_event, mock_agui_event)
-        self.assertFalse(self.handler.is_long_running_tool)
+        self.handler.set_long_running_tool_ids(tool_ids)
 
-    def test_check_is_long_tool_not_tool_call_end(self):
-        """Test check when not tool call end event."""
-        mock_adk_event = Mock(spec=Event)
-        mock_adk_event.is_final_response.return_value = True
-        
-        mock_agui_event = Mock(spec=BaseEvent)
-        mock_agui_event.type = EventType.TEXT_MESSAGE_START
-        
-        self.handler._check_is_long_tool(mock_adk_event, mock_agui_event)
-        self.assertFalse(self.handler.is_long_running_tool)
+        # Verify the event translator received the tool IDs
+        self.assertEqual(self.handler.event_translator.long_running_tool_ids, tool_ids)
 
     async def test_run_async_translator_adk_to_agui_with_translate_handler(self):
         """Test translation with custom translate handler."""

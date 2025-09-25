@@ -18,6 +18,12 @@ class TestShutdownHandler(unittest.TestCase):
         if hasattr(ShutdownHandler, '_instances'):
             ShutdownHandler._instances.clear()
 
+    def tearDown(self):
+        """Clean up test fixtures."""
+        # Clear singleton instance after each test
+        if hasattr(ShutdownHandler, '_instances'):
+            ShutdownHandler._instances.clear()
+
     @patch('adk_agui_middleware.tools.shutdown.signal.signal')
     def test_init(self, mock_signal):
         """Test ShutdownHandler initialization."""
@@ -75,13 +81,17 @@ class TestShutdownHandler(unittest.TestCase):
     def test_signal_handler_with_running_loop(self, mock_get_loop, mock_record_log):
         """Test signal handler with running event loop."""
         handler = ShutdownHandler()
-        
+
         mock_loop = Mock()
         mock_loop.is_running.return_value = True
         mock_get_loop.return_value = mock_loop
-        
+
+        # Mock create_task to return a task-like object
+        mock_task = Mock()
+        mock_loop.create_task.return_value = mock_task
+
         handler._signal_handler(signal.SIGTERM, None)
-        
+
         self.assertTrue(handler._shutdown_in_progress)
         mock_record_log.assert_called_once_with(
             f"Received signal {signal.SIGTERM}, initiating graceful shutdown"

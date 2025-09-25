@@ -44,20 +44,10 @@ class TestSessionHandler(unittest.TestCase):
         """Test session_id property returns session parameter session ID."""
         self.assertEqual(self.session_handler.session_id, "test_session")
 
-    def test_get_pending_tool_calls_dict(self):
-        """Test get_pending_tool_calls_dict static method."""
-        pending_calls = ["call1", "call2", "call3"]
-        result = SessionHandler.get_pending_tool_calls_dict(pending_calls)
-
-        expected = {"pending_tool_calls": pending_calls}
-        self.assertEqual(result, expected)
-
-    def test_get_pending_tool_calls_dict_empty(self):
-        """Test get_pending_tool_calls_dict with empty list."""
-        result = SessionHandler.get_pending_tool_calls_dict([])
-
-        expected = {"pending_tool_calls": []}
-        self.assertEqual(result, expected)
+    def test_session_handler_attributes(self):
+        """Test that session handler has required attributes."""
+        self.assertEqual(self.session_handler.session_manager, self.mock_session_manager)
+        self.assertEqual(self.session_handler.session_parameter, self.session_parameter)
 
     async def test_get_session(self):
         """Test get_session method."""

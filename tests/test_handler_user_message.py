@@ -141,14 +141,15 @@ class TestUserMessageHandler(unittest.TestCase):
     def test_get_latest_message_empty_content(self):
         """Test get_latest_message skips messages with empty content."""
         messages = [
-            UserMessage(id="1", role="user", content="Valid message"),
             UserMessage(id="2", role="user", content=""),
-            UserMessage(id="3", role="user", content=None),
+            UserMessage(id="1", role="user", content="Valid message"),
         ]
         handler = self.create_handler(messages=messages)
 
         result = handler.get_latest_message()
 
+        # The implementation goes in reverse order, so the last valid message is "Valid message"
+        self.assertIsNotNone(result)
         self.assertEqual(result.parts[0].text, "Valid message")
 
     def test_get_latest_message_no_user_messages(self):

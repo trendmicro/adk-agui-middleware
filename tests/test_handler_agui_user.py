@@ -179,11 +179,20 @@ class TestAGUIUserHandler:
         agui_user_handler.tool_call_info = {"tool-123": "test_function"}
 
         with patch("adk_agui_middleware.handler.agui_user.convert_agui_tool_message_to_adk_function_response") as mock_convert:
-            mock_convert.return_value = Mock()
+            # Create a proper Part with FunctionResponse that will satisfy the Content validation
+            function_response = types.FunctionResponse(
+                id="tool-123",
+                name="test_function",
+                response={"result": "success"}
+            )
+            mock_part = types.Part(function_response=function_response)
+            mock_convert.return_value = mock_part
 
             result = await agui_user_handler.process_tool_result()
 
         assert isinstance(result, types.Content)
+        assert result.role == "user"
+        assert len(result.parts) == 1
         mock_session_handler.overwrite_pending_tool_calls.assert_called_once()
         mock_convert.assert_called_once_with(mock_tool_message, "test_function")
 
