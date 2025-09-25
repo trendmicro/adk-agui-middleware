@@ -238,9 +238,9 @@ class AGUIUserHandler:
         async for ag_ui_event in self.running_handler.force_close_streaming_message():
             yield ag_ui_event
         if (
-                event_final_state := await self.running_handler.create_state_snapshot_event(
-                    await self.session_handler.get_session_state()
-                )
+            event_final_state := await self.running_handler.create_state_snapshot_event(
+                await self.session_handler.get_session_state()
+            )
         ) is not None:
             yield event_final_state
 
