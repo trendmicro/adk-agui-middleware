@@ -233,15 +233,14 @@ class AGUIUserHandler:
         ):
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 yield agui_event
-                if self.check_is_long_running_tool(adk_event):
-                    return
+            if self.check_is_long_running_tool(adk_event):
+                return
         async for ag_ui_event in self.running_handler.force_close_streaming_message():
             yield ag_ui_event
-        final_state = await self.session_handler.get_session_state()
         if (
-            event_final_state := await self.running_handler.create_state_snapshot_event(
-                final_state
-            )
+                event_final_state := await self.running_handler.create_state_snapshot_event(
+                    await self.session_handler.get_session_state()
+                )
         ) is not None:
             yield event_final_state
 

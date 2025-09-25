@@ -319,6 +319,104 @@ if __name__ == "__main__":
 
 ```
 
+## Examples
+
+Explore ready-to-run usage patterns in the examples folder. Each example is self-contained with comments and can be launched via uvicorn.
+
+- Basic SSE: `uvicorn examples.01_basic_sse_app.main:app --reload`
+- Custom context + input conversion: `uvicorn examples.02_custom_context.main:app --reload`
+- Plugins and timeouts: `uvicorn examples.03_plugins_and_timeouts.main:app --reload`
+- History API (threads/snapshots/patch): `uvicorn examples.04_history_api.main:app --reload`
+- Custom session lock: `uvicorn examples.05_custom_lock.main:app --reload`
+- HITL tool flow: `uvicorn examples.06_hitl_tool_flow.main:app --reload`
+
+See `examples/README.md` for details.
+
+## HandlerContext Lifecycle
+
+HandlerContext configures pluggable hooks for the request lifecycle. Instances are constructed per-request (except session lock, which is created with SSEService) and invoked at defined stages.
+
+- session_lock_handler (created at SSEService init)
+  - When: Before running the request stream and in finally cleanup
+  - Used by: SSEService.runner (lock/unlock, generate locked error event)
+- in_out_record_handler
+  - When: Immediately after building InputInfo (input_record), then for every emitted SSE event (output_record, output_catch_and_change)
+  - Used by: SSEService.get_runner and SSEService.event_generator
+- adk_event_handler
+  - When: On each ADK event before translation
+  - Used by: RunningHandler._process_events_with_handler for ADK streams
+- adk_event_timeout_handler
+  - When: Surrounds ADK event processing with a timeout; on TimeoutError, yields fallback events
+  - Used by: RunningHandler._process_events_with_handler(enable_timeout=True)
+- translate_handler
+  - When: Before default translation; can yield AGUI events, request retune, or replace the ADK event
+  - Used by: RunningHandler._translate_adk_to_agui_async
+- agui_event_handler
+  - When: On each AGUI event after translation, before encoding
+  - Used by: RunningHandler._process_events_with_handler for AGUI streams
+- agui_state_snapshot_handler
+  - When: Once at the end to transform final state before creating a StateSnapshotEvent
+  - Used by: RunningHandler.create_state_snapshot_event
+
+### Per-Request Sequence
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant F as FastAPI Endpoint
+    participant SSE as SSEService
+    participant IO as InOutHandler
+    participant L as SessionLockHandler
+    participant U as AGUIUserHandler
+    participant UM as UserMessageHandler
+    participant S as SessionHandler
+    participant R as RunningHandler
+    participant ADK as ADK Runner
+    participant T as TranslateHandler
+    participant A as ADKEventHandler
+    participant G as AGUIEventHandler
+    participant ENC as SSE Encoder
+
+    C->>F: POST RunAgentInput
+    F->>SSE: get_runner()
+    SSE->>SSE: build InputInfo
+    SSE->>IO: instantiate + input_record()
+    SSE->>L: lock(InputInfo)
+    alt locked
+        L-->>SSE: RunErrorEvent
+        SSE->>ENC: encode error
+        ENC-->>C: SSE error
+    else acquired
+        F->>SSE: event_generator(runner, input_info, IO)
+        par stream
+            SSE->>U: run()
+            U->>S: create/get session + state update
+            U->>R: run_async_with_adk()
+            R->>ADK: Runner.run_async(...)
+            loop per ADK event
+                ADK-->>R: Event
+                R->>A: process(event)
+                R->>T: translate(adk_event)?
+                T-->>R: TranslateEvents (optional retune/replace)
+                R->>R: translate/long_running via translator
+                R-->>SSE: AGUI BaseEvent(s)
+                SSE->>G: process(agui_event)
+                G-->>SSE: AGUI BaseEvent
+                SSE->>ENC: encode
+                ENC->>IO: output_record + mutate
+                IO-->>C: SSE event
+            end
+            U->>R: force_close_streaming_message
+            U->>R: create_state_snapshot_event (+state handler)
+            R-->>SSE: StateSnapshotEvent (optional)
+            SSE->>ENC: encode -> IO -> C
+            U-->>SSE: RUN_FINISHED
+            SSE->>ENC: encode -> IO -> C
+        and finally
+            SSE->>L: unlock(InputInfo)
+        end
+    end
+```
 
 ## API Reference
 
