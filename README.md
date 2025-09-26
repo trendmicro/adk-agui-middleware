@@ -25,17 +25,6 @@ Enterprise-grade Python 3.13+ middleware that bridges Google's Agent Development
 - **🛡️ Production-Ready**: Comprehensive error handling, logging, and graceful shutdown
 - **🎯 Type Safety**: Full Python 3.13 annotations with strict mypy validation
 
-### Highlights
-
-- **Redesigned Core**: Ground-up redesign with improved data delivery and closed logic gaps
-- **Conversation APIs**: Complete lifecycle management with `get_agui_thread_list`, `delete_agui_thread`, `patch_agui_state`, and snapshot endpoints
-- **Pluggable Architecture**: Stateful middleware with custom workflows, timeout handling, and swappable concurrency providers (Redis support)
-- **Enhanced Observability**: Input/output logging, conversation histories, and error mapping plugins
-- **Dynamic Context**: Runtime context extraction from headers and metadata beyond standard `RunAgentInput`
-- **SOLID Design**: Extensible base classes with compact functions following enterprise patterns
-- **Static Analysis**: Comprehensive typing with strict mypy enforcement for reliability
-- **Rich Utilities**: ThinkingMessage support, SSE encoding, and complex conversion logic
-
 ## Installation
 
 ```bash
@@ -48,6 +37,23 @@ pip install adk-agui-middleware
 - Google ADK >= 1.9.0
 - AGUI Protocol >= 0.1.7
 - FastAPI >= 0.104.0
+
+## Examples
+
+Jump in with hands-on, progressively richer examples under `examples/`.
+
+- 01_minimal_sse
+  - Smallest working setup that streams Server-Sent Events (SSE) from an ADK `LlmAgent`.
+  - Path: `examples/01_minimal_sse/app.py`
+- 02_context_history
+  - Main SSE endpoint plus History and State endpoints, with simple context extraction.
+  - Path: `examples/02_context_history/app.py`
+- 03_advanced_pipeline
+  - Adds a custom input/output recorder and a safe preprocessor for `RunAgentInput`.
+  - Path: `examples/03_advanced_pipeline/app.py`
+- 04_lifecycle_handlers
+  - Walks through the full request lifecycle and `HandlerContext` hooks (session lock, ADK/AGUI handlers, translation, state snapshot, I/O recording).
+  - Path: `examples/04_lifecycle_handlers/app.py`
 
 ## Architecture Overview
 
@@ -439,99 +445,98 @@ graph TD
 
 ```mermaid
 sequenceDiagram
-    participant 🌐 as Client
-    participant 🎯 as FastAPI Endpoint
-    participant ⚡ as SSE Service
-    participant 🔒 as Session Lock
-    participant 🎭 as AGUI User Handler
-    participant 🏃 as Running Handler
-    participant 🔄 as Event Translator
-    participant 🚀 as ADK Runner
-    participant 🤖 as Base Agent
-    participant 📋 as Session Manager
-    participant 💾 as Session Service
+    participant CLIENT as "🌐 Client"
+    participant ENDPOINT as "🎯 FastAPI Endpoint"
+    participant SSE as "⚡ SSE Service"
+    participant LOCK as "🔒 Session Lock"
+    participant AGUI_USER as "🎭 AGUI User Handler"
+    participant RUNNING as "🏃 Running Handler"
+    participant TRANSLATE as "🔄 Event Translator"
+    participant ADK_RUNNER as "🚀 ADK Runner"
+    participant BASE_AGENT as "🤖 Base Agent"
+    participant SESSION_MGR as "📋 Session Manager"
+    participant SESSION_SVC as "💾 Session Service"
 
-    Note over 🌐,💾: Request Initiation & Context Setup
-    🌐->>🎯: POST RunAgentInput
-    🎯->>⚡: Extract context & create runner
-    ⚡->>⚡: Extract app_name, user_id, session_id
-    ⚡->>🔒: Acquire session lock
+    note over CLIENT,SESSION_SVC: Request Initiation & Context Setup
+    CLIENT->>ENDPOINT: POST RunAgentInput
+    ENDPOINT->>SSE: Extract context & create runner
+    SSE->>SSE: Extract app_name, user_id, session_id
+    SSE->>LOCK: Acquire session lock
 
     alt Session locked by another request
-        🔒-->>⚡: Lock failed
-        ⚡-->>🌐: SSE: RunErrorEvent (session busy)
+        LOCK-->>SSE: Lock failed
+        SSE-->>CLIENT: SSE: RunErrorEvent (session busy)
     else Lock acquired successfully
-        🔒-->>⚡: Lock acquired
+        LOCK-->>SSE: Lock acquired
 
-        Note over ⚡,💾: Handler Initialization & Session Setup
-        ⚡->>🎭: Initialize AGUI User Handler
-        🎭->>📋: Check and create session
-        📋->>💾: Get or create session with initial state
-        💾-->>📋: Session object with state
-        📋-->>🎭: Session ready
+        note over SSE,SESSION_SVC: Handler Initialization & Session Setup
+        SSE->>AGUI_USER: Initialize AGUI User Handler
+        AGUI_USER->>SESSION_MGR: Check and create session
+        SESSION_MGR->>SESSION_SVC: Get or create session with initial state
+        SESSION_SVC-->>SESSION_MGR: Session object with state
+        SESSION_MGR-->>AGUI_USER: Session ready
 
-        🎭->>🎭: Load pending tool calls from state
-        🎭->>🏃: Set long-running tool IDs
+        AGUI_USER->>AGUI_USER: Load pending tool calls from state
+        AGUI_USER->>RUNNING: Set long-running tool IDs
 
-        Note over 🎭,🤖: Message Processing & Agent Execution
-        🎭->>🎭: Determine message type (user input or tool result)
-        🎭->>⚡: Stream: RunStartedEvent
-        ⚡-->>🌐: SSE: RUN_STARTED
+        note over AGUI_USER,BASE_AGENT: Message Processing & Agent Execution
+        AGUI_USER->>AGUI_USER: Determine message type (user input or tool result)
+        AGUI_USER->>SSE: Stream: RunStartedEvent
+        SSE-->>CLIENT: SSE: RUN_STARTED
 
-        🎭->>🏃: Execute agent with user message
-        🏃->>🚀: ADK Runner execution
-        🚀->>🤖: Process with custom agent logic
+        AGUI_USER->>RUNNING: Execute agent with user message
+        RUNNING->>ADK_RUNNER: ADK Runner execution
+        ADK_RUNNER->>BASE_AGENT: Process with custom agent logic
 
-        Note over 🤖,🌐: Event Streaming & Real-time Translation
+        note over BASE_AGENT,CLIENT: Event Streaming & Real-time Translation
         loop For each ADK event
-            🤖-->>🚀: Agent-generated ADK event
-            🚀-->>🏃: Stream ADK event
-            🏃->>🔄: Translate ADK to AGUI event
-            🔄-->>🏃: AGUI event(s)
-            🏃-->>🎭: AGUI event stream
-            🎭-->>⚡: AGUI events
-            ⚡-->>🌐: SSE: Event data (TEXT_MESSAGE_*, TOOL_CALL, etc.)
+            BASE_AGENT-->>ADK_RUNNER: Agent-generated ADK event
+            ADK_RUNNER-->>RUNNING: Stream ADK event
+            RUNNING->>TRANSLATE: Translate ADK to AGUI event
+            TRANSLATE-->>RUNNING: AGUI event(s)
+            RUNNING-->>AGUI_USER: AGUI event stream
+            AGUI_USER-->>SSE: AGUI events
+            SSE-->>CLIENT: SSE: Event data (TEXT_MESSAGE_*, TOOL_CALL, etc.)
 
             alt Long-running tool detected
-                🏃->>🎭: Long-running tool call detected
-                🎭->>📋: Persist pending tool call state
-                📋->>💾: Update session state with tool info
-                🎭-->>⚡: Early return (HITL pause)
-                break HITL workflow initiated
+            RUNNING->>AGUI_USER: Long-running tool call detected
+            AGUI_USER->>SESSION_MGR: Persist pending tool call state
+            SESSION_MGR->>SESSION_SVC: Update session state with tool info
+            AGUI_USER-->>SSE: Early return (HITL pause)
             end
         end
 
-        Note over 🎭,🌐: Workflow Completion & Cleanup
+        note over AGUI_USER,CLIENT: Workflow Completion & Cleanup
         alt Normal completion (no LRO tools)
-            🏃->>🔄: Force close streaming messages
-            🔄-->>🏃: Message end events
-            🏃->>📋: Get final session state
-            📋->>💾: Retrieve current state
-            💾-->>📋: State snapshot
-            📋-->>🏃: State data
-            🏃-->>🎭: State snapshot event
-            🎭-->>⚡: StateSnapshotEvent
-            ⚡-->>🌐: SSE: STATE_SNAPSHOT
+            RUNNING->>TRANSLATE: Force close streaming messages
+            TRANSLATE-->>RUNNING: Message end events
+            RUNNING->>SESSION_MGR: Get final session state
+            SESSION_MGR->>SESSION_SVC: Retrieve current state
+            SESSION_SVC-->>SESSION_MGR: State snapshot
+            SESSION_MGR-->>RUNNING: State data
+            RUNNING-->>AGUI_USER: State snapshot event
+            AGUI_USER-->>SSE: StateSnapshotEvent
+            SSE-->>CLIENT: SSE: STATE_SNAPSHOT
         end
 
-        🎭-->>⚡: RunFinishedEvent
-        ⚡-->>🌐: SSE: RUN_FINISHED
+        AGUI_USER-->>SSE: RunFinishedEvent
+        SSE-->>CLIENT: SSE: RUN_FINISHED
 
-        Note over ⚡,🔒: Resource Cleanup
-        ⚡->>🔒: Release session lock
-        🔒-->>⚡: Lock released
+        note over SSE,LOCK: Resource Cleanup
+        SSE->>LOCK: Release session lock
+        LOCK-->>SSE: Lock released
     end
 
-    Note over 🌐,💾: Subsequent HITL Tool Result Submission
+    note over CLIENT,SESSION_SVC: Subsequent HITL Tool Result Submission
     opt Tool result submission for HITL
-        🌐->>🎯: POST RunAgentInput (with tool result)
-        Note right of 🌐: Tool result contains:<br/>- tool_call_id<br/>- result data
-        🎯->>⚡: Process tool result submission
-        Note over ⚡,🎭: Same flow but with tool result processing
-        🎭->>🎭: Validate tool_call_id against pending tools
-        🎭->>🎭: Convert tool result to ADK format
-        🎭->>📋: Remove completed tool from pending state
-        Note over 🎭,🌐: Continue agent execution with tool result
+        CLIENT->>ENDPOINT: POST RunAgentInput (with tool result)
+        Note right of CLIENT: Tool result contains: tool_call_id, result data
+        ENDPOINT->>SSE: Process tool result submission
+        note over SSE,AGUI_USER: Same flow but with tool result processing
+        AGUI_USER->>AGUI_USER: Validate tool_call_id against pending tools
+        AGUI_USER->>AGUI_USER: Convert tool result to ADK format
+        AGUI_USER->>SESSION_MGR: Remove completed tool from pending state
+        note over AGUI_USER,CLIENT: Continue agent execution with tool result
     end
 ```
 
@@ -804,183 +809,6 @@ HandlerContext configures pluggable hooks for the request lifecycle. Instances a
   - When: Once at the end to transform final state before creating a StateSnapshotEvent
   - Used by: RunningHandler.create_state_snapshot_event
 
-### Detailed Component Interaction Flow
-
-```mermaid
-sequenceDiagram
-    participant 🌐 as Client
-    participant 🎯 as FastAPI<br/>Endpoint
-    participant ⚡ as SSE<br/>Service
-    participant 📊 as InputOutput<br/>Handler
-    participant 🔒 as Session<br/>Lock Handler
-    participant 🎭 as AGUI User<br/>Handler
-    participant 💬 as User Message<br/>Handler
-    participant 📝 as Session<br/>Handler
-    participant 🏃 as Running<br/>Handler
-    participant 🚀 as ADK<br/>Runner
-    participant 🔄 as Event<br/>Translator
-    participant 🎛️ as Custom<br/>Handlers
-    participant 🔌 as SSE<br/>Encoder
-
-    rect rgb(230, 245, 255)
-        Note over 🌐,🔌: Phase 1: Request Setup & Validation
-        🌐->>🎯: POST RunAgentInput<br/>{messages, thread_id, run_id}
-        🎯->>⚡: get_runner(agui_content, request)
-
-        activate ⚡
-        ⚡->>⚡: Extract context:<br/>• app_name<br/>• user_id<br/>• session_id<br/>• initial_state
-        ⚡->>⚡: Build InputInfo object
-        ⚡->>📊: Instantiate input/output handler
-        activate 📊
-        📊->>📊: input_record(InputInfo)
-        ⚡->>🔒: lock(InputInfo)
-        activate 🔒
-    end
-
-    alt Session already locked
-        🔒-->>⚡: Lock acquisition failed
-        ⚡->>🔌: Encode RunErrorEvent
-        🔌-->>🌐: SSE: {"event": "error", "data": "session_busy"}
-    else Lock acquired successfully
-        🔒-->>⚡: Lock acquired
-
-        rect rgb(255, 248, 225)
-            Note over ⚡,💬: Phase 2: Handler Initialization
-            🎯->>⚡: event_generator(runner, input_info, io_handler)
-            ⚡->>🎭: Initialize AGUI User Handler
-            activate 🎭
-            🎭->>💬: Initialize User Message Handler
-            activate 💬
-            🎭->>📝: Initialize Session Handler
-            activate 📝
-            🎭->>🏃: Initialize Running Handler
-            activate 🏃
-        end
-
-        rect rgb(248, 255, 248)
-            Note over 🎭,📝: Phase 3: Session & State Management
-            🎭->>🎭: async_init() - Load pending tools
-            🎭->>📝: get_pending_tool_calls()
-            📝-->>🎭: {tool_id: tool_name} mapping
-            🎭->>🏃: set_long_running_tool_ids(tool_info)
-            🎭->>💬: init(tool_call_info)
-            🎭->>📝: check_and_create_session(initial_state)
-            📝-->>🎭: Session ready
-        end
-
-        rect rgb(255, 240, 245)
-            Note over 🎭,🚀: Phase 4: Message Processing & Agent Execution
-            🎭->>🎭: Determine message type<br/>(user_message vs tool_result)
-            🎭->>⚡: yield RunStartedEvent
-            ⚡->>🔌: Encode event
-            🔌->>📊: output_record + transform
-            📊-->>🌐: SSE: {"event": "run_started"}
-
-            🎭->>🏃: run_async_with_adk(user_id, session_id, message)
-            🏃->>🚀: ADK Runner.run_async(...)
-            activate 🚀
-        end
-
-        rect rgb(240, 248, 255)
-            Note over 🚀,🌐: Phase 5: Event Streaming Pipeline
-            loop For each ADK event from agent
-                🚀-->>🏃: Stream ADK Event
-
-                par Custom ADK Event Processing
-                    🏃->>🎛️: ADK Event Handler (optional)
-                    🎛️-->>🏃: Processed/filtered events
-                and Event Translation
-                    🏃->>🔄: translate_adk_to_agui_async(adk_event)
-                    activate 🔄
-                    🔄->>🔄: Process by event type:<br/>• Text content → streaming<br/>• Function calls → tool events<br/>• State deltas → JSON patches
-                    🔄-->>🏃: AGUI BaseEvent(s)
-                    deactivate 🔄
-                and Custom Translation Handler
-                    🏃->>🎛️: Custom Translate Handler (optional)
-                    🎛️-->>🏃: TranslateEvent with flags:<br/>• is_retune<br/>• is_replace<br/>• custom_agui_event
-                end
-
-                🏃->>🏃: run_async_with_agui(adk_event)
-
-                par Custom AGUI Event Processing
-                    🏃->>🎛️: AGUI Event Handler (optional)
-                    🎛️-->>🏃: Processed AGUI events
-                and Event Streaming
-                    🏃-->>🎭: AGUI BaseEvent stream
-                    🎭->>🎭: check_is_long_running_tool(adk_event)
-                end
-
-                🎭-->>⚡: AGUI events
-                ⚡->>🔌: convert_agui_event_to_sse(event)
-                🔌->>🔌: Add timestamp & UUID
-                🔌->>📊: output_record(sse_data)
-                📊->>📊: output_catch_and_change(sse_data)
-                📊-->>🌐: SSE: Event data<br/>(TEXT_MESSAGE_*, TOOL_CALL, etc.)
-
-                alt Long-running tool detected
-                    Note right of 🎭: HITL Workflow Triggered
-                    🎭->>🎭: Update tool_call_info
-                    🎭->>📝: overwrite_pending_tool_calls(tool_info)
-                    🎭-->>⚡: Early return - HITL pause
-                    break Agent execution paused for human input
-                end
-            end
-            deactivate 🚀
-        end
-
-        rect rgb(245, 255, 245)
-            Note over 🎭,🌐: Phase 6: Completion & State Finalization
-            alt Normal completion (no long-running tools)
-                🎭->>🏃: force_close_streaming_message()
-                🏃->>🔄: Force close any unclosed messages
-                🔄-->>🏃: TextMessageEndEvent(s)
-                🏃-->>🎭: Message end events
-
-                🎭->>📝: get_session_state()
-                📝-->>🎭: Current session state
-                🎭->>🏃: create_state_snapshot_event(final_state)
-
-                par Custom State Processing
-                    🏃->>🎛️: AGUI State Snapshot Handler (optional)
-                    🎛️-->>🏃: Processed state snapshot
-                end
-
-                🏃-->>🎭: StateSnapshotEvent
-                🎭-->>⚡: State snapshot
-                ⚡->>🔌: Encode state snapshot
-                🔌->>📊: Process and send
-                📊-->>🌐: SSE: STATE_SNAPSHOT
-            end
-
-            🎭->>📝: overwrite_pending_tool_calls(final_tool_info)
-            🎭-->>⚡: RunFinishedEvent
-            ⚡->>🔌: Encode completion
-            🔌->>📊: Process and send
-            📊-->>🌐: SSE: RUN_FINISHED
-        end
-
-        rect rgb(255, 245, 245)
-            Note over ⚡,🔒: Phase 7: Resource Cleanup
-            ⚡->>🔒: unlock(InputInfo)
-            deactivate 🔒
-            deactivate 🏃
-            deactivate 📝
-            deactivate 💬
-            deactivate 🎭
-            deactivate 📊
-            deactivate ⚡
-        end
-    end
-
-    rect rgb(255, 255, 240)
-        Note over 🌐,📝: Optional: Subsequent HITL Tool Result
-        opt Tool result submission for long-running tool
-            🌐->>🎯: POST RunAgentInput<br/>{tool_result: {tool_call_id, result}}
-            Note right of 🌐: Same sequence but:<br/>• Validate tool_call_id<br/>• Convert to ADK format<br/>• Resume agent execution
-        end
-    end
-```
-
 ## API Reference
 
 ### Main AGUI Endpoint
@@ -1022,22 +850,6 @@ The middleware supports comprehensive event translation between ADK and AGUI for
 - `RUN_STARTED` - Agent execution began
 - `RUN_FINISHED` - Agent execution completed
 - `ERROR` - Error event with details
-
-#### SSE Format
-All events are converted to Server-Sent Events format:
-```javascript
-{
-  "data": "{...}",        // JSON-serialized event data
-  "event": "event_type",  // AGUI event type
-  "id": "unique_id"       // UUID for event correlation
-}
-```
-### Security Best Practices
-
-- **Authentication**: JWT token validation and RBAC integration
-- **Session Isolation**: Proper tenant isolation for multi-tenant deployments
-- **Audit Logging**: Comprehensive audit trails for compliance requirements
-- **Error Handling**: Secure error handling without information leakage
 
 ## License
 
