@@ -110,6 +110,18 @@ class AGUIErrorEvent:
 
     @staticmethod
     def create_no_input_message_error(thread_id: str) -> RunErrorEvent:
+        """Create an error event when input message is missing.
+
+        Handles scenarios where an agent execution is attempted but no user
+        message content is found in the request. This typically occurs when
+        the request is malformed or missing required message data.
+
+        Args:
+            :param thread_id: ID of the thread where input message was expected
+
+        Returns:
+            RunErrorEvent for missing input message
+        """
         record_error_log(f"Input message missing for thread {thread_id}")
         return RunErrorEvent(
             type=EventType.RUN_ERROR,

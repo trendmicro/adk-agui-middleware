@@ -1,3 +1,6 @@
+# Copyright (C) 2025 Trend Micro Inc. All rights reserved.
+"""Default session ID extraction utility for AGUI middleware."""
+
 from ag_ui.core import RunAgentInput
 from fastapi import Request
 
