@@ -36,6 +36,7 @@ def convert_agui_tool_message_to_adk_function_response(
     Raises:
         json.JSONDecodeError: If tool message content is not valid JSON (implicitly)
     """
+
     def parse_tool_content() -> dict[str, Any]:
         """Parse tool message content with error handling for empty content.
 

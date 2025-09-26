@@ -50,27 +50,42 @@ class TestRunningHandler(unittest.TestCase):
         """Test initialization with all handler types."""
         # Create actual subclasses instead of mocks to pass Pydantic validation
         class MockADKEventHandler(BaseADKEventHandler):
-            async def process(self, event): 
+            def __init__(self, input_info):
+                self.input_info = input_info
+
+            async def process(self, event):
                 yield event
-        
+
         class MockADKEventTimeoutHandler(BaseADKEventTimeoutHandler):
-            async def get_timeout(self): 
+            def __init__(self, input_info):
+                self.input_info = input_info
+
+            async def get_timeout(self):
                 return 30
-            async def process_timeout_fallback(self): 
+
+            async def process_timeout_fallback(self):
                 yield "timeout"
-        
+
         class MockAGUIEventHandler(BaseAGUIEventHandler):
-            async def process(self, event): 
+            def __init__(self, input_info):
+                self.input_info = input_info
+
+            async def process(self, event):
                 yield event
-        
+
         class MockAGUIStateSnapshotHandler(BaseAGUIStateSnapshotHandler):
-            async def process(self, state): 
+            def __init__(self, input_info):
+                self.input_info = input_info
+
+            async def process(self, state):
                 return state
-        
+
         class MockTranslateHandler(BaseTranslateHandler):
-            async def translate(self, event): 
-                from adk_agui_middleware.data_model.context import \
-                    TranslateEvent
+            def __init__(self, input_info):
+                self.input_info = input_info
+
+            async def translate(self, event):
+                from adk_agui_middleware.data_model.event import TranslateEvent
                 yield TranslateEvent(agui_event=None, is_retune=False)
         
         context = HandlerContext(

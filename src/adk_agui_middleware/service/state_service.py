@@ -28,6 +28,7 @@ class StateService:
     - Transform state data through configurable processors
     - Extract context from HTTP requests for session identification
     """
+
     def __init__(self, state_config: StateConfig):
         """Initialize the state service with configuration.
 

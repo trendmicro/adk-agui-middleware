@@ -14,31 +14,27 @@
 
 ## Overview
 
-ADK AGUI Middleware is a production-ready Python 3.13+ library engineered for enterprise-scale integration between Google's Agent Development Kit and AGUI (Agent User Interface) protocol. The middleware provides a robust foundation for building AI agent applications with real-time streaming capabilities, concurrent session management, and sophisticated Human-in-the-Loop (HITL) workflows.
+Enterprise-grade Python 3.13+ middleware that bridges Google's Agent Development Kit (ADK) with AGUI protocol, enabling real-time AI agent applications with Server-Sent Events streaming and Human-in-the-Loop workflows.
 
 ### Key Features
 
-- **🏗️ Enterprise Architecture**: Modular design with dependency injection, abstract base classes, and clean separation of concerns
-- **⚡ High-Performance SSE**: Asynchronous Server-Sent Events streaming with bidirectional event translation pipeline
-- **🔒 Session Management**: Thread-safe session locking with configurable timeout and retry mechanisms
-- **🤝 HITL Workflows**: Complete orchestration of Human-in-the-Loop tool call workflows with state persistence
-- **🔄 Event Translation**: Real-time ADK ↔ AGUI event conversion with streaming message management
-- **🛡️ Production-Ready**: Comprehensive error handling, structured logging, and graceful shutdown mechanisms
-- **🎯 Type Safety**: Full Python 3.13 type annotations with strict mypy validation and Pydantic data models
+- **⚡ SSE Streaming**: High-performance Server-Sent Events with real-time ADK ↔ AGUI translation
+- **🔒 Session Management**: Thread-safe locking with configurable timeout and retry mechanisms
+- **🤝 HITL Workflows**: Complete Human-in-the-Loop orchestration with state persistence
+- **🏗️ Enterprise Architecture**: Modular design with dependency injection and clean separation
+- **🛡️ Production-Ready**: Comprehensive error handling, logging, and graceful shutdown
+- **🎯 Type Safety**: Full Python 3.13 annotations with strict mypy validation
 
 ### Highlights
 
-- **Modernized foundation**: The core was redesigned from the ground up, replacing the legacy implementation and closing logic gaps that previously prevented outbound data from being delivered.
-- **Conversation lifecycle APIs**: Fresh helpers&mdash;`get_agui_thread_list`, `delete_agui_thread`, `patch_agui_state`, `get_agui_message_snapshot`, and `get_agui_state_snapshot`&mdash;simplify querying, updating, and auditing multi-thread conversations.
-- **Lifecycle-aware middleware plugins**: Each request instantiates a stateful middleware class that can coordinate message pipelines, convert accumulated events, and execute custom workflows across ADK↔ADK, ADK↔AGUI, and AGUI↔AGUI translations while handling timeouts gracefully.
-- **Pluggable concurrency control**: A lock abstraction (memory-backed by default) allows swapping in providers such as Redis and tweaking retry behavior, enabling reliable operation across multiple Kubernetes pods without leaking in-memory state.
-- **Observability extensions**: Input/output logging plugins capture request context, store conversation histories, and reshape final payloads&mdash;for example, mapping unexpected errors to standard error codes before responses reach clients.
-- **Adaptive context extraction**: `app_name`, `user_id`, `session_id`, and `extract_initial_state` now accept request objects so headers and other metadata can populate runtime context beyond the standard `RunAgentInput` fields.
-- **AGUI input transformers**: Custom plugins can modify inbound AGUI payloads, including promoting queued names and IDs and remapping selected user messages into tool invocations for long-running ADK tools.
-- **Extension-ready craftsmanship**: The codebase follows SOLID principles, keeps functions compact, and exposes extensible base classes, making overrides straightforward when bespoke behavior is required.
-- **Strict static analysis**: Comprehensive typing paired with rigorous mypy enforcement keeps the codebase close to statically checked reliability.
-- **Utility-rich toolkit**: Dedicated utility modules streamline complex conversion logic, including support for ThinkingMessage and Thinking mode plus standards-compliant SSE encoding.
-- **Revamped HITL pipeline**: The Human-in-the-Loop experience was rebuilt to leverage long-running tools for high-throughput, operator-friendly workflows.
+- **Redesigned Core**: Ground-up redesign with improved data delivery and closed logic gaps
+- **Conversation APIs**: Complete lifecycle management with `get_agui_thread_list`, `delete_agui_thread`, `patch_agui_state`, and snapshot endpoints
+- **Pluggable Architecture**: Stateful middleware with custom workflows, timeout handling, and swappable concurrency providers (Redis support)
+- **Enhanced Observability**: Input/output logging, conversation histories, and error mapping plugins
+- **Dynamic Context**: Runtime context extraction from headers and metadata beyond standard `RunAgentInput`
+- **SOLID Design**: Extensible base classes with compact functions following enterprise patterns
+- **Static Analysis**: Comprehensive typing with strict mypy enforcement for reliability
+- **Rich Utilities**: ThinkingMessage support, SSE encoding, and complex conversion logic
 
 ## Installation
 
@@ -67,8 +63,8 @@ graph TB
 
     subgraph "FastAPI Endpoint Layer"
         MAIN_EP[🎯 Main Endpoint<br/>/agui_main_path<br/>POST RunAgentInput]
-        HIST_EP[📚 History Endpoints<br/>GET /thread/list<br/>DELETE /thread/{id}<br/>GET /message_snapshot/{id}]
-        STATE_EP[🗄️ State Endpoints<br/>PATCH /state/{id}<br/>GET /state_snapshot/{id}]
+        HIST_EP[📚 History Endpoints<br/>GET /thread/list<br/>DELETE /thread/ID<br/>GET /message_snapshot/ID]
+        STATE_EP[🗄️ State Endpoints<br/>PATCH /state/ID<br/>GET /state_snapshot/ID]
     end
 
     subgraph "Service Layer"
@@ -342,7 +338,7 @@ graph TD
     end
 
     subgraph "Message Processing"
-        MSG_TYPE{❓ Message Type<br/>User Message or<br/>Tool Result?}
+        MSG_TYPE{❓ Message Type?}
         USER_MSG[💬 User Message<br/>Extract Content<br/>Prepare for Agent]
         TOOL_RESULT[🛠️ Tool Result<br/>Validate Tool Call ID<br/>Convert to ADK Format]
         MSG_ERROR[❌ Message Error<br/>Invalid Tool ID or<br/>Missing Content]
@@ -355,7 +351,7 @@ graph TD
     end
 
     subgraph "Tool Call Detection"
-        TOOL_CHECK{🔍 Tool Call Detection<br/>Long-Running Tool<br/>in Event?}
+        TOOL_CHECK{🔍 Long-Running Tool?}
         LRO_DETECT[⏱️ LRO Detection<br/>Mark as Long-Running<br/>Store Tool Call Info]
         HITL_PAUSE[⏸️ HITL Pause<br/>Early Return<br/>Wait for Human Input]
         NORMAL_FLOW[➡️ Normal Flow<br/>Continue Processing<br/>Standard Tools]
@@ -581,7 +577,7 @@ stateDiagram-v2
 
     note right of HITLWaiting
         Session state contains:
-        - pending_tool_calls: {tool_id: tool_name}
+        - pending_tool_calls: tool_id to tool_name mapping
         - conversation_history
         - custom_state_data
         - hitl_workflow_status
@@ -987,14 +983,27 @@ sequenceDiagram
 
 ## API Reference
 
-### Core Endpoints
+### Main AGUI Endpoint
+Register with `register_agui_endpoint(app, sse_service)`
 
 | Method | Endpoint | Description | Request Body | Response Type |
 |--------|----------|-------------|--------------|---------------|
 | `POST` | `/` | Execute agent with streaming response | `RunAgentInput` | `EventSourceResponse` |
+
+### History Endpoints
+Register with `register_agui_history_endpoint(app, history_service)`
+
+| Method | Endpoint | Description | Request Body | Response Type |
+|--------|----------|-------------|--------------|---------------|
 | `GET` | `/thread/list` | List user's conversation threads | - | `List[Dict[str, str]]` |
 | `DELETE` | `/thread/{thread_id}` | Delete conversation thread | - | `Dict[str, str]` |
 | `GET` | `/message_snapshot/{thread_id}` | Get conversation history | - | `MessagesSnapshotEvent` |
+
+### State Management Endpoints
+Register with `register_state_endpoint(app, state_service)`
+
+| Method | Endpoint | Description | Request Body | Response Type |
+|--------|----------|-------------|--------------|---------------|
 | `GET` | `/state_snapshot/{thread_id}` | Get session state snapshot | - | `StateSnapshotEvent` |
 | `PATCH` | `/state/{thread_id}` | Update session state | `List[JSONPatch]` | `Dict[str, str]` |
 
