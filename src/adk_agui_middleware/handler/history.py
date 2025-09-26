@@ -1,8 +1,6 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 from collections.abc import AsyncGenerator, Callable
-from typing import Any
 
-import jsonpatch  # type: ignore
 from ag_ui.core import BaseEvent, SystemMessage, UserMessage
 from google.adk.events import Event
 from google.adk.sessions import Session
@@ -163,51 +161,3 @@ class HistoryHandler:
         return self.message_event_util.create_message_snapshot(
             ADKEventToAGUIMessageConverter().convert(agui_event_box)
         )
-
-    async def get_state_snapshot(self, session_id: str) -> dict[str, Any] | None:
-        """Get the current state snapshot for a specific session.
-
-        Retrieves the complete state dictionary for the session,
-        returning an empty dictionary if the session is not found.
-
-        Args:
-            :param session_id: Unique identifier for the session
-
-        Returns:
-            Dictionary containing the session state, empty dict if session not found
-        """
-        return (
-            session.state
-            if (session := await self.get_session(session_id=session_id))
-            else None
-        )
-
-    async def patch_state(
-        self, session_id: str, state_patch: list[dict[str, Any]]
-    ) -> None | dict[str, Any]:
-        """Apply JSON patch operations to update session state incrementally.
-
-        Uses JSON Patch RFC 6902 format to apply partial updates to the session state,
-        enabling efficient incremental state modifications without replacing the entire
-        state dictionary. This is useful for updating specific state fields while
-        preserving other session data.
-
-        Args:
-            :param session_id: Unique identifier for the session to update
-            :param state_patch: List of JSON Patch operations to apply to the session state
-
-        Returns:
-            Dictionary with success status if patch applied successfully, None if session not found
-        """
-        session = await self.get_session(session_id=session_id)
-        if session is None:
-            return None
-        await self.session_manager.update_session_state(
-            SessionParameter(
-                app_name=self.app_name,
-                user_id=self.user_id,
-                session_id=session_id,
-            ),
-            jsonpatch.apply_patch(session.state, state_patch),
-        )
-        return {"status": "updated"}

@@ -35,17 +35,20 @@ class PathConfig(BaseModel):
 
     Attributes:
         agui_main_path: Path for the main agent interaction endpoint (default: empty string)
-        agui_thread_list_path: Path for listing available conversation threads
-        agui_state_snapshot_path: Path template for retrieving session state snapshots
-        agui_message_snapshot_path: Path template for retrieving conversation history
     """
 
     agui_main_path: str = ""
+
+
+class HistoryPathConfig(PathConfig):
+    agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
     agui_thread_list_path: str = "/thread/list"
     agui_thread_delete_path: str = "/thread/{thread_id}"
+
+
+class StatePathConfig(PathConfig):
     agui_patch_state_path: str = "/state/{thread_id}"
     agui_state_snapshot_path: str = "/state_snapshot/{thread_id}"
-    agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
 
 
 class RunnerConfig(BaseModel):
@@ -150,7 +153,6 @@ class HistoryConfig(BaseModel):
         user_id: Static user ID or callable to extract from request (required)
         session_id: Static session ID or callable to extract from request (required)
         get_thread_list: Optional callable to transform session list format for client consumption
-        get_state: Optional callable to transform state data before returning to client
         session_service: Session service implementation for history retrieval and management
     """
 
@@ -162,9 +164,19 @@ class HistoryConfig(BaseModel):
     get_thread_list: (
         Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
     ) = None
-    get_state: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None
 
     session_service: BaseSessionService = Field(default_factory=InMemorySessionService)
     adk_event_handler: type[BaseADKEventHandler] | None = None
     agui_event_handler: type[BaseAGUIEventHandler] | None = None
     translate_handler: type[BaseTranslateHandler] | None = None
+
+
+class StateConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    app_name: str | Callable[[Request], Awaitable[str]] = "default"
+    user_id: str | Callable[[Request], Awaitable[str]]
+    session_id: str | Callable[[Request], Awaitable[str]]
+    get_state: Callable[[dict[str, Any]], Awaitable[dict[str, Any]]] | None = None
+
+    session_service: BaseSessionService = Field(default_factory=InMemorySessionService)

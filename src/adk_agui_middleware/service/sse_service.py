@@ -286,6 +286,7 @@ class SSEService(BaseSSEService):
                     runner=await self._create_runner(input_info.app_name),
                     run_config=self.runner_config.run_config,
                     handler_context=self.handler_context,
+                    input_info=input_info,
                 ),
                 user_message_handler=UserMessageHandler(
                     agui_content,

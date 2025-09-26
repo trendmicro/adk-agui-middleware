@@ -2,9 +2,7 @@
 """History service for managing conversation history and session retrieval."""
 
 from collections.abc import Awaitable, Callable
-from typing import Any
 
-from ag_ui.core import StateSnapshotEvent
 from fastapi import Request
 
 from ..data_model.config import HistoryConfig
@@ -13,7 +11,6 @@ from ..event.agui_event import CustomMessagesSnapshotEvent
 from ..handler.history import HistoryHandler
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
-from ..utils.translate import StateEventUtil
 
 
 class HistoryService:
@@ -34,7 +31,6 @@ class HistoryService:
         self.session_manager = SessionManager(
             session_service=self.history_config.session_service
         )
-        self.state_event_util = StateEventUtil()
 
     async def _get_user_id_and_app_name(self, request: Request) -> dict[str, str]:
         """Extract user ID and application name from request context.
@@ -163,50 +159,3 @@ class HistoryService:
         if message_snapshot is None:
             raise ValueError("Session not found")
         return message_snapshot
-
-    async def get_state_snapshot(self, request: Request) -> StateSnapshotEvent:
-        """Get current state snapshot for a specific session.
-
-        Extracts session context from the request and returns the current
-        state snapshot as a dictionary.
-
-        Args:
-            request: HTTP request containing session context
-
-        Returns:
-            Dictionary containing the current state snapshot
-        """
-        state = await (await self._create_history_handler(request)).get_state_snapshot(
-            await self._get_session_id(request)
-        )
-        if state is None:
-            raise ValueError("Session not found")
-        if self.history_config.get_state:
-            state = await self.history_config.get_state(state)
-        return self.state_event_util.create_state_snapshot_event(state)
-
-    async def patch_state(
-        self, request: Request, state_patch: list[dict[str, Any]]
-    ) -> dict[str, str]:
-        """Apply JSON patch operations to update session state.
-
-        Extracts session context from the request and applies the provided JSON patch
-        operations to update the session state incrementally. This enables partial
-        state updates without replacing the entire state dictionary.
-
-        Args:
-            :param request: HTTP request containing session context
-            :param state_patch: List of JSON Patch operations to apply to the session state
-
-        Returns:
-            Dictionary containing operation status confirmation
-
-        Raises:
-            ValueError: If the specified session is not found
-        """
-        result = await (await self._create_history_handler(request)).patch_state(
-            session_id=await self._get_session_id(request), state_patch=state_patch
-        )
-        if result is None:
-            raise ValueError("Session not found")
-        return result

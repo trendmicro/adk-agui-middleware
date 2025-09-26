@@ -86,6 +86,10 @@ class BaseTranslateHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
+    def __init__(self, input_info: InputInfo | None):
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
     async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
         """Translate an ADK event to AGUI event format.
 
@@ -115,6 +119,10 @@ class BaseADKEventHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
+    def __init__(self, input_info: InputInfo | None):
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
     async def process(self, event: Event) -> AsyncGenerator[Event | None]:
         """Process an ADK event and yield resulting events.
 
@@ -141,6 +149,10 @@ class BaseADKEventTimeoutHandler(metaclass=ABCMeta):
     including timeout duration configuration and fallback event generation when timeouts occur.
     This enables graceful handling of long-running or stuck agent processes.
     """
+
+    @abstractmethod
+    def __init__(self, input_info: InputInfo | None):
+        raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
     async def get_timeout(self) -> int:
@@ -185,6 +197,10 @@ class BaseAGUIEventHandler(metaclass=ABCMeta):
     """
 
     @abstractmethod
+    def __init__(self, input_info: InputInfo | None):
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+    @abstractmethod
     async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
         """Process an AGUI event and yield resulting events.
 
@@ -213,6 +229,10 @@ class BaseAGUIStateSnapshotHandler(metaclass=ABCMeta):
     filtering sensitive data, reformatting for client consumption, or adding
     computed fields.
     """
+
+    @abstractmethod
+    def __init__(self, input_info: InputInfo | None):
+        raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
     async def process(self, state_snapshot: dict[str, Any]) -> dict[str, Any] | None:

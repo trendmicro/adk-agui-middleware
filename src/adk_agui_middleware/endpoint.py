@@ -1,7 +1,6 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """FastAPI endpoint registration for AGUI middleware service."""
 
-from http.client import InvalidURL
 from typing import Any
 
 from ag_ui.core import RunAgentInput, StateSnapshotEvent
@@ -9,17 +8,17 @@ from fastapi import APIRouter, FastAPI, Request
 from sse_starlette import EventSourceResponse
 
 from .base_abc.sse_service import BaseSSEService
-from .data_model.config import PathConfig
+from .data_model.config import HistoryPathConfig, PathConfig, StatePathConfig
 from .event.agui_event import CustomMessagesSnapshotEvent
 from .loggers.exception import http_exception_handler
 from .service.history_service import HistoryService
+from .service.state_service import StateService
 
 
 def register_agui_endpoint(  # noqa: C901
     app: FastAPI | APIRouter,
     sse_service: BaseSSEService,
-    path_config: PathConfig = PathConfig(),  # noqa: B008
-    history_service: HistoryService | None = None,
+    path_config: PathConfig | None = None,
 ) -> None:
     """Register AGUI endpoint for handling agent interactions via Server-Sent Events.
 
@@ -31,11 +30,13 @@ def register_agui_endpoint(  # noqa: C901
         :param app: FastAPI application instance to register the endpoint on
         :param sse_service: Service implementing BaseSSEService for handling SSE streams
         :param path_config: Configuration for endpoint paths (main, chat list, history)
-        :param history_service: Optional service for handling conversation history endpoints
 
     Raises:
         Exception: Various exceptions are handled by exception_http_handler
     """
+
+    if path_config is None:
+        path_config = PathConfig()
 
     @app.post(path_config.agui_main_path)
     async def run_agui_main(
@@ -66,6 +67,15 @@ def register_agui_endpoint(  # noqa: C901
                 ),
             )
 
+
+def register_agui_history_endpoint(
+    app: FastAPI | APIRouter,
+    history_service: HistoryService,
+    path_config: HistoryPathConfig | None = None,
+) -> None:
+    if path_config is None:
+        path_config = HistoryPathConfig()
+
     @app.get(path_config.agui_thread_list_path)
     async def get_agui_thread_list(request: Request) -> list[dict[str, str]]:
         """Get list of available conversation threads for the user.
@@ -83,10 +93,6 @@ def register_agui_endpoint(  # noqa: C901
             HTTPException: If history service is not configured or other errors occur
         """
         async with http_exception_handler(request):
-            if history_service is None:
-                raise InvalidURL(
-                    "History service not configured for chat list endpoint"
-                )
             return await history_service.list_threads(request)
 
     @app.delete(path_config.agui_thread_delete_path)
@@ -107,37 +113,7 @@ def register_agui_endpoint(  # noqa: C901
             HTTPException: If history service is not configured or thread not found
         """
         async with http_exception_handler(request):
-            if history_service is None:
-                raise InvalidURL(
-                    "History service not configured for chat list endpoint"
-                )
             return await history_service.delete_thread(request)
-
-    @app.patch(path_config.agui_patch_state_path)
-    async def patch_agui_state(
-        request: Request, state_patch: list[dict[str, Any]]
-    ) -> dict[str, str]:
-        """Update session state with partial state modifications.
-
-        Applies JSON patch operations to update session state, enabling
-        partial updates without replacing the entire state dictionary.
-        This endpoint supports incremental state changes for maintaining
-        session context across multiple interactions.
-
-        Args:
-            :param request: FastAPI request object containing session context in path
-            :param state_patch: List of JSON patch operations to apply to session state
-
-        Returns:
-            Dictionary containing operation status confirmation
-
-        Raises:
-            HTTPException: If history service is not configured or state update fails
-        """
-        async with http_exception_handler(request):
-            if history_service is None:
-                raise InvalidURL("History service not configured for state endpoint")
-            return await history_service.patch_state(request, state_patch)
 
     @app.get(path_config.agui_message_snapshot_path)
     async def get_agui_message_snapshot(
@@ -158,9 +134,40 @@ def register_agui_endpoint(  # noqa: C901
             HTTPException: If history service is not configured or session not found
         """
         async with http_exception_handler(request):
-            if history_service is None:
-                raise InvalidURL("History service not configured for history endpoint")
             return await history_service.get_message_snapshot(request)
+
+
+def register_state_endpoint(
+    app: FastAPI | APIRouter,
+    state_service: StateService,
+    path_config: StatePathConfig | None = None,
+) -> None:
+    if path_config is None:
+        path_config = StatePathConfig()
+
+    @app.patch(path_config.agui_patch_state_path)
+    async def patch_state(
+        request: Request, state_patch: list[dict[str, Any]]
+    ) -> dict[str, str]:
+        """Update session state with partial state modifications.
+
+        Applies JSON patch operations to update session state, enabling
+        partial updates without replacing the entire state dictionary.
+        This endpoint supports incremental state changes for maintaining
+        session context across multiple interactions.
+
+        Args:
+            :param request: FastAPI request object containing session context in path
+            :param state_patch: List of JSON patch operations to apply to session state
+
+        Returns:
+            Dictionary containing operation status confirmation
+
+        Raises:
+            HTTPException: If history service is not configured or state update fails
+        """
+        async with http_exception_handler(request):
+            return await state_service.patch_state(request, state_patch)
 
     @app.get(path_config.agui_state_snapshot_path)
     async def get_agui_state_snapshot(request: Request) -> StateSnapshotEvent:
@@ -179,6 +186,4 @@ def register_agui_endpoint(  # noqa: C901
             HTTPException: If history service is not configured or session not found
         """
         async with http_exception_handler(request):
-            if history_service is None:
-                raise InvalidURL("History service not configured for state endpoint")
-            return await history_service.get_state_snapshot(request)
+            return await state_service.get_state_snapshot(request)

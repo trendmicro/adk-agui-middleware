@@ -17,6 +17,7 @@ from ..base_abc.handler import (
     BaseAGUIStateSnapshotHandler,
     BaseTranslateHandler,
 )
+from ..data_model.common import InputInfo
 from ..data_model.context import HandlerContext
 from ..event.event_translator import EventTranslator
 from ..loggers.record_log import (
@@ -47,6 +48,7 @@ class RunningHandler:
         runner: Runner | None = None,
         run_config: RunConfig | None = None,
         handler_context: HandlerContext | None = None,
+        input_info: InputInfo | None = None,
     ):
         """Initialize the running handler with agent runner and configuration.
 
@@ -62,6 +64,7 @@ class RunningHandler:
         self.runner: Runner | None = runner
         self.run_config: RunConfig | None = run_config
         self.event_translator = EventTranslator()
+        self.input_info: InputInfo | None = input_info
 
         self.adk_event_handler: BaseADKEventHandler | None = None
         self.adk_event_timeout_handler: BaseADKEventTimeoutHandler | None = None
@@ -90,7 +93,7 @@ class RunningHandler:
             "translate_handler",
         ]:
             if handler_class := getattr(handler_context, attr, None):
-                setattr(self, attr, handler_class())
+                setattr(self, attr, handler_class(self.input_info))
 
     async def _get_timeout(self, enable_timeout: bool) -> float | None:
         """Get timeout duration for event processing if timeout is enabled.
