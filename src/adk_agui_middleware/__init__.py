@@ -6,15 +6,17 @@ agents with AGUI (Agent UI) protocol, providing Server-Sent Events (SSE) streami
 capabilities for real-time agent interactions.
 """
 
-from .endpoint import register_agui_endpoint
+from .endpoint import register_agui_endpoint, register_agui_history_endpoint, register_state_endpoint
 from .service.sse_service import SSEService
 
 
 __author__ = "Denny Lee"
 __email__ = "denny_lee@trendmicro.com"
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 __all__ = [
     "SSEService",
     "register_agui_endpoint",
+    "register_agui_history_endpoint",
+    "register_state_endpoint"
 ]

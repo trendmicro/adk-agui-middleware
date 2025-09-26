@@ -5,6 +5,78 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-09-26
+
+### Added
+- **State Management Service**: New `StateService` class providing comprehensive state operations
+  - Support for JSON patch operations for partial state updates
+  - Configurable context extraction from HTTP requests
+  - State snapshot generation with optional transformation pipeline
+  - Session parameter extraction and management
+- **Enhanced Configuration Models**:
+  - `StateConfig` for state management configuration
+  - `HistoryPathConfig` and `StatePathConfig` for better endpoint organization
+- **Abstract Handler Improvements**: Added mandatory `__init__` methods to all abstract handler base classes for better interface definition
+
+### Enhanced
+- **Endpoint Registration Refactoring**:
+  - Split endpoint registration into three focused functions:
+    - `register_agui_endpoint()` - Core agent interaction
+    - `register_agui_history_endpoint()` - History management
+    - `register_state_endpoint()` - State operations
+  - Improved separation of concerns and modularity
+- **Documentation**: Comprehensive method docstrings and README improvements (+1076 lines)
+- **Error Handling**: Enhanced error event processing capabilities
+- **Tool Message Conversion**: Improved utility functions for message transformation
+
+### Changed
+- **Architecture Separation**: Moved state management functionality from `HistoryService` to dedicated `StateService`
+- **Configuration Structure**: Restructured path configuration with specialized config classes
+- **Endpoint Organization**: Better endpoint separation based on functionality
+- **Handler Interface**: Standardized abstract handler constructors with `InputInfo` parameter
+
+### Removed
+- **Code Cleanup**: Removed state management methods from `HistoryService` and `HistoryHandler`
+  - `get_state_snapshot()` and `patch_state()` moved to `StateService`
+  - Removed unused imports and dependencies
+- **Configuration Simplification**: Removed `get_state` from `HistoryConfig` (moved to `StateConfig`)
+
+### Fixed
+- **Code Formatting**: Comprehensive formatting cleanup and consistency improvements
+- **Import Organization**: Cleaned up unused imports and improved import structure
+- **Type Safety**: Enhanced type annotations and error handling
+
+### Breaking Changes
+- `register_agui_endpoint()` signature changed - `history_service` parameter removed
+- State-related endpoints now require separate `register_state_endpoint()` call
+- `HistoryService` no longer provides state management methods - use `StateService` instead
+- Abstract handler classes now require `__init__(self, input_info: InputInfo | None)` implementation
+
+### Migration Guide
+- Replace `history_service` parameter in `register_agui_endpoint()` with separate service registrations:
+  ```python
+  # Before
+  register_agui_endpoint(app, sse_service, path_config, history_service)
+
+  # After
+  register_agui_endpoint(app, sse_service, path_config)
+  register_agui_history_endpoint(app, history_service)
+  register_state_endpoint(app, state_service)
+  ```
+- Update custom handler implementations to include proper `__init__` method
+- Migrate state operations from `HistoryService` to `StateService`
+
+### Technical Improvements
+- **Code Quality**: Enhanced separation of concerns and modularity
+- **Performance**: Optimized endpoint registration and state handling
+- **Architecture**: Cleaner service boundaries and responsibilities
+
+### Statistics
+- **Files Changed**: 14 files
+- **Lines Added**: +1,325
+- **Lines Removed**: -487
+- **Net Change**: +838 lines
+
 ## [1.1.0] - 2025-09-25
 
 ### Added
