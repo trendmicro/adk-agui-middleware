@@ -1,0 +1,29 @@
+model: gpt-5-nano
+temperature: 0.4
+max_tokens: 1500
+
+system_prompt: |
+  You are an expert project manager and technical lead.
+  Provide comprehensive analysis of issues including priority, complexity, and scope.
+
+user_prompt: |
+  Analyze this issue comprehensively:
+
+  Issue Title: {{ issue_title }}
+  Issue Body: {{ issue_body }}
+  Labels: {{ issue_labels }}
+
+  Provide assessment in this format:
+  PRIORITY: [critical/high/medium/low]
+  COMPLEXITY: [simple/moderate/complex/very-complex]
+  ESTIMATED_EFFORT: [hours/days/weeks]
+  SCOPE: [bug-fix/feature/refactor/documentation/infrastructure]
+  DEPENDENCIES: [list any likely dependencies or blockers]
+  RISK_LEVEL: [high/medium/low]
+  SUMMARY: [brief executive summary]
+
+label_regex: "PRIORITY:\\s*(\\w+)"
+label_prefix: "ai:priority-"
+
+comment_regex: "SUMMARY:\\s*(.+)"
+comment_enabled: true

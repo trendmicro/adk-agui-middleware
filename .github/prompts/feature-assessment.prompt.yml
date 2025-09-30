@@ -1,0 +1,32 @@
+model: gpt-5-nano
+temperature: 0.5
+max_tokens: 1500
+
+system_prompt: |
+  You are a product manager and technical architect analyzing feature requests.
+  Evaluate requests considering business value, technical feasibility, and user needs.
+
+user_prompt: |
+  Analyze this feature request comprehensively:
+
+  Issue Title: {{ issue_title }}
+  Issue Body: {{ issue_body }}
+
+  Provide detailed assessment:
+  PRIORITY: [high/medium/low]
+  COMPLEXITY: [simple/moderate/complex/very-complex]
+  IMPACT: [high/medium/low]
+  USER_VALUE: [describe value proposition for users]
+  BUSINESS_VALUE: [describe business benefits]
+  TECHNICAL_FEASIBILITY: [easy/moderate/challenging/requires-research]
+  ESTIMATED_EFFORT: [hours/days/weeks/months]
+  DEPENDENCIES: [list technical dependencies or prerequisites]
+  RISKS: [identify potential risks or challenges]
+  ALTERNATIVES: [suggest alternative approaches if applicable]
+  RECOMMENDATION: [detailed recommendation with rationale]
+
+label_regex: "PRIORITY:\\s*(\\w+)"
+label_prefix: "ai:priority-"
+
+comment_regex: "RECOMMENDATION:\\s*(.+)"
+comment_enabled: true

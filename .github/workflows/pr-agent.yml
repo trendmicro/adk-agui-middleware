@@ -1,0 +1,166 @@
+name: PR Agent Review
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main, develop, "feat/**"]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  pr-agent-review:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+        cache: 'pip'
+
+    - name: Install PR-Agent from source
+      run: |
+        echo "📦 Installing PR-Agent from source..."
+        git clone https://github.com/qodo-ai/pr-agent.git /tmp/pr-agent
+        cd /tmp/pr-agent
+        pip install -e .
+        echo "✅ PR-Agent installed successfully"
+
+    - name: Configure PR-Agent
+      run: |
+        echo "⚙️ Configuring PR-Agent..."
+        mkdir -p /tmp/pr-agent/pr_agent/settings
+        cp /tmp/pr-agent/pr_agent/settings/.secrets_template.toml /tmp/pr-agent/pr_agent/settings/.secrets.toml
+        echo "✅ Configuration completed"
+
+    - name: Auto-generate PR Description
+      if: github.event.action == 'opened'
+      env:
+        OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFIG__GIT_PROVIDER: "github"
+        PR_DESCRIPTION__PUBLISH_LABELS: "true"
+        PR_DESCRIPTION__GENERATE_AI_TITLE: "true"
+        PR_DESCRIPTION__ENABLE_PR_TYPE: "true"
+        PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
+        PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
+        PR_DESCRIPTION__ENABLE_LARGE_PR_HANDLING: "true"
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: |
+        echo "📝 Auto-generating PR description with AI title and labels..."
+        cd /tmp/pr-agent
+        python3 -m pr_agent.cli --pr_url "$PR_URL" describe
+        echo "✅ PR description auto-generated"
+
+    - name: Comprehensive PR Review
+      env:
+        OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFIG__GIT_PROVIDER: "github"
+        PR_REVIEWER__PERSISTENT_COMMENT: "true"
+        PR_REVIEWER__REQUIRE_SCORE_REVIEW: "true"
+        PR_REVIEWER__REQUIRE_TESTS_REVIEW: "true"
+        PR_REVIEWER__REQUIRE_ESTIMATE_EFFORT_TO_REVIEW: "true"
+        PR_REVIEWER__REQUIRE_SECURITY_REVIEW: "true"
+        PR_REVIEWER__REQUIRE_TICKET_ANALYSIS_REVIEW: "false"
+        PR_REVIEWER__ENABLE_REVIEW_LABELS_SECURITY: "true"
+        PR_REVIEWER__ENABLE_REVIEW_LABELS_EFFORT: "true"
+        PR_REVIEWER__INLINE_CODE_COMMENTS: "true"
+        PR_REVIEWER__NUM_CODE_SUGGESTIONS: "5"
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: |
+        echo "🔍 Running comprehensive PR review with security checks..."
+        cd /tmp/pr-agent
+        python3 -m pr_agent.cli --pr_url "$PR_URL" review
+        echo "✅ Comprehensive review completed"
+
+    - name: Generate Code Improvements
+      if: success() || failure()
+      env:
+        OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFIG__GIT_PROVIDER: "github"
+        PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: "true"
+        PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS_PER_CHUNK: "4"
+        PR_CODE_SUGGESTIONS__SUGGESTIONS_SCORE_THRESHOLD: "5"
+        PR_CODE_SUGGESTIONS__COMMITABLE_CODE_SUGGESTIONS: "true"
+        PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: "Focus on code quality, performance, maintainability, and Python best practices"
+        PR_CODE_SUGGESTIONS__AUTO_EXTENDED_MODE: "true"
+        PR_CODE_SUGGESTIONS__ENABLE_CHAT_TEXT: "true"
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: |
+        echo "💡 Generating code improvement suggestions..."
+        cd /tmp/pr-agent
+        python3 -m pr_agent.cli --pr_url "$PR_URL" improve
+        echo "✅ Code improvements suggested"
+
+    - name: Update PR Description (on sync)
+      if: github.event.action == 'synchronize'
+      env:
+        OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFIG__GIT_PROVIDER: "github"
+        PR_DESCRIPTION__PUBLISH_LABELS: "true"
+        PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
+        PR_DESCRIPTION__PUBLISH_DESCRIPTION_AS_COMMENT: "true"
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: |
+        echo "🔄 Updating PR description due to new changes..."
+        cd /tmp/pr-agent
+        python3 -m pr_agent.cli --pr_url "$PR_URL" describe
+        echo "✅ PR description updated"
+
+    - name: Update Changelog
+      if: success() || failure()
+      env:
+        OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFIG__GIT_PROVIDER: "github"
+        PR_UPDATE_CHANGELOG__PUSH_CHANGELOG_CHANGES: "false"
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: |
+        echo "📋 Updating changelog..."
+        cd /tmp/pr-agent
+        python3 -m pr_agent.cli --pr_url "$PR_URL" update_changelog || echo "⚠️  Changelog update skipped (may not exist)"
+        echo "✅ Changelog processing completed"
+
+    - name: Generate Labels
+      if: github.event.action == 'opened' || github.event.action == 'synchronize'
+      env:
+        OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CONFIG__GIT_PROVIDER: "github"
+        PR_URL: ${{ github.event.pull_request.html_url }}
+      run: |
+        echo "🏷️  Generating smart labels..."
+        cd /tmp/pr-agent
+        python3 -m pr_agent.cli --pr_url "$PR_URL" generate_labels || echo "⚠️  Label generation skipped"
+        echo "✅ Label generation completed"
+
+    - name: Summary
+      if: always()
+      run: |
+        echo "=== 🤖 PR-Agent Comprehensive Analysis Summary ==="
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo "📍 PR URL: ${{ github.event.pull_request.html_url }}"
+        echo "🌿 Branch: ${{ github.head_ref }} → ${{ github.base_ref }}"
+        echo "🎬 Action: ${{ github.event.action }}"
+        echo ""
+        echo "✨ Features Applied:"
+        echo "  ✓ Auto-generated PR description with AI title"
+        echo "  ✓ Comprehensive code review with security checks"
+        echo "  ✓ Code improvement suggestions (committable)"
+        echo "  ✓ Smart label generation"
+        echo "  ✓ Changelog update (if applicable)"
+        echo "  ✓ PR scoring and effort estimation"
+        echo ""
+        echo "📊 Check the PR for detailed analysis, suggestions, and labels!"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

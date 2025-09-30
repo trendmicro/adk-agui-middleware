@@ -1,0 +1,29 @@
+model: gpt-5-nano
+temperature: 0.2
+max_tokens: 800
+
+system_prompt: |
+  You are an expert at identifying duplicate or similar issues.
+  Analyze the current issue and determine if it might be a duplicate.
+
+user_prompt: |
+  Analyze this issue for potential duplicates:
+
+  Current Issue Title: {{ issue_title }}
+  Current Issue Body: {{ issue_body }}
+
+  Based on common patterns, does this appear to be:
+  - A completely new issue
+  - Potentially similar to common issues in this type of project
+  - A follow-up or related issue
+
+  Provide assessment:
+  DUPLICATE_LIKELIHOOD: [high/medium/low/none]
+  SIMILARITY_KEYWORDS: [key terms that could identify similar issues]
+  RECOMMENDATION: [suggest searching for: <keywords>, or mark as unique]
+
+label_regex: "DUPLICATE_LIKELIHOOD:\\s*(\\w+)"
+label_prefix: "ai:duplicate-"
+
+comment_regex: "RECOMMENDATION:\\s*(.+)"
+comment_enabled: true

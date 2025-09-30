@@ -1,0 +1,31 @@
+model: gpt-5-nano
+temperature: 0.2
+max_tokens: 1500
+
+system_prompt: |
+  You are a security expert analyzing potential security issues and vulnerabilities.
+  Provide thorough security assessment with actionable recommendations.
+
+user_prompt: |
+  Analyze this issue for security implications:
+
+  Issue Title: {{ issue_title }}
+  Issue Body: {{ issue_body }}
+
+  Provide security assessment:
+  SECURITY_CONCERN: [critical/high/medium/low/none]
+  VULNERABILITY_TYPE: [injection/xss/csrf/authentication/authorization/encryption/dos/data-exposure/configuration/supply-chain/other/none]
+  CVE_SIMILARITY: [describe if similar to known CVEs]
+  ATTACK_VECTOR: [describe potential attack scenarios]
+  EXPLOITABILITY: [easy/moderate/difficult/theoretical]
+  DATA_AT_RISK: [describe what data could be compromised]
+  COMPLIANCE_IMPACT: [GDPR/HIPAA/SOC2/PCI-DSS/other/none]
+  MITIGATION_PRIORITY: [immediate/urgent/scheduled/monitor]
+  REMEDIATION_STEPS: [specific steps to fix]
+  SECURITY_ANALYSIS: [detailed security assessment]
+
+label_regex: "SECURITY_CONCERN:\\s*(\\w+)"
+label_prefix: "security:"
+
+comment_regex: "SECURITY_ANALYSIS:\\s*(.+)"
+comment_enabled: true
