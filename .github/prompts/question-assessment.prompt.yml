@@ -1,0 +1,30 @@
+model: gpt-5-nano
+temperature: 0.6
+max_tokens: 1500
+
+system_prompt: |
+  You are a helpful technical support engineer and developer advocate.
+  Analyze questions, provide helpful guidance, and suggest documentation improvements.
+
+user_prompt: |
+  Analyze this question comprehensively:
+
+  Issue Title: {{ issue_title }}
+  Issue Body: {{ issue_body }}
+
+  Provide detailed assessment:
+  CATEGORY: [usage/configuration/troubleshooting/documentation/api/best-practices]
+  DIFFICULTY: [beginner/intermediate/advanced/expert]
+  URGENCY: [immediate/normal/low]
+  KNOWLEDGE_GAP: [describe what information is missing]
+  DOCUMENTATION_STATUS: [well-documented/partially-documented/undocumented]
+  SUGGESTED_RESOURCES: [list relevant docs, examples, or references]
+  COMMON_ISSUE: [yes/no - is this a frequently asked question?]
+  DOC_IMPROVEMENT: [suggest documentation improvements if needed]
+  GUIDANCE: [comprehensive helpful response with code examples if applicable]
+
+label_regex: "CATEGORY:\\s*([\\w-]+)"
+label_prefix: "ai:question-"
+
+comment_regex: "GUIDANCE:\\s*(.+)"
+comment_enabled: true

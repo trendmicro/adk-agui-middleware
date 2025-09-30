@@ -280,7 +280,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
-    async def output_record(self, agui_event: dict[str, str]) -> None:
+    async def output_record(self, agui_event: BaseEvent) -> None:
         """Record outgoing AGUI events for logging or audit purposes.
 
         Records outgoing response events for audit trails, debugging, or analytics.
@@ -296,9 +296,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
-    async def output_catch_and_change(
-        self, agui_event: dict[str, str]
-    ) -> dict[str, str]:
+    async def output_catch_and_change(self, agui_event: BaseEvent) -> BaseEvent:
         """Intercept and potentially modify outgoing AGUI events.
 
         Provides the opportunity to transform or modify outgoing event data

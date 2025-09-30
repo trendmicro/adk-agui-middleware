@@ -5,7 +5,7 @@ from typing import Any
 
 from ag_ui.core import RunAgentInput, StateSnapshotEvent
 from fastapi import APIRouter, FastAPI, Request
-from sse_starlette import EventSourceResponse
+from fastapi.responses import Response
 
 from .base_abc.sse_service import BaseSSEService
 from .data_model.config import HistoryPathConfig, PathConfig, StatePathConfig
@@ -39,9 +39,7 @@ def register_agui_endpoint(  # noqa: C901
         path_config = PathConfig()
 
     @app.post(path_config.agui_main_path)
-    async def run_agui_main(
-        agui_content: RunAgentInput, request: Request
-    ) -> EventSourceResponse:
+    async def run_agui_main(agui_content: RunAgentInput, request: Request) -> Response:
         """Handle AGUI agent execution requests.
 
         Processes incoming agent requests and returns a streaming response
@@ -61,10 +59,8 @@ def register_agui_endpoint(  # noqa: C901
         async with http_exception_handler(request):
             # Get configured runner for this specific request and content
             # Generate streaming response with encoded events
-            return EventSourceResponse(
-                await sse_service.event_generator(
-                    *await sse_service.get_runner(agui_content, request)
-                ),
+            return await sse_service.event_generator(
+                *await sse_service.get_runner(agui_content, request)
             )
 
 

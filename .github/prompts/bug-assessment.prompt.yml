@@ -1,0 +1,29 @@
+model: gpt-5-nano
+temperature: 0.3
+max_tokens: 1500
+
+system_prompt: |
+  You are an expert software engineer analyzing bug reports.
+  Assess the issue and provide structured, actionable feedback.
+
+user_prompt: |
+  Analyze this bug report comprehensively:
+
+  Issue Title: {{ issue_title }}
+  Issue Body: {{ issue_body }}
+
+  Provide detailed assessment:
+  SEVERITY: [critical/high/medium/low]
+  CATEGORY: [logic/performance/security/ui/api/database/infrastructure/other]
+  REPRODUCIBILITY: [always/sometimes/rare/unknown]
+  USER_IMPACT: [describe impact on users]
+  AFFECTED_COMPONENTS: [list likely affected code areas]
+  SUGGESTED_PRIORITY: [p0/p1/p2/p3]
+  INVESTIGATION_STEPS: [brief troubleshooting steps]
+  ANALYSIS: [detailed analysis with actionable insights]
+
+label_regex: "SEVERITY:\\s*(\\w+)"
+label_prefix: "ai:severity-"
+
+comment_regex: "ANALYSIS:\\s*(.+)"
+comment_enabled: true

@@ -1,0 +1,26 @@
+model: gpt-5-nano
+temperature: 0.3
+max_tokens: 1000
+
+system_prompt: |
+  You are an expert at triaging issues and suggesting appropriate team assignments.
+  Analyze issues to determine which team or expertise area should handle them.
+
+user_prompt: |
+  Analyze this issue and suggest team assignment:
+
+  Issue Title: {{ issue_title }}
+  Issue Body: {{ issue_body }}
+  Labels: {{ issue_labels }}
+
+  Based on the content, suggest:
+  TEAM: [backend/frontend/devops/security/documentation/qa/design]
+  SKILLS_REQUIRED: [list of technical skills needed]
+  EXPERTISE_LEVEL: [junior/mid/senior/expert]
+  RECOMMENDATION: [brief explanation of why this team/expertise]
+
+label_regex: "TEAM:\\s*([\\w-]+)"
+label_prefix: "team:"
+
+comment_regex: "RECOMMENDATION:\\s*(.+)"
+comment_enabled: true

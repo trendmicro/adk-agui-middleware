@@ -4,19 +4,18 @@
 from ag_ui.core import EventType, RunErrorEvent
 
 from ..loggers.record_log import record_error_log
-from ..utils.convert.agui_event_to_sse import convert_agui_event_to_sse
 
 
-class AGUIEncoderError(Exception):
-    """Exception class providing static methods for encoding error events.
+class AGUIErrorEvent:
+    """Utility class for creating specific types of AGUI error events.
 
-    Handles encoding errors and agent execution errors by creating appropriate
-    error events and logging the issues. This class provides centralized error
-    handling for SSE event encoding failures and agent execution problems.
+    Provides static methods for creating RunErrorEvent objects for common
+    error scenarios in AGUI middleware execution. Each method handles a
+    specific error category with appropriate logging and error codes.
     """
 
     @staticmethod
-    def create_encoding_error_event(e: Exception) -> dict[str, str]:
+    def create_encoding_error_event(e: Exception) -> RunErrorEvent:
         """Create an encoded error event for encoding failures.
 
         Handles situations where AGUI events cannot be properly encoded
@@ -35,10 +34,10 @@ class AGUIEncoderError(Exception):
             code="ENCODING_ERROR",
         )
         record_error_log("Event encoding failed", e)
-        return convert_agui_event_to_sse(error_event)
+        return error_event
 
     @staticmethod
-    def create_agent_error_event(e: Exception) -> dict[str, str]:
+    def create_agent_error_event(e: Exception) -> RunErrorEvent:
         """Create an encoded error event for agent execution failures.
 
         Handles exceptions that occur during agent execution, creating
@@ -57,16 +56,7 @@ class AGUIEncoderError(Exception):
             code="AGENT_ERROR",
         )
         record_error_log("AGUI Agent Error Handler", e)
-        return convert_agui_event_to_sse(error_event)
-
-
-class AGUIErrorEvent:
-    """Utility class for creating specific types of AGUI error events.
-
-    Provides static methods for creating RunErrorEvent objects for common
-    error scenarios in AGUI middleware execution. Each method handles a
-    specific error category with appropriate logging and error codes.
-    """
+        return error_event
 
     @staticmethod
     def create_execution_error_event(e: Exception) -> RunErrorEvent:

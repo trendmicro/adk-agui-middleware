@@ -5,6 +5,10 @@ import uuid
 from ag_ui.core import BaseEvent
 
 
+def convert_agui_event_to_str_fake_sse(event: BaseEvent) -> str:
+    return f"data: {event.model_dump_json(by_alias=True, exclude_none=True)}\n\n"
+
+
 def convert_agui_event_to_sse(event: BaseEvent) -> dict[str, str]:
     """Convert AGUI BaseEvent to Server-Sent Events format.
 
