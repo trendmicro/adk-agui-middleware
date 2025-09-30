@@ -597,6 +597,68 @@ stateDiagram-v2
     end note
 ```
 
+## ⚠️ Critical Configuration: SSE Response Mode
+
+### CopilotKit Frontend Compatibility Issue
+
+**IMPORTANT:** CopilotKit's frontend implementation does **NOT** comply with the standard Server-Sent Events (SSE) specification, which causes parsing failures when using FastAPI's standard `EventSourceResponse`. Although CopilotKit labels its streaming as "SSE", it does not follow the SSE spec at all—this is a significant oversight in their implementation.
+
+#### The Problem
+
+- **Standard SSE Format (`EventSourceResponse`)**: Follows [W3C SSE specification](https://html.spec.whatwg.org/multipage/server-sent-events.html) with proper event formatting
+- **CopilotKit's Expectation**: Requires `StreamingResponse` with non-standard formatting, breaking SSE compliance
+- **Impact**: If you use the standard-compliant `EventSourceResponse`, CopilotKit frontends cannot parse the events correctly
+
+#### The Solution
+
+We provide a configuration flag in `ConfigContext` to switch between standard-compliant SSE and CopilotKit-compatible streaming:
+
+```python
+from adk_agui_middleware.data_model.context import ConfigContext
+
+# For CopilotKit frontend (default, non-standard)
+config_context = ConfigContext(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    event_source_response_mode=False  # Default: Uses StreamingResponse for CopilotKit
+)
+
+# For SSE-compliant frontends (recommended for custom implementations)
+config_context = ConfigContext(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    event_source_response_mode=True  # Uses EventSourceResponse (SSE standard)
+)
+```
+
+#### Configuration Guide
+
+| Configuration | Response Type | Use Case | SSE Compliance |
+|--------------|---------------|----------|----------------|
+| `event_source_response_mode=False` (default) | `StreamingResponse` | CopilotKit frontend | ❌ Non-compliant |
+| `event_source_response_mode=True` | `EventSourceResponse` | Custom/Standard frontends | ✅ W3C compliant |
+
+#### Our Stance
+
+Since our in-house frontend is a complete redesign that **does not** use CopilotKit, we require the backend to **strictly comply with the SSE specification**. However, to maintain backward compatibility with CopilotKit users, we've made this configurable with the default set to CopilotKit's non-standard mode.
+
+**For production systems with custom frontends, we strongly recommend:**
+
+```python
+config_context = ConfigContext(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    event_source_response_mode=True  # Use SSE standard
+)
+```
+
+This ensures your implementation follows web standards and maintains long-term compatibility with standard-compliant SSE clients.
+
+---
+
 ## Quick Start
 
 ### Basic Implementation
