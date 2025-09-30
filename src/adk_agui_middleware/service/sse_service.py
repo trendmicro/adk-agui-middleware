@@ -36,8 +36,8 @@ class SSEService(BaseSSEService):
     def __init__(
         self,
         agent: BaseAgent,
-        runner_config: RunnerConfig,
         config_context: ConfigContext,
+        runner_config: RunnerConfig | None = None,
         handler_context: HandlerContext | None = None,
     ):
         """Initialize SSE service with agent and configuration.
@@ -49,7 +49,7 @@ class SSEService(BaseSSEService):
             :param handler_context: Optional context containing event handlers for processing
         """
         self.agent = agent
-        self.runner_config = runner_config
+        self.runner_config = runner_config if runner_config else RunnerConfig()
         self.session_manager = SessionManager(
             session_service=self.runner_config.session_service
         )
