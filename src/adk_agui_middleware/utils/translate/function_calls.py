@@ -21,6 +21,8 @@ from ag_ui.core import (
 )
 from google.genai import types
 
+from ...tools.json_encoder import PydanticJsonEncoder
+
 
 class FunctionCallEventUtil:
     """Utility class for converting function calls to AGUI tool call events.
@@ -49,7 +51,7 @@ class FunctionCallEventUtil:
             message_id=str(uuid.uuid4()),
             type=EventType.TOOL_CALL_RESULT,
             tool_call_id=tool_call_id,
-            content=json.dumps(content) if content else "",
+            content=json.dumps(content, cls=PydanticJsonEncoder) if content else "",
         )
 
     @staticmethod
