@@ -688,7 +688,6 @@ async def extract_user_id(content, request: Request) -> str:
 agent = MyAgent()
 sse_service = SSEService(
     agent=agent,
-    runner_config=RunnerConfig(),
     config_context=ConfigContext(
         app_name="my-app",
         user_id=extract_user_id,
@@ -742,7 +741,6 @@ class AGUIConfig:
     def create_sse_service(self) -> SSEService:
         return SSEService(
             agent=MyAgent(),
-            runner_config=RunnerConfig(),
             config_context=ConfigContext(
                 app_name="my-app",
                 user_id=lambda content, req: self.extract_user_id(req),

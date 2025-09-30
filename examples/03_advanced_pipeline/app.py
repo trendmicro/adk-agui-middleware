@@ -128,7 +128,6 @@ async def preprocess_run_input(
 
 # Build the app with advanced pipeline configuration
 agent: Any = DemoAgent()  # Replace with your BaseAgent implementation
-runner_config = RunnerConfig()  # All in-memory services by default
 
 # Configuration context with input preprocessing enabled
 config_context = ConfigContext(
@@ -145,7 +144,6 @@ handler_context = HandlerContext(
 # SSE service with advanced pipeline features enabled
 sse_service = SSEService(
     agent=agent,  # The agent implementation
-    runner_config=runner_config,  # Service configuration
     config_context=config_context,  # Request context and preprocessing
     handler_context=handler_context,  # Custom pipeline handlers
 )

@@ -257,7 +257,6 @@ def extract_user_id(_: RunAgentInput, request: Request) -> str:
 
 # Agent and middleware wiring with full lifecycle handlers
 agent: Any = build_llm_agent()  # Create the LLM agent
-runner_config = RunnerConfig()  # in-memory services for demo
 
 # Basic configuration context
 config_context = ConfigContext(
@@ -284,7 +283,6 @@ handler_context = HandlerContext(
 # SSE service with comprehensive lifecycle handling
 sse_service = SSEService(
     agent=agent,  # The LLM agent
-    runner_config=runner_config,  # Service configuration
     config_context=config_context,  # Request context configuration
     handler_context=handler_context,  # All lifecycle handlers
 )

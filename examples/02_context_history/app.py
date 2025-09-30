@@ -104,7 +104,6 @@ async def format_thread_list(session_list: list[Session]) -> list[dict[str, Any]
 agent: Any = DemoAgent()  # Replace with your BaseAgent instance
 
 # Configuration for in-memory services (suitable for development/testing)
-runner_config = RunnerConfig()  # Uses in-memory services by default
 
 # Main configuration context for the SSE service
 config_context = ConfigContext(
@@ -115,7 +114,6 @@ config_context = ConfigContext(
 # SSE service handles the main chat/agent interaction endpoint
 sse_service = SSEService(
     agent=agent,  # The agent that processes user requests
-    runner_config=runner_config,  # Service configuration
     config_context=config_context,  # Context extraction configuration
 )
 
