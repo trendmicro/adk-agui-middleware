@@ -69,6 +69,15 @@ def register_agui_history_endpoint(
     history_service: HistoryService,
     path_config: HistoryPathConfig | None = None,
 ) -> None:
+    """Register conversation history endpoints on the provided FastAPI router/app.
+
+    Creates HTTP endpoints for listing, deleting, and retrieving conversation
+    history by wiring history-specific routes to the supplied ``HistoryService``.
+
+    :param app: FastAPI application or router instance used for registration
+    :param history_service: Service responsible for history retrieval operations
+    :param path_config: Optional custom path configuration for history routes
+    """
     if path_config is None:
         path_config = HistoryPathConfig()
 
@@ -138,6 +147,15 @@ def register_state_endpoint(
     state_service: StateService,
     path_config: StatePathConfig | None = None,
 ) -> None:
+    """Register state management endpoints on the provided FastAPI router/app.
+
+    Adds HTTP endpoints for patching and fetching session state snapshots by
+    delegating to the supplied ``StateService`` implementation.
+
+    :param app: FastAPI application or router instance used for registration
+    :param state_service: Service responsible for state operations
+    :param path_config: Optional custom path configuration for state routes
+    """
     if path_config is None:
         path_config = StatePathConfig()
 

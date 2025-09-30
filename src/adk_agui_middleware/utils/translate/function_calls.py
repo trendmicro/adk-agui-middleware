@@ -41,8 +41,8 @@ class FunctionCallEventUtil:
         serializing the content as JSON and generating a unique message ID.
 
         Args:
-            tool_call_id: Unique identifier for the tool call
-            content: Function response content to include in the result
+            :param tool_call_id: Unique identifier for the tool call
+            :param content: Function response content to include in the result
 
         Returns:
             ToolCallResultEvent containing the function result
@@ -66,9 +66,9 @@ class FunctionCallEventUtil:
         start event, optional args event (if arguments provided), and end event.
 
         Args:
-            tool_call_id: Unique identifier for the tool call
-            tool_call_name: Name of the tool being called
-            tool_call_args: Arguments for the tool call (dict or string)
+            :param tool_call_id: Unique identifier for the tool call
+            :param tool_call_name: Name of the tool being called
+            :param tool_call_args: Arguments for the tool call (dict or string)
 
         Yields:
             BaseEvent objects representing the tool call sequence
@@ -101,7 +101,7 @@ class FunctionCallEventUtil:
         the complete sequence of AGUI tool call events for each one.
 
         Args:
-            function_calls: List of Google GenAI function calls to process
+            :param function_calls: List of Google GenAI function calls to process
 
         Yields:
             BaseEvent objects for all function calls in sequence

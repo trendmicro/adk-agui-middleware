@@ -48,8 +48,8 @@ class StateService:
         that can extract values from the request context.
 
         Args:
-            config_attr: Name of the configuration attribute to retrieve
-            request: HTTP request for context extraction
+            :param config_attr: Name of the configuration attribute to retrieve
+            :param request: HTTP request for context extraction
 
         Returns:
             Configuration value as string

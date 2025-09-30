@@ -1,4 +1,11 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
+"""Conversion utilities for transforming AGUI events to Server-Sent Events format.
+
+This module provides functions to convert AGUI BaseEvent objects into SSE-compatible
+formats for streaming to clients. Supports both standard SSE dictionary format and
+simplified string-based fake SSE format for testing and debugging.
+"""
+
 import time
 import uuid
 
@@ -6,6 +13,19 @@ from ag_ui.core import BaseEvent
 
 
 def convert_agui_event_to_str_fake_sse(event: BaseEvent) -> str:
+    """Convert AGUI BaseEvent to simplified string-based fake SSE format.
+
+    Creates a simple SSE-like string format for testing and debugging purposes.
+    This format mimics SSE structure but returns a plain string instead of
+    a structured dictionary, making it useful for simple streaming scenarios
+    or development testing.
+
+    Args:
+        :param event: AGUI BaseEvent to convert to fake SSE string format
+
+    Returns:
+        String formatted as SSE data line with event JSON and double newline terminator
+    """
     return f"data: {event.model_dump_json(by_alias=True, exclude_none=True)}\n\n"
 
 

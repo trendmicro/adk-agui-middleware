@@ -292,8 +292,8 @@ class RunningHandler:
         This is the primary method for executing agents and obtaining event streams.
 
         Args:
-            :param *args: Positional arguments to pass to the runner (typically user_id, session_id, message)
-            :param **kwargs: Keyword arguments to pass to the runner
+            :param args: Positional arguments to pass to the runner (typically user_id, session_id, message)
+            :param kwargs: Keyword arguments to pass to the runner
 
         Returns:
             AsyncGenerator yielding processed ADK Event objects

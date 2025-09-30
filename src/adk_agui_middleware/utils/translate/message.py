@@ -37,8 +37,8 @@ class MessageEventUtil:
         This ensures proper message boundaries and consistent formatting.
 
         Args:
-            message_id: Unique identifier for the message
-            message: Text content to display in the message
+            :param message_id: Unique identifier for the message
+            :param message: Text content to display in the message
 
         Yields:
             BaseEvent objects for the complete message sequence
@@ -63,7 +63,7 @@ class MessageEventUtil:
         for sending conversation history to clients.
 
         Args:
-            message_list: List of Message objects to include in snapshot, or None
+            :param message_list: List of Message objects to include in snapshot, or None
 
         Returns:
             MessagesSnapshotEvent containing the messages (empty if None provided)

@@ -55,9 +55,9 @@ class ADKEventToAGUIMessageConverter:
         then appends the content delta to the existing content.
 
         Args:
-            key: Unique identifier for the message being accumulated
-            msg_type: Type of message (e.g., 'message', 'thinking')
-            delta: Content fragment to append to the message
+            :param key: Unique identifier for the message being accumulated
+            :param msg_type: Type of message (e.g., 'message', 'thinking')
+            :param delta: Content fragment to append to the message
         """
         if key not in self.accumulator:
             self.accumulator[key] = {"type": msg_type, "content": ""}
@@ -70,7 +70,7 @@ class ADKEventToAGUIMessageConverter:
         if one doesn't already exist for the given key.
 
         Args:
-            key: Unique identifier for the tool call (tool_call_id)
+            :param key: Unique identifier for the tool call (tool_call_id)
         """
         if key not in self.accumulator:
             self.accumulator[key] = {"type": "tool", "name": "", "arg": ""}
@@ -86,7 +86,7 @@ class ADKEventToAGUIMessageConverter:
         stored directly.
 
         Args:
-            messages: List of events and messages to classify and accumulate
+            :param messages: List of events and messages to classify and accumulate
         """
         for event in messages:
             if isinstance(event, CustomThinkingTextMessageContentEvent):
@@ -119,8 +119,8 @@ class ADKEventToAGUIMessageConverter:
         based on the message type stored in the data.
 
         Args:
-            key: Unique identifier for the message
-            data: Dictionary containing accumulated message data including type and content
+            :param key: Unique identifier for the message
+            :param data: Dictionary containing accumulated message data including type and content
 
         Returns:
             Appropriate Message subclass instance, or None if message type is unknown
@@ -166,7 +166,7 @@ class ADKEventToAGUIMessageConverter:
         them into complete messages.
 
         Args:
-            messages: List of events and messages to convert
+            :param messages: List of events and messages to convert
 
         Returns:
             List of Message objects representing the complete conversation

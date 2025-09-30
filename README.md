@@ -703,6 +703,123 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
+### RunnerConfig Configuration
+
+The `RunnerConfig` class manages ADK runner setup and service configuration. It provides flexible service configuration with automatic in-memory fallbacks for development and testing environments.
+
+#### Default Configuration (In-Memory Services)
+
+By default, `RunnerConfig` uses in-memory services, perfect for development and testing:
+
+```python
+from adk_agui_middleware.data_model.config import RunnerConfig
+from adk_agui_middleware import SSEService
+
+# Default: Automatic in-memory services
+runner_config = RunnerConfig()
+
+sse_service = SSEService(
+    agent=MyAgent(),
+    config_context=config_context,
+    runner_config=runner_config  # Optional: uses default if not provided
+)
+```
+
+#### Custom Service Configuration
+
+For production environments, configure custom services:
+
+```python
+from google.adk.sessions import FirestoreSessionService
+from google.adk.artifacts import GCSArtifactService
+from google.adk.memory import RedisMemoryService
+from google.adk.auth.credential_service import VaultCredentialService
+from google.adk.agents.run_config import StreamingMode
+from google.adk.agents import RunConfig
+
+# Custom production configuration
+runner_config = RunnerConfig(
+    # Service configuration
+    session_service=FirestoreSessionService(project_id="my-project"),
+    artifact_service=GCSArtifactService(bucket_name="my-artifacts"),
+    memory_service=RedisMemoryService(host="redis.example.com"),
+    credential_service=VaultCredentialService(vault_url="https://vault.example.com"),
+
+    # Disable automatic in-memory fallback for production
+    use_in_memory_services=False,
+
+    # Customize agent execution behavior
+    run_config=RunConfig(
+        streaming_mode=StreamingMode.SSE,
+        max_iterations=50,
+        timeout=300
+    )
+)
+
+sse_service = SSEService(
+    agent=MyAgent(),
+    config_context=config_context,
+    runner_config=runner_config
+)
+```
+
+#### RunnerConfig Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `use_in_memory_services` | `bool` | `True` | Automatically create in-memory services when services are `None` |
+| `run_config` | `RunConfig` | `RunConfig(streaming_mode=SSE)` | ADK run configuration for agent execution behavior |
+| `session_service` | `BaseSessionService` | `InMemorySessionService()` | Session service for conversation persistence |
+| `artifact_service` | `BaseArtifactService` | `None` | Artifact service for file and data management |
+| `memory_service` | `BaseMemoryService` | `None` | Memory service for agent memory management |
+| `credential_service` | `BaseCredentialService` | `None` | Credential service for authentication |
+
+#### Configuration Examples
+
+**Development/Testing Setup:**
+```python
+# Uses all in-memory services automatically
+runner_config = RunnerConfig()
+```
+
+**Production Setup with Firestore:**
+```python
+from google.adk.sessions import FirestoreSessionService
+
+runner_config = RunnerConfig(
+    use_in_memory_services=False,
+    session_service=FirestoreSessionService(
+        project_id="my-project",
+        database_id="my-database"
+    )
+)
+```
+
+**Mixed Environment (Some Custom, Some In-Memory):**
+```python
+# Custom session service, auto-creates in-memory for others
+runner_config = RunnerConfig(
+    use_in_memory_services=True,  # Auto-create missing services
+    session_service=FirestoreSessionService(project_id="my-project"),
+    # artifact_service, memory_service, credential_service will be auto-created
+)
+```
+
+**Custom Agent Execution Configuration:**
+```python
+from google.adk.agents import RunConfig
+from google.adk.agents.run_config import StreamingMode
+
+runner_config = RunnerConfig(
+    run_config=RunConfig(
+        streaming_mode=StreamingMode.SSE,  # Server-Sent Events mode
+        max_iterations=100,  # Maximum agent iterations
+        timeout=600,  # Execution timeout in seconds
+        enable_thinking=True,  # Enable thinking/reasoning mode
+    )
+)
+```
+
 ### Advanced Configuration with Config Class
 
 ```python

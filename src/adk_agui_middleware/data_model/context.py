@@ -23,6 +23,13 @@ from .common import SessionLockConfig
 
 
 def _get_default_session_lock_handler() -> type[SessionLockHandler]:
+    """Return the default session lock handler implementation.
+
+    Provides the default concrete ``SessionLockHandler`` used when no custom
+    handler is supplied via configuration.
+
+    :returns: ``DefaultSessionLockHandler`` class implementing the lock contract
+    """
     return DefaultSessionLockHandler
 
 

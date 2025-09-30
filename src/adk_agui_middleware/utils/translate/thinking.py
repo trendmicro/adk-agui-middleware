@@ -56,7 +56,7 @@ class ThinkingMessageEventUtil:
         """Create a thinking text message start event.
 
         Args:
-            thinking_id: Unique identifier for correlating thinking message sequences
+            :param thinking_id: Unique identifier for correlating thinking message sequences
 
         Returns:
             TranslateEvent indicating the start of thinking text message
@@ -75,8 +75,8 @@ class ThinkingMessageEventUtil:
         """Create a thinking text message content event with the provided message.
 
         Args:
-            message: Text content to include in the thinking event
-            thinking_id: Unique identifier for correlating thinking message sequences
+            :param message: Text content to include in the thinking event
+            :param thinking_id: Unique identifier for correlating thinking message sequences
 
         Returns:
             TranslateEvent containing the thinking text message content
@@ -94,7 +94,7 @@ class ThinkingMessageEventUtil:
         """Create a thinking text message end event.
 
         Args:
-            thinking_id: Unique identifier for correlating thinking message sequences
+            :param thinking_id: Unique identifier for correlating thinking message sequences
 
         Returns:
             TranslateEvent indicating the end of thinking text message
@@ -115,8 +115,8 @@ class ThinkingMessageEventUtil:
         for displaying a single thinking message to the user.
 
         Args:
-            message: Text content to display as thinking message
-            uid: Optional unique identifier for the thinking sequence, generated if None
+            :param message: Text content to display as thinking message
+            :param uid: Optional unique identifier for the thinking sequence, generated if ``None``
 
         Yields:
             TranslateEvent objects for start, content, and end of thinking message
@@ -134,8 +134,8 @@ class ThinkingMessageEventUtil:
         Yields start event, content events for each message chunk, and end event.
 
         Args:
-            message: Async generator yielding text chunks
-            uid: Optional unique identifier for the thinking sequence, generated if None
+            :param message: Async generator yielding text chunks
+            :param uid: Optional unique identifier for the thinking sequence, generated if ``None``
 
         Yields:
             TranslateEvent objects representing thinking events sequence (start, content chunks, end)

@@ -63,6 +63,7 @@ class BaseSSEService(metaclass=ABCMeta):
 
         Args:
             :param runner: Callable that returns an async generator of BaseEvent objects
+            :param input_info: Processed request context associated with the runner
             :param inout_handler: Optional handler for input/output recording and transformation
 
         Yields:

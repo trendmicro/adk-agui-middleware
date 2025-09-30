@@ -224,6 +224,18 @@ class EventTranslator:
         self,
         function_response: list[types.FunctionResponse],
     ) -> AsyncGenerator[BaseEvent]:
+        """Translate function responses to AGUI tool call result events.
+
+        Processes function execution responses and generates AGUI ToolCallResultEvent
+        objects for non-long-running tools. Long-running tool results are skipped
+        as they are handled separately in the HITL workflow.
+
+        Args:
+            :param function_response: List of function responses from ADK event
+
+        Yields:
+            AGUI ToolCallResultEvent objects for completed function calls
+        """
         for func_response in function_response:
             tool_call_id = func_response.id or str(uuid.uuid4())
             if not self.long_running_tool_ids.get(tool_call_id):

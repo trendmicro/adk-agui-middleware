@@ -18,8 +18,8 @@ async def record_request_error_log(request: Request, e: Exception) -> dict[str, 
     exception information, stack trace, and function context for debugging.
 
     Args:
-        request: HTTP request that caused the error
-        e: Exception that occurred during request processing
+        :param request: HTTP request that caused the error
+        :param e: Exception that occurred during request processing
 
     Returns:
         Dictionary containing the logged error message data
@@ -47,7 +47,7 @@ async def record_request_log(request: Request) -> dict[str, Any]:
     and function context for request tracking and debugging.
 
     Args:
-        request: HTTP request to log
+        :param request: HTTP request to log
 
     Returns:
         Dictionary containing the logged request message data

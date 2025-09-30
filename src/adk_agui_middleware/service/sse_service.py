@@ -77,9 +77,9 @@ class SSEService(BaseSSEService):
         multi-tenant configuration based on request characteristics.
 
         Args:
-            config_attr: Name of the configuration attribute to retrieve
-            agui_content: Input containing agent execution parameters
-            request: HTTP request for context extraction
+            :param config_attr: Name of the configuration attribute to retrieve
+            :param agui_content: Input containing agent execution parameters
+            :param request: HTTP request for context extraction
 
         Returns:
             Configuration value as string
@@ -100,6 +100,7 @@ class SSEService(BaseSSEService):
         incoming AGUI content and request for audit trails and logging.
 
         Args:
+            :param input_info: Processed request context for the current interaction
 
         Returns:
             BaseInOutHandler instance if configured, None otherwise
@@ -120,8 +121,8 @@ class SSEService(BaseSSEService):
         transformations or modifications before sending to the client.
 
         Args:
-            inout_handler: Optional handler for recording and transforming output
-            output_data: Dictionary containing SSE event data to process
+            :param inout_handler: Optional handler for recording and transforming output
+            :param output_data: Dictionary containing SSE event data to process
 
         Returns:
             Processed output data (potentially modified by handler)
@@ -210,7 +211,7 @@ class SSEService(BaseSSEService):
         that clients always receive valid SSE events even when encoding errors occur.
 
         Args:
-            event: Base event to be encoded
+            :param event: Base event to be encoded
 
         Returns:
             Encoded event dictionary in SSE format, either successful encoding or error event
@@ -232,7 +233,7 @@ class SSEService(BaseSSEService):
         Each app gets its own Runner with configured services.
 
         Args:
-            app_name: Name of the application requiring a runner
+            :param app_name: Name of the application requiring a runner
 
         Returns:
             Runner instance configured for the specified application

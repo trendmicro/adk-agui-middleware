@@ -17,8 +17,8 @@ class Singleton(type):
         """Create or return the singleton instance of the class.
 
         Args:
-            :param *args: Positional arguments for class instantiation
-            :param **kwargs: Keyword arguments for class instantiation
+            :param args: Positional arguments for class instantiation
+            :param kwargs: Keyword arguments for class instantiation
 
         Returns:
             The singleton instance of the class

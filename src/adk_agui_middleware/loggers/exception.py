@@ -23,9 +23,9 @@ def create_common_http_exception(
     ErrorModel for structured error responses.
 
     Args:
-        status_code: HTTP status code for the exception
-        error_message: Primary error message
-        error_description: Dictionary containing detailed error information
+        :param status_code: HTTP status code for the exception
+        :param error_message: Primary error message
+        :param error_description: Dictionary containing detailed error information
 
     Returns:
         HTTPException with structured error detail
@@ -49,7 +49,7 @@ def create_internal_server_error_exception(
     with consistent formatting.
 
     Args:
-        error_description: Dictionary containing error details
+        :param error_description: Dictionary containing error details
 
     Returns:
         HTTPException with 500 status code and error details
@@ -70,7 +70,7 @@ async def http_exception_handler(request: Request) -> AsyncGenerator[None, Any]:
     HTTP error responses.
 
     Args:
-        request: FastAPI/Starlette request object
+        :param request: FastAPI/Starlette request object
 
     Yields:
         None - context for the wrapped operation

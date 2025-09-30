@@ -25,7 +25,7 @@ class HistoryService:
         """Initialize the history service.
 
         Args:
-            history_config: Configuration for history access and context extraction
+            :param history_config: Configuration for history access and context extraction
         """
         self.history_config = history_config
         self.session_manager = SessionManager(
@@ -67,6 +67,9 @@ class HistoryService:
     async def _create_history_handler(self, request: Request) -> HistoryHandler:
         """Create a history handler for the specified app and user.
 
+        Args:
+            :param request: HTTP request containing user context required for handler creation
+
         Returns:
             Configured HistoryHandler instance
         """
@@ -89,8 +92,8 @@ class HistoryService:
         that can extract values from the request context.
 
         Args:
-            config_attr: Name of the configuration attribute to retrieve
-            request: HTTP request for context extraction
+            :param config_attr: Name of the configuration attribute to retrieve
+            :param request: HTTP request for context extraction
 
         Returns:
             Configuration value as string
@@ -109,7 +112,7 @@ class HistoryService:
         available conversation threads formatted for client consumption.
 
         Args:
-            request: HTTP request containing user context
+            :param request: HTTP request containing user context
 
         Returns:
             List of dictionaries containing thread information
@@ -128,7 +131,7 @@ class HistoryService:
         conversation thread, returning the updated list of available threads.
 
         Args:
-            request: HTTP request containing session context
+            :param request: HTTP request containing session context
 
         Returns:
             Updated list of dictionaries containing thread information
@@ -147,7 +150,7 @@ class HistoryService:
         conversation history as an AGUI messages snapshot.
 
         Args:
-            request: HTTP request containing session context
+            :param request: HTTP request containing session context
 
         Returns:
             MessagesSnapshotEvent containing the conversation history

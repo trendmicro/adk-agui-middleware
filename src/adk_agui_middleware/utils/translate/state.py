@@ -20,7 +20,7 @@ class StateEventUtil:
         """Create a state delta event with JSON Patch operations.
 
         Args:
-            delta: List of JSON Patch operations to apply to state
+            :param delta: List of JSON Patch operations to apply to state
 
         Returns:
             StateDeltaEvent containing the JSON Patch operations
@@ -34,7 +34,7 @@ class StateEventUtil:
         """Create a state snapshot event with complete state data.
 
         Args:
-            state_snapshot: Complete state dictionary to snapshot
+            :param state_snapshot: Complete state dictionary to snapshot
 
         Returns:
             StateSnapshotEvent containing the full state snapshot

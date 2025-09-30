@@ -1,4 +1,11 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
+"""Configuration models for AGUI middleware setup and service initialization.
+
+This module provides comprehensive configuration classes for setting up the AGUI middleware,
+including path configurations, runner configurations with service management, and context
+extraction configurations for multi-tenant deployments.
+"""
+
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
@@ -41,12 +48,35 @@ class PathConfig(BaseModel):
 
 
 class HistoryPathConfig(PathConfig):
+    """Configuration for history-related endpoint paths.
+
+    Extends PathConfig to include conversation history management endpoints
+    for retrieving message snapshots, listing threads, and deleting conversations.
+
+    Attributes:
+        agui_main_path: Inherited from PathConfig - main agent interaction endpoint path
+        agui_message_snapshot_path: Path for retrieving conversation history with thread_id parameter
+        agui_thread_list_path: Path for listing all available conversation threads
+        agui_thread_delete_path: Path for deleting a specific thread with thread_id parameter
+    """
+
     agui_message_snapshot_path: str = "/message_snapshot/{thread_id}"
     agui_thread_list_path: str = "/thread/list"
     agui_thread_delete_path: str = "/thread/{thread_id}"
 
 
 class StatePathConfig(PathConfig):
+    """Configuration for state management endpoint paths.
+
+    Extends PathConfig to include session state management endpoints
+    for applying state patches and retrieving state snapshots.
+
+    Attributes:
+        agui_main_path: Inherited from PathConfig - main agent interaction endpoint path
+        agui_patch_state_path: Path for applying JSON patch operations to session state
+        agui_state_snapshot_path: Path for retrieving complete session state snapshot
+    """
+
     agui_patch_state_path: str = "/state/{thread_id}"
     agui_state_snapshot_path: str = "/state_snapshot/{thread_id}"
 
@@ -172,6 +202,20 @@ class HistoryConfig(BaseModel):
 
 
 class StateConfig(BaseModel):
+    """Configuration for state service context extraction and transformation.
+
+    Defines how to extract context information from requests for state management
+    operations and provides optional state transformation capabilities. Enables
+    customizable state endpoints with flexible context extraction and state filtering.
+
+    Attributes:
+        app_name: Static application name or callable to extract from request (default: "default")
+        user_id: Static user ID or callable to extract from request (required for session identification)
+        session_id: Static session ID or callable to extract from request (required for state access)
+        get_state: Optional callable to transform or filter state before returning to clients
+        session_service: Session service implementation for state retrieval and management
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     app_name: str | Callable[[Request], Awaitable[str]] = "default"

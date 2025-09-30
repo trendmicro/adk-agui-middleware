@@ -24,10 +24,10 @@ def _create_and_log_message(
     optional body data, and error information, then logs it.
 
     Args:
-        msg: Primary log message
-        log_level: Logging function to use (debug, info, warning, error)
-        body: Optional additional data to include in the log
-        error: Optional exception to include with error details
+        :param msg: Primary log message
+        :param log_level: Logging function to use (debug, info, warning, error)
+        :param body: Optional additional data to include in the log
+        :param error: Optional exception to include with error details
 
     Returns:
         Dictionary representation of the logged message
@@ -59,8 +59,8 @@ def record_debug_log(msg: str, body: Any = None) -> dict[str, Any]:
     """Record a debug-level log message.
 
     Args:
-        msg: Debug message to log
-        body: Optional additional data to include
+        :param msg: Debug message to log
+        :param body: Optional additional data to include
 
     Returns:
         Dictionary representation of the logged message
@@ -74,8 +74,8 @@ def record_log(msg: str, body: Any = None) -> dict[str, Any]:
     Default logging function for general application events.
 
     Args:
-        msg: Information message to log
-        body: Optional additional data to include
+        :param msg: Information message to log
+        :param body: Optional additional data to include
 
     Returns:
         Dictionary representation of the logged message
@@ -89,8 +89,8 @@ def record_warning_log(msg: str, body: Any = None) -> dict[str, Any]:
     Used for non-critical issues that should be noted but don't prevent operation.
 
     Args:
-        msg: Warning message to log
-        body: Optional additional data to include
+        :param msg: Warning message to log
+        :param body: Optional additional data to include
 
     Returns:
         Dictionary representation of the logged message
@@ -107,9 +107,9 @@ def record_error_log(
     and exception information when an exception is provided.
 
     Args:
-        msg: Error message to log
-        e: Optional exception that caused the error
-        body: Optional additional data to include
+        :param msg: Error message to log
+        :param e: Optional exception that caused the error
+        :param body: Optional additional data to include
 
     Returns:
         Dictionary representation of the logged message with error details
@@ -124,7 +124,7 @@ def record_agui_raw_log(raw_data: Any) -> None:
     Used for debugging and development to trace AGUI event flow.
 
     Args:
-        raw_data: Raw AGUI event data to log
+        :param raw_data: Raw AGUI event data to log
     """
     if log_config.LOG_AGUI_EVENTS:
         _create_and_log_message("[RAW_DATA: AGUI] record AGUI raw log", body=raw_data)
@@ -137,7 +137,7 @@ def record_event_raw_log(raw_data: Any) -> None:
     Used for debugging and development to trace ADK event processing.
 
     Args:
-        raw_data: Raw ADK event data to log
+        :param raw_data: Raw ADK event data to log
     """
     if log_config.LOG_ADK_EVENTS:
         _create_and_log_message("[RAW_DATA: EVENT] record EVENT raw log", body=raw_data)
