@@ -3,12 +3,14 @@
 
 import asyncio
 from collections.abc import AsyncGenerator, Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
+from sse_starlette import EventSourceResponse
+from starlette.responses import StreamingResponse
 
 from ..base_abc.handler import BaseInOutHandler
 from ..base_abc.sse_service import BaseSSEService
@@ -16,14 +18,17 @@ from ..data_model.common import InputInfo
 from ..data_model.config import RunnerConfig
 from ..data_model.context import ConfigContext, HandlerContext
 from ..data_model.session import SessionParameter
-from ..event.error_event import AGUIEncoderError
+from ..event.error_event import AGUIErrorEvent
 from ..handler.agui_user import AGUIUserHandler
 from ..handler.running import RunningHandler
 from ..handler.session import SessionHandler
 from ..handler.user_message import UserMessageHandler
 from ..manager.session import SessionManager
 from ..tools.shutdown import ShutdownHandler
-from ..utils.convert.agui_event_to_sse import convert_agui_event_to_sse
+from ..utils.convert.agui_event_to_sse import (
+    convert_agui_event_to_sse,
+    convert_agui_event_to_str_fake_sse,
+)
 
 
 class SSEService(BaseSSEService):
@@ -49,7 +54,7 @@ class SSEService(BaseSSEService):
             :param handler_context: Optional context containing event handlers for processing
         """
         self.agent = agent
-        self.runner_config = runner_config if runner_config else RunnerConfig()
+        self.runner_config = runner_config or RunnerConfig()
         self.session_manager = SessionManager(
             session_service=self.runner_config.session_service
         )
@@ -107,8 +112,8 @@ class SSEService(BaseSSEService):
 
     @staticmethod
     async def _record_output_message(
-        inout_handler: BaseInOutHandler | None, output_data: dict[str, str]
-    ) -> dict[str, str]:
+        inout_handler: BaseInOutHandler | None, output_data: BaseEvent
+    ) -> BaseEvent:
         """Record and potentially transform outgoing message data.
 
         Records the output data through the configured handler and applies any
@@ -197,8 +202,7 @@ class SSEService(BaseSSEService):
             return await value(agui_content, request)
         return value
 
-    @staticmethod
-    def _encode_event_to_sse(event: BaseEvent) -> dict[str, str]:
+    def _encode_event_to_sse(self, event: BaseEvent) -> dict[str, str] | str:
         """Handle event encoding with error recovery.
 
         Attempts to encode the event using the provided encoder, falling back
@@ -211,10 +215,15 @@ class SSEService(BaseSSEService):
         Returns:
             Encoded event dictionary in SSE format, either successful encoding or error event
         """
+        converter = (
+            convert_agui_event_to_sse
+            if self.config_context.event_source_response_mode
+            else convert_agui_event_to_str_fake_sse
+        )
         try:
-            return convert_agui_event_to_sse(event)
+            return converter(event)
         except Exception as e:
-            return AGUIEncoderError.create_encoding_error_event(e)
+            return converter(AGUIErrorEvent.create_encoding_error_event(e))
 
     async def _create_runner(self, app_name: str) -> Runner:
         """Create or retrieve a Runner instance for the specified application.
@@ -314,7 +323,7 @@ class SSEService(BaseSSEService):
         runner: Callable[[], AsyncGenerator[BaseEvent]],
         input_info: InputInfo,
         inout_handler: BaseInOutHandler | None = None,
-    ) -> AsyncGenerator[dict[str, str]]:
+    ) -> EventSourceResponse | StreamingResponse:
         """Generate encoded event strings from the agent runner.
 
         Executes the runner and encodes each event for SSE transmission,
@@ -329,7 +338,7 @@ class SSEService(BaseSSEService):
             Encoded event dictionaries ready for SSE transmission
         """
 
-        async def _generate() -> AsyncGenerator[dict[str, str]]:
+        async def _generate() -> AsyncGenerator[dict[str, str] | str]:
             """Internal generator for processing events with error handling.
 
             Yields:
@@ -337,17 +346,21 @@ class SSEService(BaseSSEService):
             """
             try:
                 async for event in runner():
-                    yield await self._record_output_message(
-                        inout_handler, self._encode_event_to_sse(event)
+                    yield self._encode_event_to_sse(
+                        await self._record_output_message(inout_handler, event)
                     )
             except Exception as e:
-                yield await self._record_output_message(
-                    inout_handler, AGUIEncoderError.create_agent_error_event(e)
+                yield self._encode_event_to_sse(
+                    await self._record_output_message(
+                        inout_handler, AGUIErrorEvent.create_agent_error_event(e)
+                    )
                 )
             finally:
                 await self.session_lock_handler.unlock(input_info)
 
-        return _generate()
+        if self.config_context.event_source_response_mode:
+            return EventSourceResponse(_generate())
+        return StreamingResponse(cast(AsyncGenerator[str], _generate()))
 
     async def close(self) -> None:
         """Close all cached Runner instances and clean up resources.

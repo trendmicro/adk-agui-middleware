@@ -6,6 +6,8 @@ from collections.abc import AsyncGenerator, Callable
 
 from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
+from sse_starlette import EventSourceResponse
+from starlette.responses import StreamingResponse
 
 from ..base_abc.handler import BaseInOutHandler
 from ..data_model.common import InputInfo
@@ -52,7 +54,7 @@ class BaseSSEService(metaclass=ABCMeta):
         runner: Callable[[], AsyncGenerator[BaseEvent]],
         input_info: InputInfo,
         inout_handler: BaseInOutHandler | None = None,
-    ) -> AsyncGenerator[dict[str, str]]:
+    ) -> EventSourceResponse | StreamingResponse:
         """Generate encoded event strings from the agent runner.
 
         Takes the runner and executes it to produce a stream of encoded event

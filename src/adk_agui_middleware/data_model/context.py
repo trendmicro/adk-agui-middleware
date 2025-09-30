@@ -84,3 +84,4 @@ class ConfigContext(BaseModel):
         Callable[[RunAgentInput, dict[str, str]], Awaitable[RunAgentInput]] | None
     ) = None
     session_lock_config: SessionLockConfig = SessionLockConfig()
+    event_source_response_mode: bool = False
