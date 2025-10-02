@@ -29,7 +29,7 @@ from ...event.agui_event import CustomThinkingTextMessageContentEvent
 from ...event.agui_type import Message, ThinkingMessage
 
 
-class ADKEventToAGUIMessageConverter:
+class AGUIEventListToMessageListConverter:
     """Converts streaming ADK events into structured AGUI messages.
 
     This converter processes a sequence of BaseEvent and UserMessage objects

@@ -10,7 +10,9 @@ from ..data_model.session import SessionParameter
 from ..event.agui_event import CustomMessagesSnapshotEvent
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
-from ..utils.convert.adk_event_to_agui_message import ADKEventToAGUIMessageConverter
+from ..utils.convert.agui_event_list_to_message_list import (
+    AGUIEventListToMessageListConverter,
+)
 from ..utils.translate import MessageEventUtil
 
 
@@ -159,5 +161,5 @@ class HistoryHandler:
             async for agui_event in self.running_handler.run_async_with_agui(adk_event):
                 agui_event_box.append(agui_event)  # noqa: PERF401
         return self.message_event_util.create_message_snapshot(
-            ADKEventToAGUIMessageConverter().convert(agui_event_box)
+            AGUIEventListToMessageListConverter().convert(agui_event_box)
         )

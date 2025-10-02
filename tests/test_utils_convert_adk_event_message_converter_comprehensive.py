@@ -1,7 +1,7 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
-"""Comprehensive unit tests for adk_agui_middleware.utils.convert.adk_event_to_agui_message module.
+"""Comprehensive unit tests for adk_agui_middleware.utils.convert.agui_event_list_to_message_list module.
 
-This test suite provides extensive coverage for the ADKEventToAGUIMessageConverter class,
+This test suite provides extensive coverage for the AGUIEventListToMessageListConverter class,
 including edge cases, message accumulation, and complex conversation scenarios.
 """
 
@@ -27,36 +27,36 @@ from ag_ui.core.types import (
 
 from adk_agui_middleware.event.agui_event import CustomThinkingTextMessageContentEvent
 from adk_agui_middleware.event.agui_type import Message, ThinkingMessage
-from adk_agui_middleware.utils.convert.adk_event_to_agui_message import (
-    ADKEventToAGUIMessageConverter,
+from adk_agui_middleware.utils.convert.agui_event_list_to_message_list import (
+    AGUIEventListToMessageListConverter,
 )
 
 
 class TestADKEventToAGUIMessageConverter:
-    """Comprehensive tests for ADKEventToAGUIMessageConverter class."""
+    """Comprehensive tests for AGUIEventListToMessageListConverter class."""
 
     @pytest.fixture
-    def converter(self) -> ADKEventToAGUIMessageConverter:
+    def converter(self) -> AGUIEventListToMessageListConverter:
         """Create a fresh converter instance for each test."""
-        return ADKEventToAGUIMessageConverter()
+        return AGUIEventListToMessageListConverter()
 
     # ========== Constructor and Basic Setup Tests ==========
 
-    def test_init(self, converter: ADKEventToAGUIMessageConverter):
+    def test_init(self, converter: AGUIEventListToMessageListConverter):
         """Test converter initialization."""
         assert converter.accumulator == {}
 
     def test_accumulator_isolation(self):
         """Test that different converter instances have isolated accumulators."""
-        converter1 = ADKEventToAGUIMessageConverter()
-        converter2 = ADKEventToAGUIMessageConverter()
+        converter1 = AGUIEventListToMessageListConverter()
+        converter2 = AGUIEventListToMessageListConverter()
 
         converter1.accumulator["test"] = {"type": "message", "content": "test1"}
         assert "test" not in converter2.accumulator
 
     # ========== Content Appending Tests ==========
 
-    def test_append_content_new_key(self, converter: ADKEventToAGUIMessageConverter):
+    def test_append_content_new_key(self, converter: AGUIEventListToMessageListConverter):
         """Test appending content to a new key."""
         converter._append_content("msg-1", "message", "Hello")
 
@@ -64,14 +64,14 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["msg-1"]["type"] == "message"
         assert converter.accumulator["msg-1"]["content"] == "Hello"
 
-    def test_append_content_existing_key(self, converter: ADKEventToAGUIMessageConverter):
+    def test_append_content_existing_key(self, converter: AGUIEventListToMessageListConverter):
         """Test appending content to an existing key."""
         converter._append_content("msg-1", "message", "Hello ")
         converter._append_content("msg-1", "message", "world!")
 
         assert converter.accumulator["msg-1"]["content"] == "Hello world!"
 
-    def test_append_content_different_keys(self, converter: ADKEventToAGUIMessageConverter):
+    def test_append_content_different_keys(self, converter: AGUIEventListToMessageListConverter):
         """Test appending content to different keys."""
         converter._append_content("msg-1", "message", "First message")
         converter._append_content("msg-2", "thinking", "Second message")
@@ -82,13 +82,13 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["msg-1"]["type"] == "message"
         assert converter.accumulator["msg-2"]["type"] == "thinking"
 
-    def test_append_content_empty_delta(self, converter: ADKEventToAGUIMessageConverter):
+    def test_append_content_empty_delta(self, converter: AGUIEventListToMessageListConverter):
         """Test appending empty content delta."""
         converter._append_content("msg-1", "message", "")
 
         assert converter.accumulator["msg-1"]["content"] == ""
 
-    def test_append_content_special_characters(self, converter: ADKEventToAGUIMessageConverter):
+    def test_append_content_special_characters(self, converter: AGUIEventListToMessageListConverter):
         """Test appending content with special characters."""
         special_text = "测试🌟\n\t<>&\"'"
         converter._append_content("msg-1", "message", special_text)
@@ -97,7 +97,7 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== Tool Initialization Tests ==========
 
-    def test_init_tool_new_key(self, converter: ADKEventToAGUIMessageConverter):
+    def test_init_tool_new_key(self, converter: AGUIEventListToMessageListConverter):
         """Test initializing a new tool call."""
         converter._init_tool("tool-1")
 
@@ -106,7 +106,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["tool-1"]["name"] == ""
         assert converter.accumulator["tool-1"]["arg"] == ""
 
-    def test_init_tool_existing_key(self, converter: ADKEventToAGUIMessageConverter):
+    def test_init_tool_existing_key(self, converter: AGUIEventListToMessageListConverter):
         """Test initializing tool call for existing key (should not overwrite)."""
         converter.accumulator["tool-1"] = {"type": "tool", "name": "existing", "arg": "data"}
         converter._init_tool("tool-1")
@@ -115,7 +115,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["tool-1"]["name"] == "existing"
         assert converter.accumulator["tool-1"]["arg"] == "data"
 
-    def test_init_tool_multiple_tools(self, converter: ADKEventToAGUIMessageConverter):
+    def test_init_tool_multiple_tools(self, converter: AGUIEventListToMessageListConverter):
         """Test initializing multiple tool calls."""
         converter._init_tool("tool-1")
         converter._init_tool("tool-2")
@@ -126,7 +126,7 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== Event Classification Tests ==========
 
-    def test_classify_thinking_content_event(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_thinking_content_event(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying thinking content events."""
         thinking_event = CustomThinkingTextMessageContentEvent(
             thinking_id="think-123",
@@ -139,7 +139,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["think-123"]["type"] == "thinking"
         assert converter.accumulator["think-123"]["content"] == "I need to think about this..."
 
-    def test_classify_text_message_content_event(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_text_message_content_event(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying text message content events."""
         text_event = TextMessageContentEvent(
             message_id="msg-456",
@@ -152,7 +152,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["msg-456"]["type"] == "message"
         assert converter.accumulator["msg-456"]["content"] == "Hello, world!"
 
-    def test_classify_tool_call_args_event(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_tool_call_args_event(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying tool call args events."""
         args_event = ToolCallArgsEvent(
             tool_call_id="tool-789",
@@ -165,7 +165,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["tool-789"]["type"] == "tool"
         assert converter.accumulator["tool-789"]["arg"] == '{"param": "value"}'
 
-    def test_classify_tool_call_start_event(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_tool_call_start_event(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying tool call start events."""
         start_event = ToolCallStartEvent(
             tool_call_id="tool-abc",
@@ -178,7 +178,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["tool-abc"]["type"] == "tool"
         assert converter.accumulator["tool-abc"]["name"] == "test_function"
 
-    def test_classify_user_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_user_message(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying user messages."""
         user_msg = UserMessage(
             id="user-123",
@@ -192,7 +192,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["user-123"]["type"] == "user"
         assert converter.accumulator["user-123"]["content"] == user_msg
 
-    def test_classify_system_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_system_message(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying system messages."""
         system_msg = SystemMessage(
             id="system-456",
@@ -206,7 +206,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["system-456"]["type"] == "system"
         assert converter.accumulator["system-456"]["content"] == system_msg
 
-    def test_classify_tool_call_result_event(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_tool_call_result_event(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying tool call result events."""
         result_event = ToolCallResultEvent(
             tool_call_id="tool-result-123",
@@ -225,7 +225,7 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== Complex Event Sequences ==========
 
-    def test_classify_streaming_text_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_streaming_text_message(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying a sequence of streaming text events."""
         events = [
             TextMessageContentEvent(message_id="stream-1", delta="Hello "),
@@ -237,7 +237,7 @@ class TestADKEventToAGUIMessageConverter:
 
         assert converter.accumulator["stream-1"]["content"] == "Hello streaming world!"
 
-    def test_classify_complete_tool_call_sequence(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_complete_tool_call_sequence(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying a complete tool call sequence."""
         events = [
             ToolCallStartEvent(tool_call_id="complete-tool", tool_call_name="calculate"),
@@ -250,7 +250,7 @@ class TestADKEventToAGUIMessageConverter:
         assert converter.accumulator["complete-tool"]["name"] == "calculate"
         assert converter.accumulator["complete-tool"]["arg"] == '{"operation": "add", "numbers": [1, 2, 3]}'
 
-    def test_classify_mixed_event_types(self, converter: ADKEventToAGUIMessageConverter):
+    def test_classify_mixed_event_types(self, converter: AGUIEventListToMessageListConverter):
         """Test classifying mixed event types in sequence."""
         user_msg = UserMessage(id="user-1", role="user", content="Calculate 2+2")
 
@@ -274,7 +274,7 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== Message Creation Tests ==========
 
-    def test_create_thinking_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_thinking_message(self, converter: AGUIEventListToMessageListConverter):
         """Test creating thinking message from accumulated data."""
         data = {"type": "thinking", "content": "Thinking content"}
 
@@ -285,7 +285,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result.id == "think-id"
         assert result.content == "Thinking content"
 
-    def test_create_assistant_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_assistant_message(self, converter: AGUIEventListToMessageListConverter):
         """Test creating assistant message from accumulated data."""
         data = {"type": "message", "content": "Assistant response"}
 
@@ -296,7 +296,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result.id == "msg-id"
         assert result.content == "Assistant response"
 
-    def test_create_user_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_user_message(self, converter: AGUIEventListToMessageListConverter):
         """Test creating user message from accumulated data."""
         original_msg = UserMessage(id="user-1", role="user", content="User content")
         data = {"type": "user", "content": original_msg}
@@ -306,7 +306,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result == original_msg
         assert isinstance(result, UserMessage)
 
-    def test_create_system_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_system_message(self, converter: AGUIEventListToMessageListConverter):
         """Test creating system message from accumulated data."""
         original_msg = SystemMessage(id="sys-1", role="system", content="System content")
         data = {"type": "system", "content": original_msg}
@@ -316,7 +316,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result == original_msg
         assert isinstance(result, SystemMessage)
 
-    def test_create_tool_call_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_tool_call_message(self, converter: AGUIEventListToMessageListConverter):
         """Test creating tool call message from accumulated data."""
         data = {
             "type": "tool",
@@ -334,7 +334,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result.tool_calls[0].function.name == "test_function"
         assert result.tool_calls[0].function.arguments == '{"param": "value"}'
 
-    def test_create_tool_result_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_tool_result_message(self, converter: AGUIEventListToMessageListConverter):
         """Test creating tool result message from accumulated data."""
         data = {
             "type": "tool_result",
@@ -351,7 +351,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result.tool_call_id == "tool-123"
         assert result.content == "Tool execution result"
 
-    def test_create_unknown_message_type(self, converter: ADKEventToAGUIMessageConverter):
+    def test_create_unknown_message_type(self, converter: AGUIEventListToMessageListConverter):
         """Test creating message with unknown type."""
         data = {"type": "unknown", "content": "Unknown content"}
 
@@ -361,14 +361,14 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== Full Conversion Tests ==========
 
-    def test_convert_empty_list(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_empty_list(self, converter: AGUIEventListToMessageListConverter):
         """Test converting empty event list."""
         result = converter.convert([])
 
         assert result == []
         assert converter.accumulator == {}
 
-    def test_convert_single_text_event(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_single_text_event(self, converter: AGUIEventListToMessageListConverter):
         """Test converting single text message event."""
         events = [TextMessageContentEvent(message_id="single", delta="Single message")]
 
@@ -378,7 +378,7 @@ class TestADKEventToAGUIMessageConverter:
         assert isinstance(result[0], AssistantMessage)
         assert result[0].content == "Single message"
 
-    def test_convert_conversation_sequence(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_conversation_sequence(self, converter: AGUIEventListToMessageListConverter):
         """Test converting a complete conversation sequence."""
         user_msg = UserMessage(id="user-1", role="user", content="Hello")
 
@@ -399,7 +399,7 @@ class TestADKEventToAGUIMessageConverter:
         assert "AssistantMessage" in message_types
         assert "ThinkingMessage" in message_types
 
-    def test_convert_tool_call_workflow(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_tool_call_workflow(self, converter: AGUIEventListToMessageListConverter):
         """Test converting complete tool call workflow."""
         events = [
             ToolCallStartEvent(tool_call_id="workflow-1", tool_call_name="process_data"),
@@ -422,7 +422,7 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== Edge Cases and Error Handling ==========
 
-    def test_convert_duplicate_message_ids(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_duplicate_message_ids(self, converter: AGUIEventListToMessageListConverter):
         """Test handling events with duplicate message IDs."""
         events = [
             TextMessageContentEvent(message_id="duplicate", delta="First "),
@@ -435,7 +435,7 @@ class TestADKEventToAGUIMessageConverter:
         assert len(result) == 1
         assert result[0].content == "First Second Third"
 
-    def test_convert_interleaved_events(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_interleaved_events(self, converter: AGUIEventListToMessageListConverter):
         """Test converting interleaved events for different messages."""
         events = [
             TextMessageContentEvent(message_id="msg-1", delta="Message 1 part 1 "),
@@ -455,7 +455,7 @@ class TestADKEventToAGUIMessageConverter:
         assert msg1.content == "Message 1 part 1 Message 1 part 2"
         assert msg2.content == "Message 2 part 1 Message 2 part 2"
 
-    def test_convert_incomplete_tool_call(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_incomplete_tool_call(self, converter: AGUIEventListToMessageListConverter):
         """Test converting incomplete tool call (missing args or name)."""
         events = [
             ToolCallStartEvent(tool_call_id="incomplete", tool_call_name="incomplete_function")
@@ -470,7 +470,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result[0].tool_calls[0].function.name == "incomplete_function"
         assert result[0].tool_calls[0].function.arguments == ""
 
-    def test_convert_orphaned_tool_args(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_orphaned_tool_args(self, converter: AGUIEventListToMessageListConverter):
         """Test converting tool args without start event."""
         events = [
             ToolCallArgsEvent(tool_call_id="orphaned", delta='{"orphaned": "args"}')
@@ -485,7 +485,7 @@ class TestADKEventToAGUIMessageConverter:
         assert result[0].tool_calls[0].function.name == ""  # No name set
         assert result[0].tool_calls[0].function.arguments == '{"orphaned": "args"}'
 
-    def test_convert_large_message_content(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_large_message_content(self, converter: AGUIEventListToMessageListConverter):
         """Test converting very large message content."""
         large_content = "Large content " * 1000  # ~13k characters
         events = [TextMessageContentEvent(message_id="large", delta=large_content)]
@@ -496,7 +496,7 @@ class TestADKEventToAGUIMessageConverter:
         assert len(result[0].content) == len(large_content)
         assert result[0].content == large_content
 
-    def test_convert_special_characters_in_content(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_special_characters_in_content(self, converter: AGUIEventListToMessageListConverter):
         """Test converting content with special characters."""
         special_content = "Special: 🌟测试\n\t<script>alert('xss')</script>"
         events = [TextMessageContentEvent(message_id="special", delta=special_content)]
@@ -506,7 +506,7 @@ class TestADKEventToAGUIMessageConverter:
         assert len(result) == 1
         assert result[0].content == special_content
 
-    def test_convert_multiple_tool_calls_same_message(self, converter: ADKEventToAGUIMessageConverter):
+    def test_convert_multiple_tool_calls_same_message(self, converter: AGUIEventListToMessageListConverter):
         """Test converting multiple tool calls for the same message."""
         events = [
             ToolCallStartEvent(tool_call_id="tool-1", tool_call_name="function_1"),
@@ -530,7 +530,7 @@ class TestADKEventToAGUIMessageConverter:
 
     # ========== State Management Tests ==========
 
-    def test_accumulator_state_persistence(self, converter: ADKEventToAGUIMessageConverter):
+    def test_accumulator_state_persistence(self, converter: AGUIEventListToMessageListConverter):
         """Test that accumulator state persists between operations."""
         # First operation
         converter._append_content("persistent", "message", "Part 1 ")
@@ -546,7 +546,7 @@ class TestADKEventToAGUIMessageConverter:
 
     def test_accumulator_independence_between_conversions(self):
         """Test that accumulator is independent between different conversions."""
-        converter = ADKEventToAGUIMessageConverter()
+        converter = AGUIEventListToMessageListConverter()
 
         # First conversion
         events1 = [TextMessageContentEvent(message_id="conv1", delta="Conversion 1")]
