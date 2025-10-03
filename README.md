@@ -750,6 +750,9 @@ runner_config = RunnerConfig(
     # Disable automatic in-memory fallback for production
     use_in_memory_services=False,
 
+    # Optional: Add ADK plugins to extend agent capabilities
+    plugins=[MyCustomPlugin(), AnotherPlugin()],
+
     # Customize agent execution behavior
     run_config=RunConfig(
         streaming_mode=StreamingMode.SSE,
@@ -775,6 +778,7 @@ sse_service = SSEService(
 | `artifact_service` | `BaseArtifactService` | `None` | Artifact service for file and data management |
 | `memory_service` | `BaseMemoryService` | `None` | Memory service for agent memory management |
 | `credential_service` | `BaseCredentialService` | `None` | Credential service for authentication |
+| `plugins` | `list[BasePlugin]` | `None` | List of ADK plugins for extending agent capabilities |
 
 #### Configuration Examples
 

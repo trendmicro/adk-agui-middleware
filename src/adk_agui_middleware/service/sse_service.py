@@ -247,6 +247,7 @@ class SSEService(BaseSSEService):
                     artifact_service=self.runner_config.get_artifact_service(),
                     memory_service=self.runner_config.get_memory_service(),
                     credential_service=self.runner_config.get_credential_service(),
+                    plugins=self.runner_config.plugins,
                 )
                 self.shutdown_handler.register_shutdown_function(runner.close)
                 self.runner_box[app_name] = runner

@@ -20,6 +20,7 @@ from google.adk.auth.credential_service.in_memory_credential_service import (
     InMemoryCredentialService,
 )
 from google.adk.memory import BaseMemoryService, InMemoryMemoryService
+from google.adk.plugins import BasePlugin
 from google.adk.sessions import BaseSessionService, InMemorySessionService, Session
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -106,6 +107,7 @@ class RunnerConfig(BaseModel):
     artifact_service: BaseArtifactService | None = None
     memory_service: BaseMemoryService | None = None
     credential_service: BaseCredentialService | None = None
+    plugins: list[BasePlugin] | None = None
 
     def _get_or_create_service(self, service_attr: str, service_class: type[T]) -> T:
         """Get existing service or create in-memory service if enabled.
