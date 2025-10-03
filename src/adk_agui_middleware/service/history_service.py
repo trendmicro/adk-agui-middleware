@@ -8,6 +8,7 @@ from fastapi import Request
 from ..data_model.config import HistoryConfig
 from ..data_model.context import HandlerContext
 from ..event.agui_event import CustomMessagesSnapshotEvent
+from ..event.event_translator import EventTranslator
 from ..handler.history import HistoryHandler
 from ..handler.running import RunningHandler
 from ..manager.session import SessionManager
@@ -80,7 +81,10 @@ class HistoryService:
                     adk_event_handler=self.history_config.adk_event_handler,
                     agui_event_handler=self.history_config.agui_event_handler,
                     translate_handler=self.history_config.translate_handler,
-                )
+                ),
+                event_translator=EventTranslator(
+                    self.history_config.retune_on_stream_complete
+                ),
             ),
             **await self._get_user_id_and_app_name(request),
         )

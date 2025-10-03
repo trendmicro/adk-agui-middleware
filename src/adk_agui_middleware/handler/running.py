@@ -49,6 +49,7 @@ class RunningHandler:
         run_config: RunConfig | None = None,
         handler_context: HandlerContext | None = None,
         input_info: InputInfo | None = None,
+        event_translator: EventTranslator | None = None,
     ):
         """Initialize the running handler with agent runner and configuration.
 
@@ -63,7 +64,7 @@ class RunningHandler:
         """
         self.runner: Runner | None = runner
         self.run_config: RunConfig | None = run_config
-        self.event_translator = EventTranslator()
+        self.event_translator = event_translator or EventTranslator()
         self.input_info: InputInfo | None = input_info
 
         self.adk_event_handler: BaseADKEventHandler | None = None

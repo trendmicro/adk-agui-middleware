@@ -92,3 +92,4 @@ class ConfigContext(BaseModel):
     ) = None
     session_lock_config: SessionLockConfig = SessionLockConfig()
     event_source_response_mode: bool = False
+    retune_on_stream_complete: bool = False

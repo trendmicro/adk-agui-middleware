@@ -37,12 +37,13 @@ class EventTranslator:
     - Support long-running tool detection and management
     """
 
-    def __init__(self) -> None:
+    def __init__(self, retune_on_stream_complete: bool = False) -> None:
         """Initialize the event translator with empty state containers.
 
         Sets up internal state tracking for streaming messages, long-running tools,
         and utility classes for different types of event translation.
         """
+        self.retune_on_stream_complete = retune_on_stream_complete
         self._streaming_message_id: dict[str, str] = {}
         self.long_running_tool_ids: dict[str, str] = {}  # IDs of long-running tools
         self.state_event_util = StateEventUtil()
@@ -174,7 +175,13 @@ class EventTranslator:
             )
 
         # Yield content if there's text and we're streaming
-        if author_id and (combined_text := "".join(text_parts)):
+        if (
+            author_id
+            and (combined_text := "".join(text_parts))
+            and not (
+                adk_event.is_final_response() and not self.retune_on_stream_complete
+            )
+        ):
             yield TextMessageContentEvent(
                 type=EventType.TEXT_MESSAGE_CONTENT,
                 message_id=author_id,

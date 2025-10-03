@@ -775,6 +775,49 @@ config_context = ConfigContext(
 | `event_source_response_mode=False`（預設） | `StreamingResponse` | CopilotKit 前端 | ❌ 非標準 |
 | `event_source_response_mode=True` | `EventSourceResponse` | 自研/標準前端 | ✅ 符合 W3C |
 
+### 串流完成訊息過濾
+
+**設定：`retune_on_stream_complete`**
+
+使用串流回應時，ADK 可能同時傳送增量串流區塊與最終完整訊息。預設情況（`retune_on_stream_complete=False`）會過濾掉最終完整訊息，以避免用戶端收到重複內容，因為所有內容已經透過串流區塊傳送。
+
+#### 為什麼需要這個設定
+
+- **預設行為（`retune_on_stream_complete=False`）**：過濾最終完整訊息以避免重複
+  - 串流區塊：✅ 傳送至用戶端
+  - 最終完整訊息：❌ 已過濾（防止重複）
+
+- **替代行為（`retune_on_stream_complete=True`）**：同時傳送串流區塊與最終完整訊息
+  - 串流區塊：✅ 傳送至用戶端
+  - 最終完整訊息：✅ 傳送至用戶端（可能造成重複）
+
+#### 設定方式
+
+在 `ConfigContext` 與 `HistoryConfig` 中設定：
+
+```python
+from adk_agui_middleware.data_model.context import ConfigContext
+from adk_agui_middleware.data_model.config import HistoryConfig
+
+# SSE 服務設定
+config_context = ConfigContext(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    retune_on_stream_complete=False  # 預設：過濾最終完整訊息
+)
+
+# 歷史服務設定
+history_config = HistoryConfig(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    retune_on_stream_complete=False  # 預設：過濾最終完整訊息
+)
+```
+
+**建議**：保持預設值 `False` 以防止內容重複，除非你的前端特別需要最終完整訊息。
+
 #### 我們的立場
 
 由於我們的自研前端是完全重構且不使用 CopilotKit，因此我們要求後端必須嚴格遵循 SSE 規範。但為維持對 CopilotKit 使用者的相容性，我們提供可設定選項，且預設為 CopilotKit 的非標準模式。

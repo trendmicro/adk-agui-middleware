@@ -19,6 +19,7 @@ from ..data_model.config import RunnerConfig
 from ..data_model.context import ConfigContext, HandlerContext
 from ..data_model.session import SessionParameter
 from ..event.error_event import AGUIErrorEvent
+from ..event.event_translator import EventTranslator
 from ..handler.agui_user import AGUIUserHandler
 from ..handler.running import RunningHandler
 from ..handler.session import SessionHandler
@@ -298,6 +299,9 @@ class SSEService(BaseSSEService):
                     run_config=self.runner_config.run_config,
                     handler_context=self.handler_context,
                     input_info=input_info,
+                    event_translator=EventTranslator(
+                        self.config_context.retune_on_stream_complete
+                    ),
                 ),
                 user_message_handler=UserMessageHandler(
                     agui_content,

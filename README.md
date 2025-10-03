@@ -642,6 +642,49 @@ config_context = ConfigContext(
 | `event_source_response_mode=False` (default) | `StreamingResponse` | CopilotKit frontend | ❌ Non-compliant |
 | `event_source_response_mode=True` | `EventSourceResponse` | Custom/Standard frontends | ✅ W3C compliant |
 
+### Stream Completion Message Filtering
+
+**Configuration: `retune_on_stream_complete`**
+
+When using streaming responses, ADK may emit both incremental streaming chunks AND a final complete message. By default (`retune_on_stream_complete=False`), the final complete message is filtered to prevent duplicate content on the client side, since all content has already been sent via streaming chunks.
+
+#### Why This Matters
+
+- **Default Behavior (`retune_on_stream_complete=False`)**: Filters out the final complete message to avoid duplication
+  - Streaming chunks: ✅ Sent to client
+  - Final complete message: ❌ Filtered (prevents duplicate)
+
+- **Alternative Behavior (`retune_on_stream_complete=True`)**: Sends both streaming chunks AND the final complete message
+  - Streaming chunks: ✅ Sent to client
+  - Final complete message: ✅ Sent to client (may cause duplication)
+
+#### Configuration
+
+Set this in both `ConfigContext` and `HistoryConfig`:
+
+```python
+from adk_agui_middleware.data_model.context import ConfigContext
+from adk_agui_middleware.data_model.config import HistoryConfig
+
+# SSE Service Configuration
+config_context = ConfigContext(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    retune_on_stream_complete=False  # Default: Filter final complete message
+)
+
+# History Service Configuration
+history_config = HistoryConfig(
+    app_name="my-app",
+    user_id=extract_user_id,
+    session_id=extract_session_id,
+    retune_on_stream_complete=False  # Default: Filter final complete message
+)
+```
+
+**Recommendation**: Keep the default `False` to prevent duplicate content unless your frontend specifically requires the final complete message.
+
 #### Our Stance
 
 Since our in-house frontend is a complete redesign that **does not** use CopilotKit, we require the backend to **strictly comply with the SSE specification**. However, to maintain backward compatibility with CopilotKit users, we've made this configurable with the default set to CopilotKit's non-standard mode.

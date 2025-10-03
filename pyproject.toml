@@ -1,6 +1,6 @@
 [project]
 name = "adk-agui-middleware"
-version = "1.3.2"
+version = "1.3.3"
 description = "Python middleware bridging Google ADK agents with AGUI protocol via Server-Sent Events for real-time agent interactions"
 readme = "README.md"
 requires-python = ">=3.10"
