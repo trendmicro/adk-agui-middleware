@@ -12,11 +12,11 @@
 
 Languages: [English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-**Enterprise-grade Python 3.13+ middleware that seamlessly bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing high-performance Server-Sent Events streaming and Human-in-the-Loop (HITL) workflow orchestration.**
+**Enterprise-grade Python 3.10+ middleware that seamlessly bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing high-performance Server-Sent Events streaming and Human-in-the-Loop (HITL) workflow orchestration.**
 
 ## Overview
 
-Enterprise-grade Python 3.13+ middleware that bridges Google's Agent Development Kit (ADK) with AGUI protocol, enabling real-time AI agent applications with Server-Sent Events streaming and Human-in-the-Loop workflows.
+Enterprise-grade Python 3.10+ middleware that bridges Google's Agent Development Kit (ADK) with AGUI protocol, enabling real-time AI agent applications with Server-Sent Events streaming and Human-in-the-Loop workflows.
 
 ### Key Features
 
@@ -25,7 +25,7 @@ Enterprise-grade Python 3.13+ middleware that bridges Google's Agent Development
 - **🤝 HITL Workflows**: Complete Human-in-the-Loop orchestration with state persistence
 - **🏗️ Enterprise Architecture**: Modular design with dependency injection and clean separation
 - **🛡️ Production-Ready**: Comprehensive error handling, logging, and graceful shutdown
-- **🎯 Type Safety**: Full Python 3.13 annotations with strict mypy validation
+- **🎯 Type Safety**: Full Python 3.10 annotations with strict mypy validation
 
 ## Installation
 
@@ -35,7 +35,7 @@ pip install adk-agui-middleware
 
 ### Requirements
 
-- Python 3.13+ (recommended 3.13.3+)
+- Python 3.10+ (recommended 3.10.3+)
 - Google ADK >= 1.9.0
 - AGUI Protocol >= 0.1.7
 - FastAPI >= 0.104.0

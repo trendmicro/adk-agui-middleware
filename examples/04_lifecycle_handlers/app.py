@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import FastAPI, Request
@@ -42,7 +43,7 @@ from adk_agui_middleware.base_abc.handler import (
     SessionLockHandler,
 )
 from adk_agui_middleware.data_model.common import InputInfo, SessionLockConfig
-from adk_agui_middleware.data_model.config import PathConfig, RunnerConfig
+from adk_agui_middleware.data_model.config import PathConfig
 from adk_agui_middleware.data_model.context import ConfigContext, HandlerContext
 from adk_agui_middleware.data_model.event import TranslateEvent
 
@@ -132,7 +133,7 @@ class LifecycleADKEventHandler(BaseADKEventHandler):
         """Initialize handler with optional input context."""
         self.info = input_info
 
-    async def process(self, event: Event) -> AsyncGenerator[Event | None, None]:
+    async def process(self, event: Event) -> AsyncGenerator[Event | None]:
         """Process ADK events before translation to AGUI format."""
         print("[Lifecycle] ADK event ->", getattr(event, "author", None))
         # Yield the event as-is; return None to filter it out.
@@ -155,7 +156,7 @@ class LifecycleTimeoutHandler(BaseADKEventTimeoutHandler):
         # 30 seconds demo timeout - adjust based on your needs
         return 30
 
-    async def process_timeout_fallback(self) -> AsyncGenerator[Event | None, None]:
+    async def process_timeout_fallback(self) -> AsyncGenerator[Event | None]:
         """Handle timeout scenarios by providing fallback events."""
         print("[Lifecycle] Timeout fallback invoked")
         # In a real app, emit an ADK error event or a synthetic explanation event.
@@ -176,7 +177,7 @@ class LifecycleTranslateHandler(BaseTranslateHandler):
         """Initialize translate handler with optional input context."""
         self.info = input_info
 
-    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent, None]:
+    async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
         """Intercept and potentially modify event translation."""
         print("[Lifecycle] Translate hook for event")
         # No-op: do not yield any TranslateEvent so the default translator runs.
@@ -197,7 +198,7 @@ class LifecycleAGUIEventHandler(BaseAGUIEventHandler):
         """Initialize AGUI event handler with optional input context."""
         self.info = input_info
 
-    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None, None]:
+    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
         """Process AGUI events after translation from ADK events."""
         print("[Lifecycle] AGUI event ->", type(event).__name__)
         # This is where you could filter or modify AGUI events before SSE output

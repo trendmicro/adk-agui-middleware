@@ -195,7 +195,7 @@ class HistoryConfig(BaseModel):
     session_id: str | Callable[[Request], Awaitable[str]]
     retune_on_stream_complete: bool = False
     get_thread_list: (
-        Callable[[list[Session]], Awaitable[list[dict[str, str]]]] | None
+        Callable[[list[Session]], Awaitable[list[dict[str, Any]]]] | None
     ) = None
 
     session_service: BaseSessionService = Field(default_factory=InMemorySessionService)

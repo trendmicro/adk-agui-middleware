@@ -2,6 +2,7 @@
 """History service for managing conversation history and session retrieval."""
 
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import Request
 
@@ -109,7 +110,7 @@ class HistoryService:
             return await value(request)
         return value
 
-    async def list_threads(self, request: Request) -> list[dict[str, str]]:
+    async def list_threads(self, request: Request) -> list[dict[str, Any]]:
         """List conversation threads for the requesting user.
 
         Extracts user context from the request and returns a list of
