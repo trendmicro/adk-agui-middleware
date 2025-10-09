@@ -21,7 +21,7 @@ from fastapi import FastAPI, Request
 from adk_agui_middleware import SSEService, register_agui_endpoint
 from adk_agui_middleware.base_abc.handler import BaseInOutHandler
 from adk_agui_middleware.data_model.common import InputInfo
-from adk_agui_middleware.data_model.config import PathConfig, RunnerConfig
+from adk_agui_middleware.data_model.config import PathConfig
 from adk_agui_middleware.data_model.context import ConfigContext, HandlerContext
 
 

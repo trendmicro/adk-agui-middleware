@@ -82,7 +82,7 @@ def register_agui_history_endpoint(
         path_config = HistoryPathConfig()
 
     @app.get(path_config.agui_thread_list_path)
-    async def get_agui_thread_list(request: Request) -> list[dict[str, str]]:
+    async def get_agui_thread_list(request: Request) -> list[dict[str, Any]]:
         """Get list of available conversation threads for the user.
 
         Retrieves all available conversation threads/sessions for the requesting

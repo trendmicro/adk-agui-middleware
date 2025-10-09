@@ -28,7 +28,6 @@ from adk_agui_middleware import (
 from adk_agui_middleware.data_model.config import (
     HistoryConfig,
     PathConfig,
-    RunnerConfig,
     StateConfig,
 )
 from adk_agui_middleware.data_model.context import ConfigContext
