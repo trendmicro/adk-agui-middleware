@@ -13,6 +13,7 @@ from google.genai import types
 
 from adk_agui_middleware.event.error_event import AGUIErrorEvent
 from adk_agui_middleware.handler.agui_user import AGUIUserHandler
+from adk_agui_middleware.handler.queue import QueueHandler
 from adk_agui_middleware.handler.running import RunningHandler
 from adk_agui_middleware.handler.session import SessionHandler
 from adk_agui_middleware.handler.user_message import UserMessageHandler
@@ -60,25 +61,38 @@ class TestAGUIUserHandler:
         return handler
 
     @pytest.fixture
-    def agui_user_handler(self, mock_running_handler, mock_user_message_handler, mock_session_handler):
+    def mock_queue_handler(self):
+        """Create mock queue handler."""
+        handler = Mock(spec=QueueHandler)
+        mock_adk_queue = Mock()
+        mock_agui_queue = Mock()
+        handler.get_adk_queue = Mock(return_value=mock_adk_queue)
+        handler.get_agui_queue = Mock(return_value=mock_agui_queue)
+        return handler
+
+    @pytest.fixture
+    def agui_user_handler(self, mock_running_handler, mock_user_message_handler, mock_session_handler, mock_queue_handler):
         """Create AGUIUserHandler instance with mocked dependencies."""
         return AGUIUserHandler(
             running_handler=mock_running_handler,
             user_message_handler=mock_user_message_handler,
             session_handler=mock_session_handler,
+            queue_handler=mock_queue_handler,
         )
 
-    def test_init(self, mock_running_handler, mock_user_message_handler, mock_session_handler):
+    def test_init(self, mock_running_handler, mock_user_message_handler, mock_session_handler, mock_queue_handler):
         """Test handler initialization."""
         handler = AGUIUserHandler(
             running_handler=mock_running_handler,
             user_message_handler=mock_user_message_handler,
             session_handler=mock_session_handler,
+            queue_handler=mock_queue_handler,
         )
 
         assert handler.running_handler == mock_running_handler
         assert handler.user_message_handler == mock_user_message_handler
         assert handler.session_handler == mock_session_handler
+        assert handler.queue_handler == mock_queue_handler
         assert handler.tool_call_info == {}
         assert handler.input_message is None
 
@@ -249,19 +263,29 @@ class TestAGUIUserHandler:
         """Test complete workflow execution."""
         mock_user_message_handler.initial_state = {"initial": "state"}
 
-        # Mock _run_async to return some events
-        async def mock_run_async_generator():
+        # Mock the queue iterators to return some events
+        async def mock_agui_queue_iterator():
             yield Mock(spec=BaseEvent)
             yield Mock(spec=BaseEvent)
 
-        with patch.object(agui_user_handler, "_run_async", return_value=mock_run_async_generator()):
-            agui_user_handler.tool_call_info = {"tool-1": "function_1"}
+        # Mock the _run_async_with_adk and _run_async_with_agui methods
+        async def mock_run_async_with_adk():
+            return
 
-            events = []
-            async for event in agui_user_handler._run_workflow():
-                events.append(event)
+        async def mock_run_async_with_agui():
+            return
 
-        # Should have start event + 2 from _run_async + finish event
+        agui_user_handler.agui_queue.get_iterator = Mock(return_value=mock_agui_queue_iterator())
+
+        with patch.object(agui_user_handler, "_run_async_with_adk", side_effect=mock_run_async_with_adk):
+            with patch.object(agui_user_handler, "_run_async_with_agui", side_effect=mock_run_async_with_agui):
+                agui_user_handler.tool_call_info = {"tool-1": "function_1"}
+
+                events = []
+                async for event in agui_user_handler._run_workflow():
+                    events.append(event)
+
+        # Should have start event + 2 from queue iterator + finish event
         assert len(events) == 4
         assert isinstance(events[0], RunStartedEvent)
         assert isinstance(events[-1], RunFinishedEvent)
