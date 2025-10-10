@@ -243,6 +243,13 @@ class RunningHandler:
     def update_agent_tools(
         self, agui_queue: QueueManager, frontend_tools: list[Tool]
     ) -> None:
+        """Inject or merge frontend tools into the agent toolset without duplication.
+
+        Merges newly provided frontend Tool definitions into an existing FrontendToolset
+        if present on the agent; otherwise, appends a new FrontendToolset. Deduplication
+        is performed by tool name across existing BaseTool instances and existing
+        FrontendToolset.ag_ui_tools.
+        """
         if not self.runner or not hasattr(self.runner.agent, "tools"):
             return
         agent = self.runner.agent

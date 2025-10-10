@@ -4,7 +4,7 @@
 import time
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ErrorModel(BaseModel):
@@ -24,7 +24,7 @@ class ErrorModel(BaseModel):
 
     error: str
     error_description: dict[str, Any] | str
-    timestamp: int = int(time.time())
+    timestamp: int = Field(default_factory=lambda: int(time.time()))
     trace_id: str = ""
 
 

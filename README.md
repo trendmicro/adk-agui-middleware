@@ -10,8 +10,6 @@
 [![Security: Bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 [![Type Checker: mypy](https://img.shields.io/badge/type_checker-mypy-blue.svg)](https://github.com/python/mypy)
 
-Languages: [English](README.md) | [繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
-
 **Enterprise-grade Python 3.10+ middleware that seamlessly bridges Google's Agent Development Kit (ADK) with AGUI protocol, providing high-performance Server-Sent Events streaming and Human-in-the-Loop (HITL) workflow orchestration.**
 
 ## Overview
@@ -63,270 +61,227 @@ Jump in with hands-on, progressively richer examples under `examples/`.
 
 ```mermaid
 graph TB
-    subgraph "Client Applications"
-        WEB[🌐 Web Applications<br/>React/Vue/Angular]
-        MOBILE[📱 Mobile Apps<br/>iOS/Android/Flutter]
-        API[🔌 API Clients<br/>REST/GraphQL/SDK]
+    %% Clients
+    subgraph "Clients"
+        WEB[Web Apps]
+        MOBILE[Mobile Apps]
+        API[API Clients]
     end
 
-    subgraph "FastAPI Endpoint Layer"
-        MAIN_EP[🎯 Main Endpoint<br/>/agui_main_path<br/>POST RunAgentInput]
-        HIST_EP[📚 History Endpoints<br/>GET /thread/list<br/>DELETE /thread/ID<br/>GET /message_snapshot/ID]
-        STATE_EP[🗄️ State Endpoints<br/>PATCH /state/ID<br/>GET /state_snapshot/ID]
+    %% Endpoints
+    subgraph "FastAPI Endpoints"
+        MAIN_EP[POST / - RunAgentInput]
+        HIST_EP[History API]
+        STATE_EP[State API]
     end
 
-    subgraph "Service Layer"
-        SSE_SVC[⚡ SSE Service<br/>Event Orchestration<br/>& Streaming Management]
-        HIST_SVC[📖 History Service<br/>Conversation Retrieval<br/>& Thread Management]
-        STATE_SVC[🗃️ State Service<br/>Session State Mgmt<br/>& JSON Patch Operations]
+    %% Services
+    subgraph "Services"
+        SSE_SVC[SSEService]
+        HIST_SVC[HistoryService]
+        STATE_SVC[StateService]
     end
 
-    subgraph "Handler Context System"
-        LOCK_HDL[🔒 Session Lock Handler<br/>Concurrency Control<br/>& Resource Protection]
-        IO_HDL[📊 Input/Output Handler<br/>Request/Response Logging<br/>& Audit Trails]
-        CTX_MGR[🎛️ Handler Context<br/>Pluggable Event Processing<br/>& Custom Workflows]
+    %% Core pipeline
+    subgraph "Core Pipeline"
+        AGUI_USER[AGUIUserHandler]
+        USER_MSG[UserMessageHandler]
+        RUNNING[RunningHandler]
+        TRANSLATOR[EventTranslator]
+        SESSION_HDL[SessionHandler]
+        QUEUE_HDL[QueueHandler]
+        LOCK_HDL[SessionLockHandler]
     end
 
-    subgraph "Core Processing Pipeline"
-        AGUI_USER[🎭 AGUI User Handler<br/>Workflow Orchestration<br/>& HITL Coordination]
-        RUNNING[🏃 Running Handler<br/>Agent Execution Engine<br/>& Event Translation]
-        USER_MSG[💬 User Message Handler<br/>Input Processing<br/>& Tool Result Handling]
-        SESSION_HDL[📝 Session Handler<br/>State Management<br/>& Tool Call Tracking]
+    %% Managers & ADK
+    subgraph "Managers & ADK"
+        SESS_MGR[SessionManager]
+        ADK_RUNNER[ADK Runner]
+        BASE_AGENT[BaseAgent]
+        RUN_CFG[RunConfig]
     end
 
-    subgraph "Event Translation Engine"
-        TRANSLATOR[🔄 Event Translator<br/>ADK ↔ AGUI Conversion<br/>Streaming Management]
-        MSG_UTIL[📝 Message Utils<br/>Text Event Processing<br/>& Streaming Coordination]
-        FUNC_UTIL[🛠️ Function Utils<br/>Tool Call Translation<br/>& Response Handling]
-        STATE_UTIL[🗂️ State Utils<br/>Delta Processing<br/>& Snapshot Creation]
-        THK_UTIL[🤔 Thinking Utils<br/>Reasoning Mode<br/>& Thought Processing]
+    %% Utilities
+    subgraph "Utilities"
+        SSE_ENC[SSE Converter]
+        FRONT_TOOLS[FrontendToolset]
+        SHUTDOWN[ShutdownHandler]
     end
 
-    subgraph "Session & State Management"
-        SESS_MGR[📋 Session Manager<br/>ADK Session Operations<br/>& Lifecycle Management]
-        SESS_PARAM[🏷️ Session Parameters<br/>App/User/Session IDs<br/>& Context Extraction]
-        CONFIG_CTX[⚙️ Config Context<br/>Multi-tenant Support<br/>& Dynamic Configuration]
-    end
-
-    subgraph "Google ADK Integration"
-        ADK_RUNNER[🚀 ADK Runner<br/>Agent Container<br/>& Execution Environment]
-        BASE_AGENT[🤖 Base Agent<br/>Custom Implementation<br/>& Business Logic]
-        ADK_SESS[💾 ADK Session Service<br/>State Persistence<br/>& Event Storage]
-        RUN_CONFIG[⚙️ Run Config<br/>Streaming Mode<br/>& Execution Parameters]
-    end
-
-    subgraph "Service Configuration"
-        ARTIFACT_SVC[📎 Artifact Service<br/>File Management<br/>& Data Storage]
-        MEMORY_SVC[🧠 Memory Service<br/>Agent Memory<br/>& Context Retention]
-        CREDENTIAL_SVC[🔐 Credential Service<br/>Authentication<br/>& Security Management]
-    end
-
-    subgraph "Infrastructure & Utilities"
-        LOGGER[📋 Structured Logging<br/>Event Tracking<br/>& Debug Information]
-        SHUTDOWN[🔌 Shutdown Handler<br/>Graceful Cleanup<br/>& Resource Management]
-        JSON_ENC[📤 JSON Encoder<br/>Serialization<br/>& Data Formatting]
-        CONVERT[🔄 Conversion Utils<br/>Data Transformation<br/>& Format Adaptation]
-    end
-
-    %% Client to Endpoint connections
+    %% Flow
     WEB --> MAIN_EP
     MOBILE --> MAIN_EP
     API --> MAIN_EP
     WEB --> HIST_EP
     WEB --> STATE_EP
 
-    %% Endpoint to Service connections
     MAIN_EP --> SSE_SVC
     HIST_EP --> HIST_SVC
     STATE_EP --> STATE_SVC
 
-    %% Service to Handler connections
+    %% SSE service orchestration
     SSE_SVC --> LOCK_HDL
-    SSE_SVC --> IO_HDL
-    SSE_SVC --> CTX_MGR
     SSE_SVC --> AGUI_USER
+    SSE_SVC --> SHUTDOWN
+    SSE_SVC --> SSE_ENC
 
-    %% Core processing pipeline
-    AGUI_USER --> RUNNING
+    %% Pipeline
     AGUI_USER --> USER_MSG
     AGUI_USER --> SESSION_HDL
+    AGUI_USER --> RUNNING
+    AGUI_USER --> QUEUE_HDL
     RUNNING --> TRANSLATOR
-
-    %% Translation engine components
-    TRANSLATOR --> MSG_UTIL
-    TRANSLATOR --> FUNC_UTIL
-    TRANSLATOR --> STATE_UTIL
-    TRANSLATOR --> THK_UTIL
-
-    %% Session management connections
-    SESSION_HDL --> SESS_MGR
-    SESS_MGR --> ADK_SESS
-    SESS_MGR --> SESS_PARAM
-    SSE_SVC --> CONFIG_CTX
-
-    %% ADK integration
     RUNNING --> ADK_RUNNER
     ADK_RUNNER --> BASE_AGENT
-    ADK_RUNNER --> RUN_CONFIG
-    SESS_MGR --> ADK_SESS
+    ADK_RUNNER --> RUN_CFG
 
-    %% Service configuration
-    ADK_RUNNER --> ARTIFACT_SVC
-    ADK_RUNNER --> MEMORY_SVC
-    ADK_RUNNER --> CREDENTIAL_SVC
-
-    %% Infrastructure connections
-    RUNNING --> LOGGER
-    SESS_MGR --> LOGGER
-    TRANSLATOR --> JSON_ENC
-    SSE_SVC --> CONVERT
-    SSE_SVC --> SHUTDOWN
+    %% Managers and tools
+    SESSION_HDL --> SESS_MGR
+    RUNNING --> FRONT_TOOLS
+    QUEUE_HDL -->|ADK/AGUI queues| SSE_ENC
 
     %% Styling
-    classDef client fill:#e3f2fd,color:#000,stroke:#1976d2,stroke-width:2px
-    classDef endpoint fill:#e8f5e8,color:#000,stroke:#388e3c,stroke-width:2px
-    classDef service fill:#fff3e0,color:#000,stroke:#f57c00,stroke-width:2px
-    classDef handler fill:#f3e5f5,color:#000,stroke:#7b1fa2,stroke-width:2px
-    classDef core fill:#fce4ec,color:#000,stroke:#c2185b,stroke-width:2px
-    classDef translation fill:#e1f5fe,color:#000,stroke:#0288d1,stroke-width:2px
-    classDef session fill:#f1f8e9,color:#000,stroke:#689f38,stroke-width:2px
-    classDef adk fill:#fff8e1,color:#000,stroke:#ff8f00,stroke-width:2px
-    classDef config fill:#fafafa,color:#000,stroke:#424242,stroke-width:2px
-    classDef infra fill:#e8eaf6,color:#000,stroke:#3f51b5,stroke-width:2px
-
-    class WEB,MOBILE,API client
-    class MAIN_EP,HIST_EP,STATE_EP endpoint
-    class SSE_SVC,HIST_SVC,STATE_SVC service
-    class LOCK_HDL,IO_HDL,CTX_MGR handler
-    class AGUI_USER,RUNNING,USER_MSG,SESSION_HDL core
-    class TRANSLATOR,MSG_UTIL,FUNC_UTIL,STATE_UTIL,THK_UTIL translation
-    class SESS_MGR,SESS_PARAM,CONFIG_CTX session
-    class ADK_RUNNER,BASE_AGENT,ADK_SESS,RUN_CONFIG adk
-    class ARTIFACT_SVC,MEMORY_SVC,CREDENTIAL_SVC config
-    class LOGGER,SHUTDOWN,JSON_ENC,CONVERT infra
+    classDef box fill:#f7f7f7,stroke:#555,color:#111,stroke-width:1px
+    class WEB,MOBILE,API,MAIN_EP,HIST_EP,STATE_EP,SSE_SVC,HIST_SVC,STATE_SVC,AGUI_USER,USER_MSG,RUNNING,TRANSLATOR,SESSION_HDL,QUEUE_HDL,LOCK_HDL,SESS_MGR,ADK_RUNNER,BASE_AGENT,RUN_CFG,SSE_ENC,FRONT_TOOLS,SHUTDOWN box
 ```
 
-### Event Translation Pipeline
+### Concurrent Event Processing Architecture
 
 ```mermaid
-graph LR
-    subgraph "ADK Event Sources"
-        ADK_TEXT[📝 Text Content<br/>Streaming & Final<br/>Parts & Messages]
-        ADK_FUNC[🛠️ Function Calls<br/>Tool Invocations<br/>Long-running & Standard]
-        ADK_RESP[📋 Function Responses<br/>Tool Results<br/>Success & Error States]
-        ADK_STATE[🗂️ State Deltas<br/>Session Updates<br/>Custom Metadata]
-        ADK_THINK[🤔 Thinking Mode<br/>Reasoning Process<br/>Internal Thoughts]
+graph TB
+    subgraph "Request Initiation"
+        CLIENT_REQ[📥 Client Request<br/>POST RunAgentInput<br/>with Messages & Tools]
+        INPUT_INFO[📋 Input Info Creation<br/>Extract Context<br/>Initialize Event Queues]
+        QUEUE_INIT[🎯 Queue Initialization<br/>Create EventQueue Model<br/>ADK & AGUI Queues]
     end
 
-    subgraph "Translation Engine Core"
-        TRANSLATOR[🔄 Event Translator<br/>Central Processing<br/>State Management]
+    subgraph "Dual Queue Architecture"
+        ADK_QUEUE[📊 ADK Event Queue<br/>Queue Event or None<br/>Producer: Agent Runner]
+        AGUI_QUEUE[📦 AGUI Event Queue<br/>Queue BaseEvent or None<br/>Consumer: Client Stream]
+    end
 
-        subgraph "Utility Modules"
-            MSG_UTIL[📝 Message Utils<br/>Text Processing<br/>Streaming Coordination]
-            FUNC_UTIL[🛠️ Function Utils<br/>Tool Call Translation<br/>Response Handling]
-            STATE_UTIL[🗂️ State Utils<br/>Delta Processing<br/>Snapshot Creation]
-            THK_UTIL[🤔 Thinking Utils<br/>Reasoning Translation<br/>Thought Structuring]
-            COMMON_UTIL[🔧 Common Utils<br/>Shared Functions<br/>Base Operations]
+    subgraph "Queue Management Layer"
+        QUEUE_HANDLER[🎯 Queue Handler<br/>Factory Pattern<br/>Create Managers]
+        ADK_MGR[📊 ADK Queue Manager<br/>Logging & Iteration<br/>Caller Tracking]
+        AGUI_MGR[📦 AGUI Queue Manager<br/>Logging & Iteration<br/>Caller Tracking]
+    end
+
+    subgraph "Concurrent Task Execution"
+        TASK_GROUP[⚡ Async TaskGroup<br/>Concurrent Execution<br/>Exception Aggregation]
+
+        subgraph "ADK Producer Task"
+            ADK_TASK[🔵 Task 1: ADK Event Producer<br/>async _run_async_with_adk]
+            ADK_RUNNER[🚀 ADK Agent Runner<br/>Execute Agent Logic<br/>Generate Events]
+            ADK_PUT[➡️ Put Events to ADK Queue<br/>await adk_queue.put event<br/>Log with Caller Info]
+            ADK_SENTINEL[🛑 ADK Termination<br/>Put None to ADK Queue<br/>Signal Completion]
         end
 
-        STREAM_MGR[🌊 Stream Manager<br/>Message ID Tracking<br/>Event Sequencing]
-        LRO_TRACKER[⏱️ LRO Tracker<br/>Long-Running Tools<br/>HITL Coordination]
-    end
-
-    subgraph "AGUI Event Types"
-        AGUI_START[▶️ Text Message Start<br/>EventType.TEXT_MESSAGE_START<br/>Role & Message ID]
-        AGUI_CONTENT[📄 Text Message Content<br/>EventType.TEXT_MESSAGE_CONTENT<br/>Delta Streaming]
-        AGUI_END[⏹️ Text Message End<br/>EventType.TEXT_MESSAGE_END<br/>Completion Signal]
-
-        AGUI_TOOL_CALL[🔧 Tool Call Event<br/>EventType.TOOL_CALL<br/>Function Invocation]
-        AGUI_TOOL_RESULT[📊 Tool Result Event<br/>EventType.TOOL_RESULT<br/>Execution Results]
-
-        AGUI_STATE_DELTA[🔄 State Delta Event<br/>EventType.STATE_DELTA<br/>JSON Patch Operations]
-        AGUI_STATE_SNAP[📸 State Snapshot Event<br/>EventType.STATE_SNAPSHOT<br/>Complete State]
-
-        AGUI_CUSTOM[🎛️ Custom Events<br/>EventType.CUSTOM<br/>Metadata & Extensions]
-        AGUI_THINKING[💭 Thinking Events<br/>EventType.THINKING<br/>Reasoning Process]
-    end
-
-    subgraph "SSE Protocol Layer"
-        SSE_CONVERTER[🔌 SSE Converter<br/>Protocol Formatter<br/>Timestamp & UUID]
-
-        subgraph "SSE Components"
-            SSE_DATA[📦 data: JSON payload<br/>Event content<br/>Serialized data]
-            SSE_EVENT[🏷️ event: Event type<br/>AGUI event type<br/>Client routing]
-            SSE_ID[🆔 id: Unique identifier<br/>UUID generation<br/>Event correlation]
-            SSE_TIME[⏰ timestamp: Milliseconds<br/>Event timing<br/>Sequence tracking]
+        subgraph "AGUI Translator Task"
+            AGUI_TASK[🟢 Task 2: AGUI Event Translator<br/>async _run_async_with_agui]
+            AGUI_ITER[🔄 ADK Queue Iterator<br/>async for adk_event<br/>in adk_queue.get_iterator]
+            TRANSLATOR[🔄 Event Translator<br/>ADK → AGUI Translation<br/>Streaming & Tool Detection]
+            AGUI_PUT[➡️ Put Events to AGUI Queue<br/>await agui_queue.put event<br/>Generate HITL Events]
+            AGUI_SENTINEL[🛑 AGUI Termination<br/>Put None to AGUI Queue<br/>After Final State]
         end
     end
 
-    %% ADK to Translation Engine
-    ADK_TEXT --> TRANSLATOR
-    ADK_FUNC --> TRANSLATOR
-    ADK_RESP --> TRANSLATOR
-    ADK_STATE --> TRANSLATOR
-    ADK_THINK --> TRANSLATOR
+    subgraph "Client Stream Consumer"
+        STREAM_CONSUMER[🌊 SSE Stream Consumer<br/>Main Workflow Loop<br/>async for agui_event]
+        AGUI_OUTPUT[📤 AGUI Queue Iterator<br/>async for in agui_queue<br/>Yield to Client]
+        SSE_FORMAT[🔌 SSE Formatter<br/>Convert to SSE Protocol<br/>Add Timestamps & IDs]
+        CLIENT_STREAM[📡 Client SSE Stream<br/>Real-time Event Delivery<br/>EventSourceResponse]
+    end
 
-    %% Translation Engine Processing
-    TRANSLATOR --> MSG_UTIL
-    TRANSLATOR --> FUNC_UTIL
-    TRANSLATOR --> STATE_UTIL
-    TRANSLATOR --> THK_UTIL
-    TRANSLATOR --> COMMON_UTIL
+    subgraph "Exception Handling"
+        ADK_EXCEPTION[⚠️ ADK Exception Handler<br/>Context Manager<br/>Ensure Sentinel in Finally]
+        AGUI_EXCEPTION[⚠️ AGUI Exception Handler<br/>Context Manager<br/>Ensure Sentinel in Finally]
+        TASK_EXCEPTION[🚨 TaskGroup Exception<br/>Aggregate Exceptions<br/>ExceptionGroup Handler]
+        ERROR_EVENT[❌ Error Event Generation<br/>Convert to AGUI Error<br/>Send to Client]
+    end
 
-    TRANSLATOR --> STREAM_MGR
-    TRANSLATOR --> LRO_TRACKER
+    subgraph "Synchronization & Termination"
+        ITER_PROTOCOL[🔄 AsyncQueueIterator<br/>__aiter__ & __anext__<br/>task_done on get]
+        NONE_SENTINEL[🛑 None Sentinel Pattern<br/>Signals Queue Termination<br/>Raises StopAsyncIteration]
+        GRACEFUL_STOP[✅ Graceful Termination<br/>All Tasks Complete<br/>Queues Drained]
+    end
 
-    %% Utility to AGUI Event Generation
-    MSG_UTIL --> AGUI_START
-    MSG_UTIL --> AGUI_CONTENT
-    MSG_UTIL --> AGUI_END
+    %% Request flow
+    CLIENT_REQ --> INPUT_INFO
+    INPUT_INFO --> QUEUE_INIT
+    QUEUE_INIT --> ADK_QUEUE
+    QUEUE_INIT --> AGUI_QUEUE
 
-    FUNC_UTIL --> AGUI_TOOL_CALL
-    FUNC_UTIL --> AGUI_TOOL_RESULT
+    %% Queue management setup
+    QUEUE_INIT --> QUEUE_HANDLER
+    QUEUE_HANDLER --> ADK_MGR
+    QUEUE_HANDLER --> AGUI_MGR
+    ADK_MGR --> ADK_QUEUE
+    AGUI_MGR --> AGUI_QUEUE
 
-    STATE_UTIL --> AGUI_STATE_DELTA
-    STATE_UTIL --> AGUI_STATE_SNAP
+    %% Concurrent task execution
+    INPUT_INFO --> TASK_GROUP
+    TASK_GROUP --> ADK_TASK
+    TASK_GROUP --> AGUI_TASK
 
-    THK_UTIL --> AGUI_THINKING
-    COMMON_UTIL --> AGUI_CUSTOM
+    %% ADK producer flow
+    ADK_TASK --> ADK_EXCEPTION
+    ADK_EXCEPTION --> ADK_RUNNER
+    ADK_RUNNER --> ADK_PUT
+    ADK_PUT --> ADK_MGR
+    ADK_MGR --> ADK_QUEUE
+    ADK_EXCEPTION -.->|Finally Block| ADK_SENTINEL
+    ADK_SENTINEL --> ADK_QUEUE
 
-    %% Stream & LRO Management
-    STREAM_MGR --> AGUI_START
-    STREAM_MGR --> AGUI_CONTENT
-    STREAM_MGR --> AGUI_END
-    LRO_TRACKER --> AGUI_TOOL_CALL
+    %% AGUI translator flow
+    AGUI_TASK --> AGUI_EXCEPTION
+    AGUI_EXCEPTION --> AGUI_ITER
+    AGUI_ITER --> ADK_QUEUE
+    ADK_QUEUE --> TRANSLATOR
+    TRANSLATOR --> AGUI_PUT
+    AGUI_PUT --> AGUI_MGR
+    AGUI_MGR --> AGUI_QUEUE
+    AGUI_EXCEPTION -.->|Finally Block| AGUI_SENTINEL
+    AGUI_SENTINEL --> AGUI_QUEUE
 
-    %% AGUI to SSE Conversion
-    AGUI_START --> SSE_CONVERTER
-    AGUI_CONTENT --> SSE_CONVERTER
-    AGUI_END --> SSE_CONVERTER
-    AGUI_TOOL_CALL --> SSE_CONVERTER
-    AGUI_TOOL_RESULT --> SSE_CONVERTER
-    AGUI_STATE_DELTA --> SSE_CONVERTER
-    AGUI_STATE_SNAP --> SSE_CONVERTER
-    AGUI_CUSTOM --> SSE_CONVERTER
-    AGUI_THINKING --> SSE_CONVERTER
+    %% Stream consumer flow
+    TASK_GROUP --> STREAM_CONSUMER
+    STREAM_CONSUMER --> AGUI_OUTPUT
+    AGUI_OUTPUT --> AGUI_QUEUE
+    AGUI_QUEUE --> SSE_FORMAT
+    SSE_FORMAT --> CLIENT_STREAM
 
-    %% SSE Component Generation
-    SSE_CONVERTER --> SSE_DATA
-    SSE_CONVERTER --> SSE_EVENT
-    SSE_CONVERTER --> SSE_ID
-    SSE_CONVERTER --> SSE_TIME
+    %% Exception handling
+    ADK_TASK -.->|Exception| TASK_EXCEPTION
+    AGUI_TASK -.->|Exception| TASK_EXCEPTION
+    TASK_EXCEPTION --> ERROR_EVENT
+    ERROR_EVENT --> AGUI_QUEUE
+
+    %% Synchronization
+    AGUI_ITER --> ITER_PROTOCOL
+    AGUI_OUTPUT --> ITER_PROTOCOL
+    ITER_PROTOCOL --> NONE_SENTINEL
+    NONE_SENTINEL --> GRACEFUL_STOP
 
     %% Styling
-    classDef adk fill:#e1f5fe,color:#000,stroke:#0288d1,stroke-width:2px
-    classDef translation fill:#fff3e0,color:#000,stroke:#f57c00,stroke-width:2px
-    classDef utils fill:#f3e5f5,color:#000,stroke:#7b1fa2,stroke-width:2px
-    classDef agui fill:#fce4ec,color:#000,stroke:#c2185b,stroke-width:2px
-    classDef sse fill:#e8f5e8,color:#000,stroke:#388e3c,stroke-width:2px
-    classDef management fill:#fff8e1,color:#000,stroke:#ff8f00,stroke-width:2px
+    classDef request fill:#e3f2fd,color:#000,stroke:#1976d2,stroke-width:2px
+    classDef queue fill:#ffebee,color:#000,stroke:#d32f2f,stroke-width:2px
+    classDef manager fill:#fff3e0,color:#000,stroke:#f57c00,stroke-width:2px
+    classDef task fill:#e8f5e9,color:#000,stroke:#43a047,stroke-width:2px
+    classDef producer fill:#e1f5fe,color:#000,stroke:#0288d1,stroke-width:2px
+    classDef translator fill:#f3e5f5,color:#000,stroke:#8e24aa,stroke-width:2px
+    classDef consumer fill:#fff8e1,color:#000,stroke:#ffa000,stroke-width:2px
+    classDef exception fill:#fbe9e7,color:#000,stroke:#ff6f00,stroke-width:2px
+    classDef sync fill:#f1f8e9,color:#000,stroke:#689f38,stroke-width:2px
 
-    class ADK_TEXT,ADK_FUNC,ADK_RESP,ADK_STATE,ADK_THINK adk
-    class TRANSLATOR,SSE_CONVERTER translation
-    class MSG_UTIL,FUNC_UTIL,STATE_UTIL,THK_UTIL,COMMON_UTIL utils
-    class AGUI_START,AGUI_CONTENT,AGUI_END,AGUI_TOOL_CALL,AGUI_TOOL_RESULT,AGUI_STATE_DELTA,AGUI_STATE_SNAP,AGUI_CUSTOM,AGUI_THINKING agui
-    class SSE_DATA,SSE_EVENT,SSE_ID,SSE_TIME sse
-    class STREAM_MGR,LRO_TRACKER management
+    class CLIENT_REQ,INPUT_INFO,QUEUE_INIT request
+    class ADK_QUEUE,AGUI_QUEUE queue
+    class QUEUE_HANDLER,ADK_MGR,AGUI_MGR manager
+    class TASK_GROUP task
+    class ADK_TASK,ADK_RUNNER,ADK_PUT,ADK_SENTINEL producer
+    class AGUI_TASK,AGUI_ITER,TRANSLATOR,AGUI_PUT,AGUI_SENTINEL translator
+    class STREAM_CONSUMER,AGUI_OUTPUT,SSE_FORMAT,CLIENT_STREAM consumer
+    class ADK_EXCEPTION,AGUI_EXCEPTION,TASK_EXCEPTION,ERROR_EVENT exception
+    class ITER_PROTOCOL,NONE_SENTINEL,GRACEFUL_STOP sync
 ```
 
 ### Human-in-the-Loop (HITL) Workflow
@@ -343,6 +298,7 @@ graph TD
         SESS_CHECK[📋 Session Check<br/>Get or Create Session<br/>Load Existing State]
         STATE_INIT[🗂️ State Initialization<br/>Apply Initial State<br/>Load Pending Tools]
         TOOL_RESUME[⏱️ Tool Resume Check<br/>Detect Pending LRO Tools<br/>Resume HITL Workflow]
+        FRONTEND_TOOLS[🧰 Frontend Tools Setup<br/>Extract Client Tools<br/>Inject into Agent]
     end
 
     subgraph "Message Processing"
@@ -354,14 +310,19 @@ graph TD
 
     subgraph "Agent Execution Pipeline"
         AGENT_START[▶️ Agent Execution<br/>RUN_STARTED Event<br/>Begin Processing]
-        ADK_RUN[🚀 ADK Runner<br/>Agent Processing<br/>Stream Events]
-        EVENT_PROC[🔄 Event Processing<br/>ADK → AGUI Translation<br/>Real-time Streaming]
+        QUEUE_SETUP[🎯 Queue Setup<br/>Initialize Event Queues<br/>ADK & AGUI Managers]
+        CONCURRENT_EXEC[⚡ Concurrent Execution<br/>TaskGroup with 2 Tasks<br/>Producer & Translator]
+        ADK_RUN[🚀 ADK Runner Task<br/>Agent Processing<br/>Stream to ADK Queue]
+        EVENT_PROC[🔄 AGUI Translator Task<br/>ADK → AGUI Translation<br/>Stream to AGUI Queue]
+        CLIENT_STREAM[🌊 Client Stream Consumer<br/>AGUI Queue Iterator<br/>Yield to SSE Response]
     end
 
-    subgraph "Tool Call Detection"
+    subgraph "Tool Call Detection & Processing"
         TOOL_CHECK{🔍 Long-Running Tool?}
+        FRONTEND_CALL{🧰 Frontend Tool Call?}
         LRO_DETECT[⏱️ LRO Detection<br/>Mark as Long-Running<br/>Store Tool Call Info]
-        HITL_PAUSE[⏸️ HITL Pause<br/>Early Return<br/>Wait for Human Input]
+        FRONTEND_EVENT[🎯 Frontend Tool Event<br/>Generate Function Call<br/>Put to AGUI Queue]
+        HITL_PAUSE[⏸️ HITL Pause<br/>Early Return from Translator<br/>Wait for Human Input]
         NORMAL_FLOW[➡️ Normal Flow<br/>Continue Processing<br/>Standard Tools]
     end
 
@@ -385,7 +346,8 @@ graph TD
     %% Session Management Flow
     SESS_CHECK --> STATE_INIT
     STATE_INIT --> TOOL_RESUME
-    TOOL_RESUME --> MSG_TYPE
+    TOOL_RESUME --> FRONTEND_TOOLS
+    FRONTEND_TOOLS --> MSG_TYPE
 
     %% Message Processing Flow
     MSG_TYPE -->|User Message| USER_MSG
@@ -396,14 +358,22 @@ graph TD
     MSG_ERROR --> ERROR_EVENT
 
     %% Agent Execution Flow
-    AGENT_START --> ADK_RUN
+    AGENT_START --> QUEUE_SETUP
+    QUEUE_SETUP --> CONCURRENT_EXEC
+    CONCURRENT_EXEC --> ADK_RUN
+    CONCURRENT_EXEC --> EVENT_PROC
+    CONCURRENT_EXEC --> CLIENT_STREAM
     ADK_RUN --> EVENT_PROC
+    EVENT_PROC --> CLIENT_STREAM
     EVENT_PROC --> TOOL_CHECK
 
     %% Tool Call Handling
     TOOL_CHECK -->|Long-Running Tool| LRO_DETECT
     TOOL_CHECK -->|Standard Tool| NORMAL_FLOW
-    LRO_DETECT --> HITL_PAUSE
+    LRO_DETECT --> FRONTEND_CALL
+    FRONTEND_CALL -->|Yes| FRONTEND_EVENT
+    FRONTEND_CALL -->|No| HITL_PAUSE
+    FRONTEND_EVENT --> HITL_PAUSE
     NORMAL_FLOW --> STATE_SNAP
 
     %% HITL Flow
