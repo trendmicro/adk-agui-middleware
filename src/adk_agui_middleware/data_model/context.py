@@ -41,6 +41,7 @@ class HandlerContext(BaseModel):
     This enables extensible event processing through dependency injection.
 
     Attributes:
+        session_lock_handler: Concrete SessionLockHandler class to enforce per-session mutual exclusion
         adk_event_handler: Optional handler for processing ADK events before translation
         adk_event_timeout_handler: Optional handler for managing ADK event timeouts
         agui_event_handler: Optional handler for processing AGUI events before transmission

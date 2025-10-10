@@ -47,6 +47,7 @@ class InputInfo(BaseModel):
         user_id: User identifier extracted from request context for session isolation
         session_id: Session identifier for conversation persistence and state management
         initial_state: Optional initial state dictionary for new session initialization
+        event_queue: Queue handler bundling ADK and AGUI queues for this interaction
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

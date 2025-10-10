@@ -144,6 +144,15 @@ def record_event_raw_log(raw_data: Any) -> None:
 
 
 def record_queue_log(item_info: dict[str, Any]) -> None:
+    """Record event queue operation information for debugging.
+
+    Conditionally logs queue put operations based on LOG_EVENT_QUEUE configuration.
+    Used for tracing event flow through ADK and AGUI queues during development
+    and debugging of the event pipeline.
+
+    Args:
+        :param item_info: Dictionary containing queue operation details (caller, type, event)
+    """
     if log_config.LOG_EVENT_QUEUE:
         _create_and_log_message(
             "[RAW_DATA: ADK_QUEUE] Current ADK event queue size", body=item_info

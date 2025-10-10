@@ -288,7 +288,7 @@ class BaseInOutHandler(metaclass=ABCMeta):
         interaction history for analysis.
 
         Args:
-            :param agui_event: Dictionary containing SSE-formatted event data to record
+            :param agui_event: AGUI BaseEvent instance to record
 
         Raises:
             NotImplementedError: Must be implemented by subclasses
@@ -304,10 +304,10 @@ class BaseInOutHandler(metaclass=ABCMeta):
         format conversion, field addition/removal, or content filtering.
 
         Args:
-            :param agui_event: Dictionary containing SSE-formatted event data to potentially modify
+            :param agui_event: AGUI BaseEvent instance to potentially modify
 
         Returns:
-            Modified event dictionary (may be unchanged from input)
+            Modified BaseEvent (may be unchanged from input)
 
         Raises:
             NotImplementedError: Must be implemented by subclasses

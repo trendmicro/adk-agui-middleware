@@ -133,13 +133,13 @@ class HistoryService:
         """Delete a specific conversation thread for the user.
 
         Extracts session context from the request and deletes the specified
-        conversation thread, returning the updated list of available threads.
+        conversation thread, returning a status confirmation payload.
 
         Args:
             :param request: HTTP request containing session context
 
         Returns:
-            Updated list of dictionaries containing thread information
+            Dictionary containing deletion status confirmation
         """
         await (await self._create_history_handler(request)).delete_session(
             await self._get_session_id(request)

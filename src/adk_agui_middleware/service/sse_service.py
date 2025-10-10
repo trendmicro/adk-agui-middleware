@@ -125,10 +125,10 @@ class SSEService(BaseSSEService):
 
         Args:
             :param inout_handler: Optional handler for recording and transforming output
-            :param output_data: Dictionary containing SSE event data to process
+            :param output_data: AGUI BaseEvent to process
 
         Returns:
-            Processed output data (potentially modified by handler)
+            BaseEvent (potentially modified by handler)
         """
         if inout_handler:
             await inout_handler.output_record(output_data)

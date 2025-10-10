@@ -41,7 +41,7 @@ class BaseSSEService(metaclass=ABCMeta):
             :param request: HTTP request containing client context and headers
 
         Returns:
-            Tuple containing the runner callable and optional input/output handler
+            Tuple of (runner callable, InputInfo, optional input/output handler)
 
         Raises:
             NotImplementedError: Must be implemented by subclasses

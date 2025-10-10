@@ -98,6 +98,18 @@ async def http_exception_handler(request: Request) -> AsyncGenerator[None, Any]:
 async def adk_event_exception_handler(
     queue_controller: QueueManager,
 ) -> AsyncGenerator[None, Any]:
+    """Context manager for ADK event stream exception handling.
+
+    Ensures that ADK event streams always signal termination to the downstream
+    queue consumer, even when exceptions occur. Logs exceptions and forwards the
+    termination sentinel to the queue in a finally block.
+
+    Args:
+        :param queue_controller: QueueManager to receive the termination sentinel
+
+    Yields:
+        None – wraps the block that produces ADK events
+    """
     try:
         yield
     except Exception as e:
@@ -111,6 +123,18 @@ async def adk_event_exception_handler(
 async def agui_event_exception_handler(
     queue_controller: QueueManager,
 ) -> AsyncGenerator[None, Any]:
+    """Context manager for AGUI event stream exception handling.
+
+    Ensures that AGUI event streams always signal termination to the downstream
+    queue consumer, even when exceptions occur. Logs exceptions and forwards the
+    termination sentinel to the queue in a finally block.
+
+    Args:
+        :param queue_controller: QueueManager to receive the termination sentinel
+
+    Yields:
+        None – wraps the block that produces AGUI events
+    """
     try:
         yield
     except Exception as e:

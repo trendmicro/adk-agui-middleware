@@ -20,7 +20,9 @@ class TranslateEvent(BaseModel):
 
     Attributes:
         agui_event: The translated AGUI event, or None if translation failed or was skipped
+        adk_event: Replacement ADK event to inject into the pipeline (when is_replace is True)
         is_retune: Whether the event should trigger retuning of the agent processing flow
+        is_replace: Whether to replace the current ADK event with the provided adk_event
     """
 
     agui_event: BaseEvent | None = None
