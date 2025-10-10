@@ -9,8 +9,8 @@ from typing import Any
 from fastapi import HTTPException, Request, status
 
 from ..data_model.error import ErrorModel
-from ..handler.queue import QueueController
 from ..loggers.record_request_log import record_request_error_log, record_request_log
+from ..manager.queue import QueueManager
 from .record_log import record_error_log
 
 
@@ -96,7 +96,7 @@ async def http_exception_handler(request: Request) -> AsyncGenerator[None, Any]:
 
 @asynccontextmanager
 async def adk_event_exception_handler(
-    queue_controller: QueueController,
+    queue_controller: QueueManager,
 ) -> AsyncGenerator[None, Any]:
     try:
         yield
@@ -109,7 +109,7 @@ async def adk_event_exception_handler(
 
 @asynccontextmanager
 async def agui_event_exception_handler(
-    queue_controller: QueueController,
+    queue_controller: QueueManager,
 ) -> AsyncGenerator[None, Any]:
     try:
         yield

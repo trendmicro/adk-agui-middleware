@@ -283,6 +283,12 @@ class SSEService(BaseSSEService):
             user_id=await self.extract_user_id(agui_content, request),
             session_id=await self.extract_session_id(agui_content, request),
             initial_state=await self.extract_initial_state(agui_content, request),
+            event_queue=QueueHandler(
+                EventQueue(
+                    adk_event_queue=asyncio.Queue(),
+                    agui_event_queue=asyncio.Queue(),
+                )
+            ),
         )
 
         async def runner() -> AsyncGenerator[BaseEvent]:
@@ -319,12 +325,7 @@ class SSEService(BaseSSEService):
                         session_id=input_info.session_id,
                     ),
                 ),
-                queue_handler=QueueHandler(
-                    EventQueue(
-                        adk_event_queue=asyncio.Queue(),
-                        agui_event_queue=asyncio.Queue(),
-                    )
-                ),
+                queue_handler=input_info.event_queue,
             )
             async for event in user_handler.run():
                 yield event

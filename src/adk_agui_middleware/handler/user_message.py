@@ -4,7 +4,7 @@
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from ag_ui.core import RunAgentInput, ToolMessage, UserMessage
+from ag_ui.core import RunAgentInput, Tool, ToolMessage, UserMessage
 from fastapi import Request
 from google.genai import types
 
@@ -84,6 +84,10 @@ class UserMessageHandler:
             if isinstance(self.agui_content.messages[-1], ToolMessage)
             else None
         )
+
+    @property
+    def frontend_tools(self) -> list[Tool]:
+        return self.agui_content.tools
 
     async def init(self, tool_call_info: dict[str, str]) -> None:
         """Initialize the handler with tool call information for input conversion.

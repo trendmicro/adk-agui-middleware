@@ -114,6 +114,8 @@ select = [
 ]
 
 ignore = [
+    "UP047",  # Generic function `create_function_with_params` should use type parameters
+
     "E501",   # line-too-long
 
     "COM819", # prohibited-trailing-comma
