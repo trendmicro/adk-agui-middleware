@@ -5,6 +5,8 @@ from ag_ui.core import RunAgentInput
 from fastapi import Request
 from pydantic import BaseModel, ConfigDict
 
+from ..handler.queue import QueueHandler
+
 
 class SessionLockConfig(BaseModel):
     """Configuration for session locking behavior and timeout settings.
@@ -55,3 +57,4 @@ class InputInfo(BaseModel):
     user_id: str  # User identifier for session isolation
     session_id: str  # Session identifier for conversation persistence
     initial_state: dict[str, Any] | None = None  # Optional initial session state
+    event_queue: QueueHandler

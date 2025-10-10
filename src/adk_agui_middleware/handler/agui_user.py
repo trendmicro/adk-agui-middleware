@@ -81,6 +81,9 @@ class AGUIUserHandler:
         self.tool_call_info = await self.session_handler.get_pending_tool_calls()
         self.running_handler.set_long_running_tool_ids(self.tool_call_info)
         await self.user_message_handler.init(self.tool_call_info)
+        self.running_handler.update_agent_tools(
+            self.agui_queue, self.user_message_handler.frontend_tools
+        )
 
     @property
     def app_name(self) -> str:

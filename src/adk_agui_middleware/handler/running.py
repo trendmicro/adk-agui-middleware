@@ -5,7 +5,7 @@ import asyncio
 from collections.abc import AsyncGenerator, Callable
 from typing import Any
 
-from ag_ui.core import BaseEvent, StateSnapshotEvent
+from ag_ui.core import BaseEvent, StateSnapshotEvent, Tool
 from google.adk import Runner
 from google.adk.agents import RunConfig
 from google.adk.events import Event
@@ -25,6 +25,8 @@ from ..loggers.record_log import (
     record_event_raw_log,
     record_warning_log,
 )
+from ..manager.queue import QueueManager
+from ..tools.frontend_tool import FrontendToolset
 
 
 class RunningHandler:
@@ -237,6 +239,22 @@ class RunningHandler:
         translate_func = self._select_translation_function(adk_event)
         async for agui_event in translate_func(adk_event):
             yield agui_event
+
+    def update_agent_tools(
+        self, agui_queue: QueueManager, frontend_tools: list[Tool]
+    ) -> None:
+        if not self.runner or not hasattr(self.runner.agent, "tools"):
+            return
+        agent = self.runner.agent
+        existing_tools = (
+            agent.tools
+            if isinstance(agent.tools, list)
+            else ([agent.tools] if agent.tools else [])
+        )
+        existing_names = {t.__name__ for t in existing_tools if hasattr(t, "__name__")}
+        if new_tools := [t for t in frontend_tools if t.name not in existing_names]:
+            existing_tools.append(FrontendToolset(agui_queue, new_tools))
+            agent.tools = existing_tools
 
     def set_long_running_tool_ids(self, long_running_tool_ids: dict[str, str]) -> None:
         """Set long-running tool IDs in the event translator.
