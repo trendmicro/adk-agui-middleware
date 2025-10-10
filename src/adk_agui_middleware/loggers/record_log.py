@@ -141,3 +141,10 @@ def record_event_raw_log(raw_data: Any) -> None:
     """
     if log_config.LOG_ADK_EVENTS:
         _create_and_log_message("[RAW_DATA: EVENT] record EVENT raw log", body=raw_data)
+
+
+def record_queue_log(item_info: dict[str, Any]) -> None:
+    if log_config.LOG_EVENT_QUEUE:
+        _create_and_log_message(
+            "[RAW_DATA: ADK_QUEUE] Current ADK event queue size", body=item_info
+        )
