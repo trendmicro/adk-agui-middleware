@@ -17,10 +17,12 @@ from ..base_abc.sse_service import BaseSSEService
 from ..data_model.common import InputInfo
 from ..data_model.config import RunnerConfig
 from ..data_model.context import ConfigContext, HandlerContext
+from ..data_model.queue import EventQueue
 from ..data_model.session import SessionParameter
 from ..event.error_event import AGUIErrorEvent
 from ..event.event_translator import EventTranslator
 from ..handler.agui_user import AGUIUserHandler
+from ..handler.queue import QueueHandler
 from ..handler.running import RunningHandler
 from ..handler.session import SessionHandler
 from ..handler.user_message import UserMessageHandler
@@ -294,7 +296,7 @@ class SSEService(BaseSSEService):
                 return
 
             user_handler = AGUIUserHandler(
-                RunningHandler(
+                running_handler=RunningHandler(
                     runner=await self._create_runner(input_info.app_name),
                     run_config=self.runner_config.run_config,
                     handler_context=self.handler_context,
@@ -316,6 +318,12 @@ class SSEService(BaseSSEService):
                         user_id=input_info.user_id,
                         session_id=input_info.session_id,
                     ),
+                ),
+                queue_handler=QueueHandler(
+                    EventQueue(
+                        adk_event_queue=asyncio.Queue(),
+                        agui_event_queue=asyncio.Queue(),
+                    )
                 ),
             )
             async for event in user_handler.run():
