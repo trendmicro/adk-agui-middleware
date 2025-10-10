@@ -28,8 +28,16 @@ class MockBaseModel:
         return json.dumps(self.model_dump())
 
 
+def mock_field(default=None, default_factory=None, **kwargs):
+    """Mock pydantic Field function that handles default_factory."""
+    if default_factory is not None:
+        return default_factory()
+    return default
+
+
 sys.modules["pydantic"] = Mock()
 sys.modules["pydantic"].BaseModel = MockBaseModel
+sys.modules["pydantic"].Field = mock_field
 
 # Load the error module directly
 spec = importlib.util.spec_from_file_location(
