@@ -109,12 +109,12 @@ class FrontendTool(BaseTool):
                 tool_call_args=args,
             ):
                 await self.agui_queue.put(agui_event)
-            return None
         except Exception as e:
             record_error_log(
                 f"Error in proxy tool execution for {tool_context.function_call_id}.", e
             )
             raise
+        return None
 
     def __repr__(self) -> str:
         """Return string representation of the frontend tool.
