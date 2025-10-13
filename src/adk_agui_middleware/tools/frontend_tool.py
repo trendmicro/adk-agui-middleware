@@ -2,6 +2,7 @@
 """Frontend tool adapter for exposing client-side tools through ADK agent framework."""
 
 import uuid
+from collections.abc import Callable, Coroutine
 from typing import Any
 
 from ag_ui.core import Tool
@@ -13,7 +14,6 @@ from google.genai import types
 from ..loggers.record_log import record_error_log
 from ..manager.queue import QueueManager
 from ..utils.translate import FunctionCallEventUtil
-from .create_function_with_params import create_function_with_params
 
 
 class FrontendTool(BaseTool):
@@ -55,13 +55,23 @@ class FrontendTool(BaseTool):
             self.parameters = {"type": "object", "properties": {}}
         # Create the underlying long-running tool with dynamic signature
         self._long_running_tool = LongRunningFunctionTool(
-            create_function_with_params(
-                self._execute,
+            self._create_agui_function_call(
                 self.name,
                 self.description,
-                list(self.parameters.get("properties", {}).keys()),
             )
         )
+
+    def _create_agui_function_call(
+        self,
+        name: str,
+        description: str,
+    ) -> Callable[..., Coroutine[Any, Any, Any]]:
+        async def dynamic_func(args: dict[str, Any], tool_context: ToolContext) -> Any:
+            return await self._execute(args, tool_context)
+
+        dynamic_func.__name__ = name
+        dynamic_func.__doc__ = description
+        return dynamic_func
 
     def _get_declaration(self) -> types.FunctionDeclaration | None:
         """Get the function declaration for this tool.
@@ -99,6 +109,7 @@ class FrontendTool(BaseTool):
                 tool_call_args=args,
             ):
                 await self.agui_queue.put(agui_event)
+            return None
         except Exception as e:
             record_error_log(
                 f"Error in proxy tool execution for {tool_context.function_call_id}.", e
