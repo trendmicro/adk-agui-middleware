@@ -26,10 +26,27 @@ jobs:
         python-version: "3.13"
         cache: 'pip'
 
-    - name: Install PR-Agent from source
+    - name: Cache PR-Agent installation
+      uses: actions/cache@v4
+      id: pr-agent-cache
+      with:
+        path: /tmp/pr-agent
+        key: ${{ runner.os }}-pr-agent-${{ hashFiles('**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pr-agent-
+
+    - name: Clone PR-Agent repository
+      if: steps.pr-agent-cache.outputs.cache-hit != 'true'
+      timeout-minutes: 5
       run: |
-        echo "📦 Installing PR-Agent from source..."
-        git clone https://github.com/qodo-ai/pr-agent.git /tmp/pr-agent
+        echo "📦 Cloning PR-Agent repository..."
+        git clone --depth 1 https://github.com/qodo-ai/pr-agent.git /tmp/pr-agent
+        echo "✅ PR-Agent repository cloned successfully"
+
+    - name: Install PR-Agent dependencies
+      timeout-minutes: 5
+      run: |
+        echo "📦 Installing PR-Agent dependencies..."
         cd /tmp/pr-agent
         pip install -e .
         echo "✅ PR-Agent installed successfully"
@@ -43,8 +60,12 @@ jobs:
 
     - name: Auto-generate PR Description
       if: github.event.action == 'opened'
+      timeout-minutes: 10
+      continue-on-error: false
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_DESCRIPTION__PUBLISH_LABELS: "true"
@@ -53,16 +74,30 @@ jobs:
         PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
         PR_DESCRIPTION__ADD_ORIGINAL_USER_DESCRIPTION: "true"
         PR_DESCRIPTION__ENABLE_LARGE_PR_HANDLING: "true"
+        PR_DESCRIPTION__FINAL_UPDATE_MESSAGE: "true"
+        PR_DESCRIPTION__INCLUDE_GENERATED_BY_HEADER: "true"
+        PR_DESCRIPTION__USE_BULLET_POINTS: "true"
+        PR_DESCRIPTION__EXTRA_INSTRUCTIONS: "Please provide: 1) A clear summary of what changed and why, 2) Business impact and value, 3) Technical approach and design decisions, 4) Security and performance considerations, 5) Testing strategy and coverage, 6) Dependencies and migration notes if applicable"
+        PR_DESCRIPTION__ENABLE_HELP_TEXT: "true"
+        PR_DESCRIPTION__PUBLISH_DESCRIPTION_AS_COMMENT: "false"
         PR_URL: ${{ github.event.pull_request.html_url }}
       run: |
+        set -e
         echo "📝 Auto-generating PR description with AI title and labels..."
         cd /tmp/pr-agent
-        python3 -m pr_agent.cli --pr_url "$PR_URL" describe
+        python3 -m pr_agent.cli --pr_url "$PR_URL" describe || {
+          echo "❌ Failed to generate PR description"
+          exit 1
+        }
         echo "✅ PR description auto-generated"
 
     - name: Comprehensive PR Review
+      timeout-minutes: 15
+      continue-on-error: false
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_REVIEWER__PERSISTENT_COMMENT: "true"
@@ -74,54 +109,90 @@ jobs:
         PR_REVIEWER__ENABLE_REVIEW_LABELS_SECURITY: "true"
         PR_REVIEWER__ENABLE_REVIEW_LABELS_EFFORT: "true"
         PR_REVIEWER__INLINE_CODE_COMMENTS: "true"
-        PR_REVIEWER__NUM_CODE_SUGGESTIONS: "5"
+        PR_REVIEWER__NUM_CODE_SUGGESTIONS: "10"
+        PR_REVIEWER__INCREMENTAL_REVIEW: "true"
+        PR_REVIEWER__REMOVE_PREVIOUS_REVIEW_COMMENT: "true"
+        PR_REVIEWER__ENABLE_HELP_TEXT: "true"
+        PR_REVIEWER__MAXIMAL_REVIEW_EFFORT: "5"
+        PR_REVIEWER__EXTRA_INSTRUCTIONS: "Focus on: 1) Security vulnerabilities and data exposure risks, 2) Performance bottlenecks and scalability issues, 3) Error handling and edge cases, 4) Code maintainability and readability, 5) Best practices violations, 6) Type safety and null checks, 7) Resource leaks and memory management, 8) API design and backwards compatibility"
+        PR_REVIEWER__REQUIRE_ALL_THRESHOLDS_FOR_TESTS_REVIEW: "false"
+        PR_REVIEWER__REQUIRE_CAN_BE_SPLIT_REVIEW: "true"
         PR_URL: ${{ github.event.pull_request.html_url }}
       run: |
+        set -e
         echo "🔍 Running comprehensive PR review with security checks..."
         cd /tmp/pr-agent
-        python3 -m pr_agent.cli --pr_url "$PR_URL" review
+        python3 -m pr_agent.cli --pr_url "$PR_URL" review || {
+          echo "❌ Failed to complete PR review"
+          exit 1
+        }
         echo "✅ Comprehensive review completed"
 
     - name: Generate Code Improvements
       if: success() || failure()
+      timeout-minutes: 15
+      continue-on-error: true
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: "true"
-        PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS_PER_CHUNK: "4"
-        PR_CODE_SUGGESTIONS__SUGGESTIONS_SCORE_THRESHOLD: "5"
+        PR_CODE_SUGGESTIONS__NUM_CODE_SUGGESTIONS_PER_CHUNK: "8"
+        PR_CODE_SUGGESTIONS__SUGGESTIONS_SCORE_THRESHOLD: "0"
         PR_CODE_SUGGESTIONS__COMMITABLE_CODE_SUGGESTIONS: "true"
-        PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: "Focus on code quality, performance, maintainability, and Python best practices"
+        PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: "Prioritize: 1) Security vulnerabilities (SQL injection, XSS, CSRF, authentication/authorization issues), 2) Performance optimizations (N+1 queries, unnecessary loops, caching opportunities), 3) Error handling improvements (try-catch, validation, edge cases), 4) Code smells (duplicated code, long functions, complex conditionals), 5) Type safety and null checks, 6) Python best practices (PEP 8, idioms, stdlib usage), 7) Documentation and naming clarity, 8) Test coverage gaps"
         PR_CODE_SUGGESTIONS__AUTO_EXTENDED_MODE: "true"
         PR_CODE_SUGGESTIONS__ENABLE_CHAT_TEXT: "true"
+        PR_CODE_SUGGESTIONS__RANK_SUGGESTIONS: "true"
+        PR_CODE_SUGGESTIONS__ENABLE_HELP_TEXT: "true"
         PR_URL: ${{ github.event.pull_request.html_url }}
       run: |
+        set -e
         echo "💡 Generating code improvement suggestions..."
         cd /tmp/pr-agent
-        python3 -m pr_agent.cli --pr_url "$PR_URL" improve
+        python3 -m pr_agent.cli --pr_url "$PR_URL" improve || {
+          echo "⚠️  Failed to generate code improvements (non-blocking)"
+          exit 0
+        }
         echo "✅ Code improvements suggested"
 
     - name: Update PR Description (on sync)
       if: github.event.action == 'synchronize'
+      timeout-minutes: 10
+      continue-on-error: true
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_DESCRIPTION__PUBLISH_LABELS: "true"
         PR_DESCRIPTION__ENABLE_SEMANTIC_FILES_TYPES: "true"
         PR_DESCRIPTION__PUBLISH_DESCRIPTION_AS_COMMENT: "true"
+        PR_DESCRIPTION__FINAL_UPDATE_MESSAGE: "true"
+        PR_DESCRIPTION__USE_BULLET_POINTS: "true"
+        PR_DESCRIPTION__EXTRA_INSTRUCTIONS: "Please provide: 1) A clear summary of what changed and why, 2) Business impact and value, 3) Technical approach and design decisions, 4) Security and performance considerations, 5) Testing strategy and coverage, 6) Dependencies and migration notes if applicable"
         PR_URL: ${{ github.event.pull_request.html_url }}
       run: |
+        set -e
         echo "🔄 Updating PR description due to new changes..."
         cd /tmp/pr-agent
-        python3 -m pr_agent.cli --pr_url "$PR_URL" describe
+        python3 -m pr_agent.cli --pr_url "$PR_URL" describe || {
+          echo "⚠️  Failed to update PR description (non-blocking)"
+          exit 0
+        }
         echo "✅ PR description updated"
 
     - name: Update Changelog
       if: success() || failure()
+      timeout-minutes: 5
+      continue-on-error: true
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_UPDATE_CHANGELOG__PUSH_CHANGELOG_CHANGES: "false"
@@ -129,20 +200,30 @@ jobs:
       run: |
         echo "📋 Updating changelog..."
         cd /tmp/pr-agent
-        python3 -m pr_agent.cli --pr_url "$PR_URL" update_changelog || echo "⚠️  Changelog update skipped (may not exist)"
+        python3 -m pr_agent.cli --pr_url "$PR_URL" update_changelog || {
+          echo "⚠️  Changelog update skipped (may not exist or failed)"
+          exit 0
+        }
         echo "✅ Changelog processing completed"
 
     - name: Generate Labels
       if: github.event.action == 'opened' || github.event.action == 'synchronize'
+      timeout-minutes: 5
+      continue-on-error: true
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_URL: ${{ github.event.pull_request.html_url }}
       run: |
         echo "🏷️  Generating smart labels..."
         cd /tmp/pr-agent
-        python3 -m pr_agent.cli --pr_url "$PR_URL" generate_labels || echo "⚠️  Label generation skipped"
+        python3 -m pr_agent.cli --pr_url "$PR_URL" generate_labels || {
+          echo "⚠️  Label generation skipped (non-blocking)"
+          exit 0
+        }
         echo "✅ Label generation completed"
 
     - name: Summary

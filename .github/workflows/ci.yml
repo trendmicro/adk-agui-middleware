@@ -183,10 +183,87 @@ jobs:
           bandit-detailed.txt
           bandit-detailed.xml
 
+  # pyscn code-quality analysis (complexity, dead code, clones, deps)
+  pyscn:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        version: "latest"
+
+    - name: Show pyscn version
+      run: |
+        uvx pyscn --version || true
+
+    - name: Run pyscn check (quality gate)
+      id: pyscn_check
+      continue-on-error: true
+      run: |
+        set -o pipefail
+        echo "🔎 Running pyscn quality gate (check)..."
+        uvx pyscn check . | tee pyscn-check.txt
+        status=${PIPESTATUS[0]}
+        echo "PYSCN_STATUS=$status" >> $GITHUB_ENV
+        if [ "$status" -eq 0 ]; then
+          echo "result=success" >> $GITHUB_OUTPUT
+        else
+          echo "result=failure" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Run pyscn analyze (JSON report)
+      run: |
+        echo "📊 Running pyscn analyze (JSON)..."
+        uvx pyscn analyze --json . > pyscn-report.json || true
+
+    - name: Attach HTML report if generated
+      run: |
+        # Collect potential HTML reports from common locations
+        mkdir -p pyscn-artifacts
+        if [ -d .pyscn ]; then cp -R .pyscn pyscn-artifacts/.pyscn || true; fi
+        if ls *.html >/dev/null 2>&1; then cp *.html pyscn-artifacts/ || true; fi
+        if [ -d htmlcov ]; then cp -R htmlcov pyscn-artifacts/htmlcov || true; fi
+        cp -f pyscn-check.txt pyscn-artifacts/ || true
+        cp -f pyscn-report.json pyscn-artifacts/ || true
+
+    - name: Upload pyscn artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: pyscn-reports
+        path: |
+          pyscn-artifacts/**
+
+    - name: Post pyscn summary and conclude
+      if: always()
+      run: |
+        echo "## pyscn Quality Gate" >> $GITHUB_STEP_SUMMARY
+        echo "- Result: ${{ steps.pyscn_check.outputs.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Config: .pyscn.toml (strict)" >> $GITHUB_STEP_SUMMARY
+        echo "- Artifacts: see 'pyscn-reports'" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### pyscn check output" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        sed -e 's/^/    /' pyscn-check.txt >> $GITHUB_STEP_SUMMARY || true
+        # Fail job if quality gate failed
+        if [ "${PYSCN_STATUS:-1}" -ne 0 ]; then
+          echo "❌ pyscn quality gate failed" >&2
+          exit 1
+        else
+          echo "✅ pyscn quality gate passed"
+        fi
+
   # Summary job to provide overall status
   summary:
     runs-on: ubuntu-latest
-    needs: [lint, test, security]
+    needs: [lint, test, security, pyscn]
     if: always()
     steps:
     - name: Check results
@@ -195,8 +272,9 @@ jobs:
         echo "Lint: ${{ needs.lint.result }}"
         echo "Test: ${{ needs.test.result }}"
         echo "Security: ${{ needs.security.result }}"
+        echo "pyscn: ${{ needs.pyscn.result }}"
         
-        if [ "${{ needs.lint.result }}" == "success" ] && [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.security.result }}" == "success" ]; then
+        if [ "${{ needs.lint.result }}" == "success" ] && [ "${{ needs.test.result }}" == "success" ] && [ "${{ needs.security.result }}" == "success" ] && [ "${{ needs.pyscn.result }}" == "success" ]; then
           echo "✅ All checks passed!"
           exit 0
         else

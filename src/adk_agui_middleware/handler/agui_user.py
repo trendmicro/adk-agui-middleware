@@ -85,6 +85,17 @@ class AGUIUserHandler:
             self.agui_queue, self.user_message_handler.frontend_tools
         )
 
+    async def _async_close(self) -> None:
+        """Close internal async resources created during the run.
+
+        Ensures the underlying runner and any associated resources are
+        gracefully closed after a workflow completes or aborts.
+
+        Raises:
+            Exception: Propagates exceptions from the underlying runner close
+        """
+        await self.running_handler.close()
+
     @property
     def app_name(self) -> str:
         """Get the application name from the session handler.
@@ -227,6 +238,12 @@ class AGUIUserHandler:
         return None
 
     async def _run_async_with_adk(self) -> None:
+        """Run the ADK pipeline and push events onto the ADK queue.
+
+        Executes the agent via the running handler and forwards produced
+        ADK events to the ADK queue, guaranteeing a termination sentinel
+        is sent even if an exception occurs.
+        """
         async with adk_event_exception_handler(self.adk_queue):
             async for adk_event in self.running_handler.run_async_with_adk(
                 user_id=self.user_id,
@@ -236,6 +253,12 @@ class AGUIUserHandler:
                 await self.adk_queue.put(adk_event)
 
     async def _run_async_with_agui(self) -> None:
+        """Translate ADK events to AGUI events and push onto the AGUI queue.
+
+        Consumes ADK events from the ADK queue, translates them to AGUI
+        events via the running handler, and forwards them to the AGUI queue.
+        Guarantees a termination sentinel is sent even on exceptions.
+        """
         async with agui_event_exception_handler(self.agui_queue):
             async for adk_event in self.adk_queue.get_iterator():
                 async for agui_event in self.running_handler.run_async_with_agui(
@@ -308,3 +331,5 @@ class AGUIUserHandler:
                 yield event
         except Exception as e:
             yield AGUIErrorEvent.create_execution_error_event(e)
+        finally:
+            await self._async_close()

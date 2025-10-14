@@ -93,17 +93,28 @@ graph TB
         LOCK_HDL[SessionLockHandler]
     end
 
+    %% Handler hooks (dependency injection)
+    subgraph "HandlerContext Hooks"
+        ADK_H[BaseADKEventHandler]
+        ADK_TO[BaseADKEventTimeoutHandler]
+        TR_H[BaseTranslateHandler]
+        AGUI_H[BaseAGUIEventHandler]
+        STATE_H[BaseAGUIStateSnapshotHandler]
+        IO_H[BaseInOutHandler]
+    end
+
     %% Managers & ADK
     subgraph "Managers & ADK"
         SESS_MGR[SessionManager]
         ADK_RUNNER[ADK Runner]
         BASE_AGENT[BaseAgent]
         RUN_CFG[RunConfig]
+        RUNNER_CFG[RunnerConfig]
     end
 
     %% Utilities
     subgraph "Utilities"
-        SSE_ENC[SSE Converter]
+        SSE_ENC[SSE Encoder/Formatter]
         FRONT_TOOLS[FrontendToolset]
         SHUTDOWN[ShutdownHandler]
     end
@@ -134,6 +145,15 @@ graph TB
     RUNNING --> ADK_RUNNER
     ADK_RUNNER --> BASE_AGENT
     ADK_RUNNER --> RUN_CFG
+    RUNNER_CFG --> RUN_CFG
+
+    %% HandlerContext wiring
+    RUNNING -. pre/post hooks .-> ADK_H
+    RUNNING -. timeout .-> ADK_TO
+    RUNNING -. translate .-> TR_H
+    RUNNING -. post-AGUI .-> AGUI_H
+    RUNNING -. state snapshot .-> STATE_H
+    SSE_SVC -. I/O record .-> IO_H
 
     %% Managers and tools
     SESSION_HDL --> SESS_MGR
@@ -142,7 +162,7 @@ graph TB
 
     %% Styling
     classDef box fill:#f7f7f7,stroke:#555,color:#111,stroke-width:1px
-    class WEB,MOBILE,API,MAIN_EP,HIST_EP,STATE_EP,SSE_SVC,HIST_SVC,STATE_SVC,AGUI_USER,USER_MSG,RUNNING,TRANSLATOR,SESSION_HDL,QUEUE_HDL,LOCK_HDL,SESS_MGR,ADK_RUNNER,BASE_AGENT,RUN_CFG,SSE_ENC,FRONT_TOOLS,SHUTDOWN box
+    class WEB,MOBILE,API,MAIN_EP,HIST_EP,STATE_EP,SSE_SVC,HIST_SVC,STATE_SVC,AGUI_USER,USER_MSG,RUNNING,TRANSLATOR,SESSION_HDL,QUEUE_HDL,LOCK_HDL,SESS_MGR,ADK_RUNNER,BASE_AGENT,RUN_CFG,RUNNER_CFG,SSE_ENC,FRONT_TOOLS,SHUTDOWN,ADK_H,ADK_TO,TR_H,AGUI_H,STATE_H,IO_H box
 ```
 
 ### Concurrent Event Processing Architecture
@@ -188,8 +208,10 @@ graph TB
     subgraph "Client Stream Consumer"
         STREAM_CONSUMER[🌊 SSE Stream Consumer<br/>Main Workflow Loop<br/>async for agui_event]
         AGUI_OUTPUT[📤 AGUI Queue Iterator<br/>async for in agui_queue<br/>Yield to Client]
-        SSE_FORMAT[🔌 SSE Formatter<br/>Convert to SSE Protocol<br/>Add Timestamps & IDs]
-        CLIENT_STREAM[📡 Client SSE Stream<br/>Real-time Event Delivery<br/>EventSourceResponse]
+        SSE_SWITCH{🔀 SSE Mode? event_source_response_mode}
+        SSE_SSR[🔌 StreamingResponse<br/>Fake SSE lines]
+        SSE_ESR[🔌 EventSourceResponse<br/>Spec-compliant SSE]
+        CLIENT_STREAM[📡 Client Stream<br/>Real-time Event Delivery]
     end
 
     subgraph "Exception Handling"
@@ -235,7 +257,7 @@ graph TB
     %% AGUI translator flow
     AGUI_TASK --> AGUI_EXCEPTION
     AGUI_EXCEPTION --> AGUI_ITER
-    AGUI_ITER --> ADK_QUEUE
+    ADK_QUEUE --> AGUI_ITER
     ADK_QUEUE --> TRANSLATOR
     TRANSLATOR --> AGUI_PUT
     AGUI_PUT --> AGUI_MGR
@@ -246,9 +268,12 @@ graph TB
     %% Stream consumer flow
     TASK_GROUP --> STREAM_CONSUMER
     STREAM_CONSUMER --> AGUI_OUTPUT
-    AGUI_OUTPUT --> AGUI_QUEUE
-    AGUI_QUEUE --> SSE_FORMAT
-    SSE_FORMAT --> CLIENT_STREAM
+    AGUI_QUEUE --> AGUI_OUTPUT
+    AGUI_OUTPUT --> SSE_SWITCH
+    SSE_SWITCH -->|False| SSE_SSR
+    SSE_SWITCH -->|True| SSE_ESR
+    SSE_SSR --> CLIENT_STREAM
+    SSE_ESR --> CLIENT_STREAM
 
     %% Exception handling
     ADK_TASK -.->|Exception| TASK_EXCEPTION
@@ -279,7 +304,7 @@ graph TB
     class TASK_GROUP task
     class ADK_TASK,ADK_RUNNER,ADK_PUT,ADK_SENTINEL producer
     class AGUI_TASK,AGUI_ITER,TRANSLATOR,AGUI_PUT,AGUI_SENTINEL translator
-    class STREAM_CONSUMER,AGUI_OUTPUT,SSE_FORMAT,CLIENT_STREAM consumer
+    class STREAM_CONSUMER,AGUI_OUTPUT,SSE_SWITCH,SSE_SSR,SSE_ESR,CLIENT_STREAM consumer
     class ADK_EXCEPTION,AGUI_EXCEPTION,TASK_EXCEPTION,ERROR_EVENT exception
     class ITER_PROTOCOL,NONE_SENTINEL,GRACEFUL_STOP sync
 ```
@@ -453,7 +478,7 @@ sequenceDiagram
 
         note over AGUI_USER,BASE_AGENT: Message Processing & Agent Execution
         AGUI_USER->>AGUI_USER: Determine message type (user input or tool result)
-        AGUI_USER->>SSE: Stream: RunStartedEvent
+        AGUI_USER->>SSE: Yield RUN_STARTED
         SSE-->>CLIENT: SSE: RUN_STARTED
 
         AGUI_USER->>RUNNING: Execute agent with user message
@@ -472,9 +497,10 @@ sequenceDiagram
 
             alt Long-running tool detected
             RUNNING->>AGUI_USER: Long-running tool call detected
+            AGUI_USER-->>SSE: Early return (HITL pause)
+            note over AGUI_USER: TaskGroup completes
             AGUI_USER->>SESSION_MGR: Persist pending tool call state
             SESSION_MGR->>SESSION_SVC: Update session state with tool info
-            AGUI_USER-->>SSE: Early return (HITL pause)
             end
         end
 
@@ -573,7 +599,7 @@ stateDiagram-v2
 
 ### CopilotKit Frontend Compatibility Issue
 
-**IMPORTANT:** CopilotKit's frontend implementation does **NOT** comply with the standard Server-Sent Events (SSE) specification, which causes parsing failures when using FastAPI's standard `EventSourceResponse`. Although CopilotKit labels its streaming as "SSE", it does not follow the SSE spec at all—this is a significant oversight in their implementation.
+IMPORTANT: Some legacy frontends (for example, CopilotKit) do not strictly follow the Server-Sent Events (SSE) specification and can fail to parse FastAPI's standard `EventSourceResponse`. Although they label their stream as "SSE", the wire format differs from the spec.
 
 #### The Problem
 
@@ -683,7 +709,7 @@ from fastapi import FastAPI, Request
 from google.adk.agents import BaseAgent
 from adk_agui_middleware import SSEService
 from adk_agui_middleware.endpoint import register_agui_endpoint
-from adk_agui_middleware.data_model.config import RunnerConfig
+from adk_agui_middleware.data_model.config import PathConfig, RunnerConfig
 from adk_agui_middleware.data_model.context import ConfigContext
 
 # Initialize FastAPI application
@@ -691,13 +717,13 @@ app = FastAPI(title="AI Agent Service", version="1.0.0")
 
 # Define your custom ADK agent
 class MyAgent(BaseAgent):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.instructions = "You are a helpful AI assistant."
 
 # Simple context extraction
-async def extract_user_id(content, request: Request) -> str:
-    return request.headers.get("x-user-id", "default-user")
+async def extract_user_id(_: object, request: Request) -> str:
+    return request.headers.get("X-User-Id", "default-user")
 
 # Create SSE service
 agent = MyAgent()
@@ -707,11 +733,17 @@ sse_service = SSEService(
         app_name="my-app",
         user_id=extract_user_id,
         session_id=lambda content, req: content.thread_id,
-    )
+        event_source_response_mode=True,  # Use spec-compliant SSE by default
+    ),
+    runner_config=RunnerConfig(),
 )
 
-# Register endpoint
-register_agui_endpoint(app, sse_service)
+# Register endpoint at /agui
+register_agui_endpoint(
+    app,
+    sse_service,
+    path_config=PathConfig(agui_main_path="/agui"),
+)
 
 if __name__ == "__main__":
     import uvicorn
@@ -882,6 +914,7 @@ class AGUIConfig:
                 user_id=lambda content, req: self.extract_user_id(req),
                 session_id=lambda content, req: content.thread_id,
                 extract_initial_state=self.extract_initial_state,
+                event_source_response_mode=True,
             ),
             # Optional: Add custom handlers
             # handler_context=HandlerContext(
@@ -929,40 +962,52 @@ if __name__ == "__main__":
 from collections.abc import AsyncGenerator
 from adk_agui_middleware.base_abc.handler import (
     BaseADKEventHandler,
+    BaseAGUIEventHandler,
     BaseInOutHandler,
-    BaseTranslateHandler
+    BaseTranslateHandler,
 )
 from adk_agui_middleware.data_model.common import InputInfo
 from adk_agui_middleware.data_model.event import TranslateEvent
+from ag_ui.core import BaseEvent
 from google.adk.events import Event
 
 class MyADKEventHandler(BaseADKEventHandler):
     def __init__(self, input_info: InputInfo | None):
-        pass  # Initialize your handler
+        self.input_info = input_info
 
     async def process(self, event: Event) -> AsyncGenerator[Event | None]:
-        # Filter or modify ADK events before translation
+        # Optionally filter or transform ADK events before translation
         yield event
 
 class MyTranslateHandler(BaseTranslateHandler):
     def __init__(self, input_info: InputInfo | None):
-        pass  # Initialize your handler
+        self.input_info = input_info
 
     async def translate(self, adk_event: Event) -> AsyncGenerator[TranslateEvent]:
-        # Custom translation logic
-        yield TranslateEvent()  # Your custom translation
+        # Optionally emit AGUI events or replace/retune ADK events
+        # yield TranslateEvent(agui_event=SomeAGUIEvent())
+        # yield TranslateEvent(is_retune=True)
+        yield TranslateEvent()
+
+class MyAGUIEventHandler(BaseAGUIEventHandler):
+    def __init__(self, input_info: InputInfo | None):
+        self.input_info = input_info
+
+    async def process(self, event: BaseEvent) -> AsyncGenerator[BaseEvent | None]:
+        # Optionally filter or transform AGUI events after translation
+        yield event
 
 class MyInOutHandler(BaseInOutHandler):
     async def input_record(self, input_info: InputInfo) -> None:
-        # Log input for audit/debugging
+        # Record incoming context for audit/debugging
         pass
 
-    async def output_record(self, agui_event: dict[str, str]) -> None:
-        # Log output events
+    async def output_record(self, agui_event: BaseEvent) -> None:
+        # Record outgoing AGUI events (pre-encoding)
         pass
 
-    async def output_catch_and_change(self, agui_event: dict[str, str]) -> dict[str, str]:
-        # Modify output before sending to client
+    async def output_catch_and_change(self, agui_event: BaseEvent) -> BaseEvent:
+        # Optionally modify the event before encoding to SSE
         return agui_event
 ```
 
@@ -970,12 +1015,10 @@ class MyInOutHandler(BaseInOutHandler):
 
 Explore ready-to-run usage patterns in the examples folder. Each example is self-contained with comments and can be launched via uvicorn.
 
-- Basic SSE: `uvicorn examples.01_basic_sse_app.main:app --reload`
-- Custom context + input conversion: `uvicorn examples.02_custom_context.main:app --reload`
-- Plugins and timeouts: `uvicorn examples.03_plugins_and_timeouts.main:app --reload`
-- History API (threads/snapshots/patch): `uvicorn examples.04_history_api.main:app --reload`
-- Custom session lock: `uvicorn examples.05_custom_lock.main:app --reload`
-- HITL tool flow: `uvicorn examples.06_hitl_tool_flow.main:app --reload`
+- Minimal SSE: `uvicorn examples.01_minimal_sse.app:app --reload`
+- Context + History + State: `uvicorn examples.02_context_history.app:app --reload`
+- Advanced pipeline (I/O recorder + input preprocessing): `uvicorn examples.03_advanced_pipeline.app:app --reload`
+- Lifecycle handlers (full hook set): `uvicorn examples.04_lifecycle_handlers.app:app --reload`
 
 See `examples/README.md` for details.
 

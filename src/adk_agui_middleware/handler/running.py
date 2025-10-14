@@ -250,7 +250,11 @@ class RunningHandler:
         is performed by tool name across existing BaseTool instances and existing
         FrontendToolset.ag_ui_tools.
         """
-        if not self.runner or not hasattr(self.runner.agent, "tools"):
+        if (
+            not self.runner
+            or not hasattr(self.runner.agent, "tools")
+            or not frontend_tools
+        ):
             return
         agent = self.runner.agent
         existing_tools = (
@@ -376,3 +380,15 @@ class RunningHandler:
             record_agui_raw_log,
             self.agui_event_handler,
         )
+
+    async def close(self) -> None:
+        """Close the underlying ADK runner if it exists.
+
+        Ensures the Runner releases any resources (e.g., network connections),
+        making shutdown predictable and leak-free.
+
+        Raises:
+            Exception: Propagates exceptions raised by the runner's close method
+        """
+        if self.runner:
+            await self.runner.close()  # type: ignore[no-untyped-call]
