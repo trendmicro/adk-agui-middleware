@@ -45,6 +45,8 @@ jobs:
       if: github.event.action == 'opened'
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_DESCRIPTION__PUBLISH_LABELS: "true"
@@ -63,6 +65,8 @@ jobs:
     - name: Comprehensive PR Review
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_REVIEWER__PERSISTENT_COMMENT: "true"
@@ -86,6 +90,8 @@ jobs:
       if: success() || failure()
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: "true"
@@ -106,6 +112,8 @@ jobs:
       if: github.event.action == 'synchronize'
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_DESCRIPTION__PUBLISH_LABELS: "true"
@@ -122,6 +130,8 @@ jobs:
       if: success() || failure()
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_UPDATE_CHANGELOG__PUSH_CHANGELOG_CHANGES: "false"
@@ -136,6 +146,8 @@ jobs:
       if: github.event.action == 'opened' || github.event.action == 'synchronize'
       env:
         OPENAI__KEY: ${{ secrets.OPENAI_API_KEY }}
+        OPENAI__API_BASE: ${{ secrets.AI_ENDPOINT }}
+        CONFIG__MODEL: ${{ vars.AI_MODEL }}
         GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CONFIG__GIT_PROVIDER: "github"
         PR_URL: ${{ github.event.pull_request.html_url }}

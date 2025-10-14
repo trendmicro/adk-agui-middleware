@@ -2,7 +2,6 @@
 """Concrete implementation of Server-Sent Events service for AGUI middleware."""
 
 import asyncio
-import copy
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any, cast
 
