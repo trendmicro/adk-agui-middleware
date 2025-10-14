@@ -228,6 +228,17 @@ class SSEService(BaseSSEService):
             return converter(AGUIErrorEvent.create_encoding_error_event(e))
 
     async def _create_runner(self, app_name: str) -> Runner:
+        """Create a fresh ADK Runner instance for the provided app name.
+
+        Clones the agent to avoid cross-request state leakage and wires in
+        session, artifact, memory, and credential services from the runner config.
+
+        Args:
+            :param app_name: Application name bound to the runner instance
+
+        Returns:
+            Configured Runner ready to execute agent operations
+        """
         return Runner(
             app_name=app_name,
             agent=self.agent.model_copy(deep=True),

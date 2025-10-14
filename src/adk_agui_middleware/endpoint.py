@@ -32,7 +32,7 @@ def register_agui_endpoint(  # noqa: C901
         :param path_config: Configuration for endpoint paths (main, chat list, history)
 
     Raises:
-        Exception: Various exceptions are handled by exception_http_handler
+        Exception: Various exceptions are handled by http_exception_handler
     """
 
     if path_config is None:
@@ -54,7 +54,7 @@ def register_agui_endpoint(  # noqa: C901
             EventSourceResponse containing encoded agent events with appropriate media type
 
         Raises:
-            Exception: Handled by exception_http_handler context manager
+            Exception: Handled by http_exception_handler context manager
         """
         async with http_exception_handler(request):
             # Get configured runner for this specific request and content

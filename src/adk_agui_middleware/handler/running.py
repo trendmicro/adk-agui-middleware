@@ -382,5 +382,13 @@ class RunningHandler:
         )
 
     async def close(self) -> None:
+        """Close the underlying ADK runner if it exists.
+
+        Ensures the Runner releases any resources (e.g., network connections),
+        making shutdown predictable and leak-free.
+
+        Raises:
+            Exception: Propagates exceptions raised by the runner's close method
+        """
         if self.runner:
             await self.runner.close()  # type: ignore[no-untyped-call]

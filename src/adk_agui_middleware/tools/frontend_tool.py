@@ -66,7 +66,30 @@ class FrontendTool(BaseTool):
         name: str,
         description: str,
     ) -> Callable[..., Coroutine[Any, Any, Any]]:
+        """Create an async function used to proxy an AGUI tool invocation.
+
+        Generates a coroutine function with a dynamic name and docstring that
+        delegates to ``self._execute``. This allows the ADK tool system to
+        expose the frontend tool with the expected metadata.
+
+        Args:
+            :param name: Function name to expose to the tool system
+            :param description: Human-readable description used as the docstring
+
+        Returns:
+            A coroutine function that forwards execution to ``_execute``
+        """
+
         async def dynamic_func(args: dict[str, Any], tool_context: ToolContext) -> Any:
+            """Proxy execution that forwards to the tool's internal executor.
+
+            Args:
+                :param args: Tool invocation arguments
+                :param tool_context: Execution context with function call metadata
+
+            Returns:
+                The result of ``_execute`` (typically None; result arrives via HITL)
+            """
             return await self._execute(args, tool_context)
 
         dynamic_func.__name__ = name

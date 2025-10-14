@@ -1,6 +1,7 @@
 name: AI Issue Assessment
 
 on:
+  workflow_dispatch:
   issues:
     types: [opened, edited, labeled, reopened]
   issue_comment:
@@ -9,25 +10,48 @@ on:
 permissions:
   issues: write
   contents: read
+  models: read
 
 jobs:
   ai-assessment:
-    if: |
-      (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'edited' || github.event.action == 'reopened' || github.event.label.name == 'ai-review')) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/ai-review'))
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && (github.event.action == 'opened' || github.event.action == 'edited' || github.event.action == 'reopened' || (github.event.action == 'labeled' && github.event.label.name == 'ai-review'))) || (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/ai-review'))
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Comprehensive AI Assessment
+      - name: Resolve AI endpoint (PR-Agent aligned)
+        run: |
+          if [ -n "${{ secrets.AI_ENDPOINT }}" ]; then
+            echo "AI_ENDPOINT_SAFE=${{ secrets.AI_ENDPOINT }}" >> $GITHUB_ENV
+          else
+            echo "AI_ENDPOINT_SAFE=https://models.github.ai/inference" >> $GITHUB_ENV
+          fi
+
+      - name: AI Assessment (PR-Agent settings)
+        if: ${{ vars.AI_MODEL != '' }}
         uses: github/ai-assessment-comment-labeler@v1.0.1
-        id: assessment
+        id: assessment_with_model
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue_number: ${{ github.event.issue.number }}
           issue_body: ${{ github.event.issue.body }}
           ai_review_label: 'ai-review'
           prompts_directory: './.github/prompts'
-          labels_to_prompts_mapping: 'bug,bug-assessment.prompt.yml;enhancement,feature-assessment.prompt.yml;question,question-assessment.prompt.yml;security,security-assessment.prompt.yml;all,comprehensive-assessment.prompt.yml;all,duplicate-detection.prompt.yml;all,team-assignment.prompt.yml'
+          labels_to_prompts_mapping: 'bug,bug-assessment.prompt.yml|enhancement,feature-assessment.prompt.yml|question,question-assessment.prompt.yml|security,security-assessment.prompt.yml|all,comprehensive-assessment.prompt.yml|all,duplicate-detection.prompt.yml|all,team-assignment.prompt.yml'
+          model: ${{ vars.AI_MODEL }}
+          endpoint: ${{ env.AI_ENDPOINT_SAFE }}
+
+      - name: AI Assessment (prompt default model)
+        if: ${{ vars.AI_MODEL == '' }}
+        uses: github/ai-assessment-comment-labeler@v1.0.1
+        id: assessment_default
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue_number: ${{ github.event.issue.number }}
+          issue_body: ${{ github.event.issue.body }}
+          ai_review_label: 'ai-review'
+          prompts_directory: './.github/prompts'
+          labels_to_prompts_mapping: 'bug,bug-assessment.prompt.yml|enhancement,feature-assessment.prompt.yml|question,question-assessment.prompt.yml|security,security-assessment.prompt.yml|all,comprehensive-assessment.prompt.yml|all,duplicate-detection.prompt.yml|all,team-assignment.prompt.yml'
+          endpoint: ${{ env.AI_ENDPOINT_SAFE }}
