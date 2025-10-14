@@ -307,4 +307,8 @@ pyrightconfig.json
 .history
 .ionide
 
+### pyscn ###
+
+.pyscn/
+
 # End of https://www.toptal.com/developers/gitignore/api/python,intellij,visualstudiocode

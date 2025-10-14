@@ -1,0 +1,289 @@
+# pyscn configuration file
+# This file configures all analysis features of pyscn
+# Place this file in your project root to customize analysis behavior
+
+# =============================================================================
+# OUTPUT CONFIGURATION
+# =============================================================================
+[output]
+format = "text"                 # text, json, yaml, csv, html
+show_details = true              # Show detailed breakdown for strict reviews
+sort_by = "complexity"           # name, complexity, risk
+min_complexity = 1               # Minimum complexity to report
+directory = ".pyscn/reports"     # Output directory for reports
+
+# =============================================================================
+# COMPLEXITY ANALYSIS
+# =============================================================================
+[complexity]
+enabled = true                   # Enable complexity analysis
+# Strict thresholds aligned with project lint (ruff mccabe = 10)
+low_threshold = 6                # ≤ 6: low risk
+medium_threshold = 9             # 7-9: medium risk
+max_complexity = 10              # ≥ 10: high risk and fail gate
+report_unchanged = true          # Report functions with complexity = 1
+
+# =============================================================================
+# DEAD CODE DETECTION
+# =============================================================================
+[dead_code]
+enabled = true                   # Enable dead code detection
+# Strict: report everything starting at info
+min_severity = "info"            # info < warning < critical
+show_context = true              # Show surrounding code context
+context_lines = 5                # Number of context lines to show
+sort_by = "severity"             # severity, line, file, function
+
+# Detection options - configure what types of dead code to detect
+detect_after_return = true       # Code after return statements
+detect_after_break = true        # Code after break statements
+detect_after_continue = true     # Code after continue statements
+detect_after_raise = true        # Code after raise statements
+detect_unreachable_branches = true # Unreachable conditional branches
+
+# Patterns to ignore (regex patterns)
+ignore_patterns = []
+
+# =============================================================================
+# CLONE DETECTION
+# =============================================================================
+[clones]
+# Analysis settings
+min_lines = 4                    # Detect smaller clones
+min_nodes = 8                    # Detect smaller AST fragments
+max_edit_distance = 40.0         # Tighter edit distance
+ignore_literals = false          # Consider literal changes
+ignore_identifiers = false       # Consider identifier changes
+cost_model_type = "python"       # default, python, weighted
+
+# Threshold settings for clone type classification (0.0 - 1.0)
+type1_threshold = 0.99           # Stricter exact match
+type2_threshold = 0.97
+type3_threshold = 0.90
+type4_threshold = 0.75
+similarity_threshold = 0.85      # General minimum similarity threshold
+
+# Filtering settings
+min_similarity = 0.0             # Minimum similarity to report
+max_similarity = 1.0             # Maximum similarity to report
+enabled_clone_types = ["type1", "type2", "type3", "type4"] # Clone types to detect
+max_results = 10000              # Maximum results (0 = no limit)
+
+# Grouping settings
+grouping_mode = "connected"      # Grouping mode: connected, star, complete_linkage, k_core
+grouping_threshold = 0.85        # Threshold for grouping
+k_core_k = 2                     # K-core parameter
+
+# LSH acceleration settings
+lsh_enabled = "auto"             # Enable LSH: true, false, auto (based on project size)
+lsh_auto_threshold = 500         # Auto-enable LSH for projects with >500 fragments
+lsh_similarity_threshold = 0.50  # LSH similarity threshold
+lsh_bands = 32                   # Number of LSH bands
+lsh_rows = 4                     # Number of rows per band
+lsh_hashes = 128                 # Number of hash functions
+
+# Performance settings
+max_memory_mb = 100              # Memory limit in MB (0 = no limit)
+batch_size = 100                 # Batch size for processing
+enable_batching = true           # Enable batching for large projects
+max_goroutines = 4               # Maximum concurrent goroutines
+timeout_seconds = 300            # Timeout for clone analysis
+
+# Output settings
+show_details = false             # Show detailed clone information
+show_content = false             # Include source code content in output
+sort_by = "similarity"           # Sort by: similarity, size, location, type
+group_clones = true              # Group related clones together
+
+# =============================================================================
+# CBO (COUPLING BETWEEN OBJECTS) ANALYSIS
+# =============================================================================
+[cbo]
+enabled = true                   # Enable CBO analysis
+# Slightly stricter thresholds
+low_threshold = 4                # ≤ 4: low risk
+medium_threshold = 8             # 5-8: medium risk
+include_builtins = false         # Exclude built-ins
+include_imports = true           # Include imported module dependencies
+min_cbo = 0                      # Minimum CBO to report
+show_zeros = false               # Exclude CBO = 0
+
+# =============================================================================
+# ANALYSIS CONFIGURATION
+# =============================================================================
+[analysis]
+recursive = true                 # Recursively analyze directories
+follow_symlinks = false          # Follow symbolic links
+include_patterns = ["src/**/*.py"]  # Restrict to project source
+exclude_patterns = [             # Exclude tests, caches, examples and build artifacts
+    "**/test_*.py",
+    "**/*_test.py",
+    "tests/**",
+    "examples/**",
+    "dist/**",
+    "htmlcov/**",
+    ".pyscn/**",
+    ".mypy_cache/**",
+    ".ruff_cache/**",
+    "**/__pycache__/*",
+    "**/*.pyc",
+    "**/.pytest_cache/**",
+    ".tox/**",
+    ".idea/**",
+    "venv/**",
+    "env/**",
+    ".venv/**",
+    ".env/**"
+]
+
+# =============================================================================
+# DEPENDENCY ANALYSIS (strict)
+# =============================================================================
+[dependencies]
+enabled = true
+include_stdlib = false
+include_third_party = false      # Focus on internal coupling
+follow_relative = true
+
+# Analysis options
+detect_cycles = true
+calculate_metrics = true
+find_long_chains = true
+
+# Thresholds and reporting
+min_coupling = 0
+max_coupling = 8                 # Stricter coupling limit
+min_instability = 0.0
+max_distance = 1.0
+sort_by = "risk"                 # name, coupling, instability, distance, risk
+show_matrix = false
+show_metrics = true
+show_chains = true
+generate_dot_graph = false
+cycle_reporting = "critical"     # all, critical, summary
+max_cycles_to_show = 10
+show_cycle_paths = true
+
+# =============================================================================
+# SYSTEM ANALYSIS
+# =============================================================================
+[system_analysis]
+enabled = true
+enable_dependencies = true
+enable_architecture = true
+use_complexity_data = true
+use_clones_data = true
+use_dead_code_data = true
+generate_unified_report = true
+# =============================================================================
+# ARCHITECTURE VALIDATION
+# =============================================================================
+# Define architectural layers and validate dependencies
+
+[architecture]
+enabled = true
+validate_layers = true
+validate_cohesion = true
+validate_responsibility = true
+min_cohesion = 0.6
+max_coupling = 8
+max_responsibilities = 3
+layer_violation_severity = "error"
+cohesion_violation_severity = "warning"
+responsibility_violation_severity = "warning"
+show_all_violations = false
+group_by_type = true
+include_suggestions = true
+max_violations_to_show = 50
+strict_mode = true
+fail_on_violations = true
+
+[[architecture.layers]]
+name = "presentation"
+packages = [
+    "endpoint", "endpoints",
+    "handler", "handlers",
+    "api", "apis", "router", "routers",
+    "controller", "controllers", "view", "views",
+    "ui", "web", "rest", "graphql"
+]
+
+[[architecture.layers]]
+name = "application"
+packages = [
+    "service", "services",
+    "manager", "managers",
+    "base_abc",
+    "usecase", "usecases", "use_case", "use_cases",
+    "workflow", "workflows", "command", "commands",
+    "query", "queries", "dependencies", "dependency"
+]
+
+[[architecture.layers]]
+name = "domain"
+packages = [
+    "data_model",
+    "event",
+    "pattern",
+    "model", "models", "entity", "entities", "schema", "schemas",
+    "domain", "domains", "core", "business",
+    "aggregate", "aggregates", "valueobject", "valueobjects"
+]
+
+[[architecture.layers]]
+name = "infrastructure"
+packages = [
+    "config", "loggers", "utils", "tools",
+    "repository", "repositories", "repo", "repos",
+    "db", "database", "adapter", "adapters",
+    "persistence", "storage", "cache", "client", "clients", "external"
+]
+[[architecture.rules]]
+from = "presentation" 
+allow = ["presentation", "application", "domain", "infrastructure"]
+
+[[architecture.rules]]
+from = "application" 
+allow = ["application", "domain", "infrastructure"]
+
+[[architecture.rules]]
+from = "domain" 
+allow = ["domain", "infrastructure"] 
+deny = ["presentation", "application"]
+
+[[architecture.rules]]
+from = "infrastructure" 
+allow = ["infrastructure", "domain", "application"]
+
+
+# =============================================================================
+# EXAMPLE CONFIGURATIONS
+# =============================================================================
+
+# Uncomment and modify these sections for common use cases:
+
+# # Strict mode - fail on any issues
+# [complexity]
+# max_complexity = 10
+# [dead_code]
+# min_severity = "critical"
+# 
+# # Relaxed mode - only catch major issues  
+# [complexity]
+# low_threshold = 15
+# medium_threshold = 25
+# [dead_code]
+# min_severity = "warning"
+# 
+# # Clone detection focused on exact matches
+# [clones]
+# similarity_threshold = 0.95
+# enabled_clone_types = ["type1", "type2"]
+# 
+# # Performance optimized for large codebases
+# [clones]
+# max_goroutines = 8
+# max_memory_mb = 1024
+# min_lines = 10
+# min_nodes = 20
+# lsh_enabled = true
