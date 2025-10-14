@@ -35,12 +35,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pr-agent-
 
-    - name: Install PR-Agent from source
+    - name: Clone PR-Agent repository
       if: steps.pr-agent-cache.outputs.cache-hit != 'true'
       timeout-minutes: 5
       run: |
-        echo "📦 Installing PR-Agent from source..."
+        echo "📦 Cloning PR-Agent repository..."
         git clone --depth 1 https://github.com/qodo-ai/pr-agent.git /tmp/pr-agent
+        echo "✅ PR-Agent repository cloned successfully"
+
+    - name: Install PR-Agent dependencies
+      timeout-minutes: 5
+      run: |
+        echo "📦 Installing PR-Agent dependencies..."
         cd /tmp/pr-agent
         pip install -e .
         echo "✅ PR-Agent installed successfully"
