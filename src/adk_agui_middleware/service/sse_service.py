@@ -42,11 +42,11 @@ class SSEService(BaseSSEService):
     """
 
     def __init__(
-            self,
-            agent: BaseAgent,
-            config_context: ConfigContext,
-            runner_config: RunnerConfig | None = None,
-            handler_context: HandlerContext | None = None,
+        self,
+        agent: BaseAgent,
+        config_context: ConfigContext,
+        runner_config: RunnerConfig | None = None,
+        handler_context: HandlerContext | None = None,
     ):
         """Initialize SSE service with agent and configuration.
 
@@ -69,7 +69,7 @@ class SSEService(BaseSSEService):
         )
 
     async def _get_config_value(
-            self, config_attr: str, agui_content: RunAgentInput, request: Request
+        self, config_attr: str, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract configuration value from context config.
 
@@ -93,7 +93,7 @@ class SSEService(BaseSSEService):
         return value
 
     async def _create_and_record_message(
-            self, input_info: InputInfo
+        self, input_info: InputInfo
     ) -> BaseInOutHandler | None:
         """Create and record incoming message for audit and logging purposes.
 
@@ -114,7 +114,7 @@ class SSEService(BaseSSEService):
 
     @staticmethod
     async def _record_output_message(
-            inout_handler: BaseInOutHandler | None, output_data: BaseEvent
+        inout_handler: BaseInOutHandler | None, output_data: BaseEvent
     ) -> BaseEvent:
         """Record and potentially transform outgoing message data.
 
@@ -134,7 +134,7 @@ class SSEService(BaseSSEService):
         return output_data
 
     async def extract_app_name(
-            self, agui_content: RunAgentInput, request: Request
+        self, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract application name from the request context.
 
@@ -151,7 +151,7 @@ class SSEService(BaseSSEService):
         return await self._get_config_value("app_name", agui_content, request)
 
     async def extract_user_id(
-            self, agui_content: RunAgentInput, request: Request
+        self, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract user identifier from the request context.
 
@@ -168,7 +168,7 @@ class SSEService(BaseSSEService):
         return await self._get_config_value("user_id", agui_content, request)
 
     async def extract_session_id(
-            self, agui_content: RunAgentInput, request: Request
+        self, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract session identifier from the request context.
 
@@ -185,7 +185,7 @@ class SSEService(BaseSSEService):
         return await self._get_config_value("session_id", agui_content, request)
 
     async def extract_initial_state(
-            self, agui_content: RunAgentInput, request: Request
+        self, agui_content: RunAgentInput, request: Request
     ) -> dict[str, Any] | None:
         """Extract initial state dictionary from the request context.
 
@@ -239,7 +239,7 @@ class SSEService(BaseSSEService):
         )
 
     async def get_runner(
-            self, agui_content: RunAgentInput, request: Request
+        self, agui_content: RunAgentInput, request: Request
     ) -> tuple[
         Callable[[], AsyncGenerator[BaseEvent]],
         InputInfo,
@@ -316,10 +316,10 @@ class SSEService(BaseSSEService):
         return runner, input_info, in_out_record
 
     async def event_generator(
-            self,
-            runner: Callable[[], AsyncGenerator[BaseEvent]],
-            input_info: InputInfo,
-            inout_handler: BaseInOutHandler | None = None,
+        self,
+        runner: Callable[[], AsyncGenerator[BaseEvent]],
+        input_info: InputInfo,
+        inout_handler: BaseInOutHandler | None = None,
     ) -> EventSourceResponse | StreamingResponse:
         """Generate encoded event strings from the agent runner.
 
