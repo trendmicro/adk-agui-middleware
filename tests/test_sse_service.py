@@ -45,7 +45,8 @@ class TestSSEService(unittest.TestCase):
         self.assertEqual(self.sse_service.runner_config, self.runner_config)
         self.assertEqual(self.sse_service.config_context, self.context_config)
         self.assertIsNotNone(self.sse_service.session_manager)
-        self.assertEqual(self.sse_service.runner_box, {})
+        self.assertIsNotNone(self.sse_service.shutdown_handler)
+        self.assertIsNotNone(self.sse_service.session_lock_handler)
 
     async def test_get_config_value_static_string(self):
         """Test _get_config_value with static string configuration."""
@@ -159,28 +160,33 @@ class TestSSEService(unittest.TestCase):
         result = await self.sse_service._create_runner(app_name)
 
         self.assertEqual(result, mock_runner_instance)
-        self.assertIn(app_name, self.sse_service.runner_box)
-        self.assertEqual(self.sse_service.runner_box[app_name], mock_runner_instance)
 
         # Verify Runner was created with correct parameters
-        mock_runner_class.assert_called_once_with(
-            app_name=app_name,
-            agent=self.mock_agent,
-            session_service=self.sse_service.session_manager.session_service,
-            artifact_service=self.runner_config.get_artifact_service(),
-            memory_service=self.runner_config.get_memory_service(),
-            credential_service=self.runner_config.get_credential_service(),
-        )
+        # Note: agent should be deep copied, so we check the type instead of exact instance
+        mock_runner_class.assert_called_once()
+        call_kwargs = mock_runner_class.call_args[1]
+        self.assertEqual(call_kwargs["app_name"], app_name)
+        self.assertEqual(call_kwargs["session_service"], self.sse_service.session_manager.session_service)
+        self.assertEqual(call_kwargs["artifact_service"], self.runner_config.get_artifact_service())
+        self.assertEqual(call_kwargs["memory_service"], self.runner_config.get_memory_service())
+        self.assertEqual(call_kwargs["credential_service"], self.runner_config.get_credential_service())
+        self.assertEqual(call_kwargs["plugins"], self.runner_config.plugins)
 
-    async def test_create_runner_cached(self):
-        """Test _create_runner returns cached runner for existing app."""
-        app_name = "cached_app"
-        cached_runner = Mock(spec=Runner)
-        self.sse_service.runner_box[app_name] = cached_runner
+    @patch("adk_agui_middleware.service.sse_service.Runner")
+    async def test_create_runner_creates_new_instance(self, mock_runner_class):
+        """Test _create_runner creates a new runner instance each time."""
+        mock_runner_instance1 = Mock(spec=Runner)
+        mock_runner_instance2 = Mock(spec=Runner)
+        mock_runner_class.side_effect = [mock_runner_instance1, mock_runner_instance2]
 
-        result = await self.sse_service._create_runner(app_name)
+        app_name = "test_app"
+        result1 = await self.sse_service._create_runner(app_name)
+        result2 = await self.sse_service._create_runner(app_name)
 
-        self.assertEqual(result, cached_runner)
+        # Each call should create a new instance
+        self.assertEqual(result1, mock_runner_instance1)
+        self.assertEqual(result2, mock_runner_instance2)
+        self.assertEqual(mock_runner_class.call_count, 2)
 
     @patch("adk_agui_middleware.service.sse_service.AGUIUserHandler")
     @patch("adk_agui_middleware.service.sse_service.UserMessageHandler")
@@ -343,17 +349,26 @@ class TestSSEService(unittest.TestCase):
         # Verify service was created successfully
         self.assertEqual(service.config_context, context_config)
 
-    async def test_runner_box_isolation(self):
-        """Test that runner_box maintains separate runners per app."""
+    @patch("adk_agui_middleware.service.sse_service.Runner")
+    async def test_runner_creation_isolation(self, mock_runner_class):
+        """Test that each _create_runner call creates independent runner instances."""
+        mock_runner1 = Mock(spec=Runner)
+        mock_runner2 = Mock(spec=Runner)
+        mock_runner3 = Mock(spec=Runner)
+        mock_runner_class.side_effect = [mock_runner1, mock_runner2, mock_runner3]
+
         app1_runner = await self.sse_service._create_runner("app1")
         app2_runner = await self.sse_service._create_runner("app2")
 
         # Should be different instances
         self.assertNotEqual(app1_runner, app2_runner)
 
-        # Should be cached
-        app1_runner_cached = await self.sse_service._create_runner("app1")
-        self.assertEqual(app1_runner, app1_runner_cached)
+        # Each call creates a new instance (no caching)
+        app1_runner_again = await self.sse_service._create_runner("app1")
+        self.assertNotEqual(app1_runner, app1_runner_again)
+
+        # Verify all three runners were created
+        self.assertEqual(mock_runner_class.call_count, 3)
 
     @patch("adk_agui_middleware.service.sse_service.SessionManager")
     def test_session_manager_initialization(self, mock_session_manager_class):
