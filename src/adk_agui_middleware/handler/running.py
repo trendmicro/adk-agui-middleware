@@ -46,12 +46,12 @@ class RunningHandler:
     """
 
     def __init__(
-        self,
-        runner: Runner | None = None,
-        run_config: RunConfig | None = None,
-        handler_context: HandlerContext | None = None,
-        input_info: InputInfo | None = None,
-        event_translator: EventTranslator | None = None,
+            self,
+            runner: Runner | None = None,
+            run_config: RunConfig | None = None,
+            handler_context: HandlerContext | None = None,
+            input_info: InputInfo | None = None,
+            event_translator: EventTranslator | None = None,
     ):
         """Initialize the running handler with agent runner and configuration.
 
@@ -126,15 +126,15 @@ class RunningHandler:
         if self.adk_event_timeout_handler is None:
             return
         async for (
-            event
+                event
         ) in await self.adk_event_timeout_handler.process_timeout_fallback():
             yield event
 
     @staticmethod
     async def _process_single_event(
-        event: BaseEvent | Event,
-        log_func: Any,
-        event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None,
+            event: BaseEvent | Event,
+            log_func: Any,
+            event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None,
     ) -> AsyncGenerator[BaseEvent | Event]:
         """Process a single event with logging and optional custom event handler.
 
@@ -158,11 +158,11 @@ class RunningHandler:
                 yield new_event
 
     async def _process_events_with_handler(
-        self,
-        event_stream: AsyncGenerator,  # type: ignore[type-arg]
-        log_func: Any,
-        event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None = None,
-        enable_timeout: bool = False,
+            self,
+            event_stream: AsyncGenerator,  # type: ignore[type-arg]
+            log_func: Any,
+            event_handler: BaseADKEventHandler | BaseAGUIEventHandler | None = None,
+            enable_timeout: bool = False,
     ) -> AsyncGenerator:  # type: ignore[type-arg]
         """Process an event stream with optional event handler and logging.
 
@@ -182,7 +182,7 @@ class RunningHandler:
             async with asyncio.timeout(await self._get_timeout(enable_timeout)):
                 async for event in event_stream:
                     async for processed_event in self._process_single_event(
-                        event, log_func, event_handler
+                            event, log_func, event_handler
                     ):
                         yield processed_event
         except TimeoutError:
@@ -191,7 +191,7 @@ class RunningHandler:
                 yield fallback_event
 
     def _select_translation_function(
-        self, adk_event: Event
+            self, adk_event: Event
     ) -> Callable[[Event], AsyncGenerator[BaseEvent]]:
         """Select appropriate translation function based on event characteristics.
 
@@ -211,7 +211,7 @@ class RunningHandler:
         return self.event_translator.translate
 
     async def _translate_adk_to_agui_async(
-        self, adk_event: Event
+            self, adk_event: Event
     ) -> AsyncGenerator[BaseEvent]:
         """Translate ADK events to AGUI events with custom handler and long-running tool detection.
 
@@ -227,7 +227,7 @@ class RunningHandler:
         """
         if self.translate_handler:
             async for translate_event in await self.translate_handler.translate(
-                adk_event
+                    adk_event
             ):
                 if translate_event.agui_event is not None:
                     yield translate_event.agui_event
@@ -241,7 +241,7 @@ class RunningHandler:
             yield agui_event
 
     def update_agent_tools(
-        self, agui_queue: QueueManager, frontend_tools: list[Tool]
+            self, agui_queue: QueueManager, frontend_tools: list[Tool]
     ) -> None:
         """Inject or merge frontend tools into the agent toolset without duplication.
 
@@ -288,7 +288,7 @@ class RunningHandler:
         return self.event_translator.force_close_streaming_message()
 
     async def create_state_snapshot_event(
-        self, final_state: dict[str, Any]
+            self, final_state: dict[str, Any]
     ) -> StateSnapshotEvent | None:
         """Create a state snapshot event with optional state processing.
 
@@ -337,7 +337,7 @@ class RunningHandler:
         )
 
     def run_async_with_history(
-        self, runner: AsyncGenerator[Event]
+            self, runner: AsyncGenerator[Event]
     ) -> AsyncGenerator[Event]:
         """Process historical events through the ADK event handler pipeline.
 
@@ -376,3 +376,6 @@ class RunningHandler:
             record_agui_raw_log,
             self.agui_event_handler,
         )
+
+    def close(self) -> None:
+        self.runner.close()

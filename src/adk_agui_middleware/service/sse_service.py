@@ -42,11 +42,11 @@ class SSEService(BaseSSEService):
     """
 
     def __init__(
-        self,
-        agent: BaseAgent,
-        config_context: ConfigContext,
-        runner_config: RunnerConfig | None = None,
-        handler_context: HandlerContext | None = None,
+            self,
+            agent: BaseAgent,
+            config_context: ConfigContext,
+            runner_config: RunnerConfig | None = None,
+            handler_context: HandlerContext | None = None,
     ):
         """Initialize SSE service with agent and configuration.
 
@@ -61,8 +61,6 @@ class SSEService(BaseSSEService):
         self.session_manager = SessionManager(
             session_service=self.runner_config.session_service
         )
-        self._runner_lock = asyncio.Lock()
-        self.runner_box: dict[str, Runner] = {}
         self.config_context = config_context
         self.handler_context = handler_context or HandlerContext()
         self.shutdown_handler = ShutdownHandler()
@@ -71,7 +69,7 @@ class SSEService(BaseSSEService):
         )
 
     async def _get_config_value(
-        self, config_attr: str, agui_content: RunAgentInput, request: Request
+            self, config_attr: str, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract configuration value from context config.
 
@@ -95,7 +93,7 @@ class SSEService(BaseSSEService):
         return value
 
     async def _create_and_record_message(
-        self, input_info: InputInfo
+            self, input_info: InputInfo
     ) -> BaseInOutHandler | None:
         """Create and record incoming message for audit and logging purposes.
 
@@ -116,7 +114,7 @@ class SSEService(BaseSSEService):
 
     @staticmethod
     async def _record_output_message(
-        inout_handler: BaseInOutHandler | None, output_data: BaseEvent
+            inout_handler: BaseInOutHandler | None, output_data: BaseEvent
     ) -> BaseEvent:
         """Record and potentially transform outgoing message data.
 
@@ -136,7 +134,7 @@ class SSEService(BaseSSEService):
         return output_data
 
     async def extract_app_name(
-        self, agui_content: RunAgentInput, request: Request
+            self, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract application name from the request context.
 
@@ -153,7 +151,7 @@ class SSEService(BaseSSEService):
         return await self._get_config_value("app_name", agui_content, request)
 
     async def extract_user_id(
-        self, agui_content: RunAgentInput, request: Request
+            self, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract user identifier from the request context.
 
@@ -170,7 +168,7 @@ class SSEService(BaseSSEService):
         return await self._get_config_value("user_id", agui_content, request)
 
     async def extract_session_id(
-        self, agui_content: RunAgentInput, request: Request
+            self, agui_content: RunAgentInput, request: Request
     ) -> str:
         """Extract session identifier from the request context.
 
@@ -187,7 +185,7 @@ class SSEService(BaseSSEService):
         return await self._get_config_value("session_id", agui_content, request)
 
     async def extract_initial_state(
-        self, agui_content: RunAgentInput, request: Request
+            self, agui_content: RunAgentInput, request: Request
     ) -> dict[str, Any] | None:
         """Extract initial state dictionary from the request context.
 
@@ -230,35 +228,18 @@ class SSEService(BaseSSEService):
             return converter(AGUIErrorEvent.create_encoding_error_event(e))
 
     async def _create_runner(self, app_name: str) -> Runner:
-        """Create or retrieve a Runner instance for the specified application.
-
-        Implements lazy initialization and caching of Runner instances per app.
-        Each app gets its own Runner with configured services.
-
-        Args:
-            :param app_name: Name of the application requiring a runner
-
-        Returns:
-            Runner instance configured for the specified application
-        """
-        async with self._runner_lock:
-            if app_name not in self.runner_box:
-                runner = Runner(
-                    app_name=app_name,
-                    agent=self.agent,
-                    session_service=self.session_manager.session_service,
-                    artifact_service=self.runner_config.get_artifact_service(),
-                    memory_service=self.runner_config.get_memory_service(),
-                    credential_service=self.runner_config.get_credential_service(),
-                    plugins=self.runner_config.plugins,
-                )
-                self.shutdown_handler.register_shutdown_function(runner.close)
-                self.runner_box[app_name] = runner
-            self.runner_box[app_name].agent = self.agent.model_copy(deep=True)
-            return self.runner_box[app_name]
+        return Runner(
+            app_name=app_name,
+            agent=self.agent.model_copy(deep=True),
+            session_service=self.session_manager.session_service,
+            artifact_service=self.runner_config.get_artifact_service(),
+            memory_service=self.runner_config.get_memory_service(),
+            credential_service=self.runner_config.get_credential_service(),
+            plugins=self.runner_config.plugins,
+        )
 
     async def get_runner(
-        self, agui_content: RunAgentInput, request: Request
+            self, agui_content: RunAgentInput, request: Request
     ) -> tuple[
         Callable[[], AsyncGenerator[BaseEvent]],
         InputInfo,
@@ -335,10 +316,10 @@ class SSEService(BaseSSEService):
         return runner, input_info, in_out_record
 
     async def event_generator(
-        self,
-        runner: Callable[[], AsyncGenerator[BaseEvent]],
-        input_info: InputInfo,
-        inout_handler: BaseInOutHandler | None = None,
+            self,
+            runner: Callable[[], AsyncGenerator[BaseEvent]],
+            input_info: InputInfo,
+            inout_handler: BaseInOutHandler | None = None,
     ) -> EventSourceResponse | StreamingResponse:
         """Generate encoded event strings from the agent runner.
 
@@ -377,14 +358,3 @@ class SSEService(BaseSSEService):
         if self.config_context.event_source_response_mode:
             return EventSourceResponse(_generate())
         return StreamingResponse(cast(AsyncGenerator[str], _generate()))
-
-    async def close(self) -> None:
-        """Close all cached Runner instances and clean up resources.
-
-        Gracefully shuts down all cached Runner instances and clears the runner cache.
-        This method is thread-safe and uses a lock to prevent race conditions during shutdown.
-        """
-        async with self._runner_lock:
-            for runner in self.runner_box.values():
-                await runner.close()  # type: ignore[no-untyped-call]
-            self.runner_box.clear()

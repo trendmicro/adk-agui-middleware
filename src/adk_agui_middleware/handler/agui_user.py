@@ -44,11 +44,11 @@ class AGUIUserHandler:
     """
 
     def __init__(
-        self,
-        running_handler: RunningHandler,
-        user_message_handler: UserMessageHandler,
-        session_handler: SessionHandler,
-        queue_handler: QueueHandler,
+            self,
+            running_handler: RunningHandler,
+            user_message_handler: UserMessageHandler,
+            session_handler: SessionHandler,
+            queue_handler: QueueHandler,
     ):
         """Initialize the AGUI user handler.
 
@@ -84,6 +84,9 @@ class AGUIUserHandler:
         self.running_handler.update_agent_tools(
             self.agui_queue, self.user_message_handler.frontend_tools
         )
+
+    async def _async_close(self):
+        self.running_handler.close()
 
     @property
     def app_name(self) -> str:
@@ -164,9 +167,9 @@ class AGUIUserHandler:
             return False
         for func_call in adk_event.get_function_calls():
             if (
-                func_call.id in adk_event.long_running_tool_ids
-                and func_call.id
-                and func_call.name
+                    func_call.id in adk_event.long_running_tool_ids
+                    and func_call.id
+                    and func_call.name
             ):
                 self.tool_call_info[func_call.id] = func_call.name
                 return True
@@ -229,9 +232,9 @@ class AGUIUserHandler:
     async def _run_async_with_adk(self) -> None:
         async with adk_event_exception_handler(self.adk_queue):
             async for adk_event in self.running_handler.run_async_with_adk(
-                user_id=self.user_id,
-                session_id=self.session_id,
-                new_message=self.input_message,
+                    user_id=self.user_id,
+                    session_id=self.session_id,
+                    new_message=self.input_message,
             ):
                 await self.adk_queue.put(adk_event)
 
@@ -239,20 +242,20 @@ class AGUIUserHandler:
         async with agui_event_exception_handler(self.agui_queue):
             async for adk_event in self.adk_queue.get_iterator():
                 async for agui_event in self.running_handler.run_async_with_agui(
-                    adk_event
+                        adk_event
                 ):
                     await self.agui_queue.put(agui_event)
                 if self.check_is_long_running_tool(adk_event):
                     return
             async for (
-                ag_ui_event
+                    ag_ui_event
             ) in self.running_handler.force_close_streaming_message():
                 await self.agui_queue.put(ag_ui_event)
             if (
-                event_final_state
-                := await self.running_handler.create_state_snapshot_event(
-                    await self.session_handler.get_session_state()
-                )
+                    event_final_state
+                    := await self.running_handler.create_state_snapshot_event(
+                        await self.session_handler.get_session_state()
+                    )
             ) is not None:
                 await self.agui_queue.put(event_final_state)
 
@@ -308,3 +311,5 @@ class AGUIUserHandler:
                 yield event
         except Exception as e:
             yield AGUIErrorEvent.create_execution_error_event(e)
+        finally:
+            await self._async_close()
