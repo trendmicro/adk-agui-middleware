@@ -2,6 +2,7 @@
 """Concrete implementation of Server-Sent Events service for AGUI middleware."""
 
 import asyncio
+import copy
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Any, cast
 
@@ -254,6 +255,7 @@ class SSEService(BaseSSEService):
                 )
                 self.shutdown_handler.register_shutdown_function(runner.close)
                 self.runner_box[app_name] = runner
+            self.runner_box[app_name].agent = self.agent.model_copy(deep=True)
             return self.runner_box[app_name]
 
     async def get_runner(
