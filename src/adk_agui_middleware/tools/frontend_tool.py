@@ -10,14 +10,10 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools import BaseTool, LongRunningFunctionTool, ToolContext
 from google.adk.tools.base_toolset import BaseToolset, ToolPredicate
 from google.genai import types
-from pydantic import TypeAdapter
 
 from ..loggers.record_log import record_error_log
 from ..manager.queue import QueueManager
 from ..utils.translate import FunctionCallEventUtil
-
-
-agui_tools_typeadapter = TypeAdapter(list[Tool])
 
 
 class FrontendTool(BaseTool):
@@ -181,9 +177,11 @@ class FrontendToolset(BaseToolset):
 
     Attributes:
         agui_queue: Class variable for Queue manager for sending events to clients
+        agui_tools: List of AGUI Tool definitions to convert
     """
 
     agui_queue: QueueManager | None = None
+    agui_tools: list[Tool] = []
 
     def __init__(
         self,
@@ -203,6 +201,7 @@ class FrontendToolset(BaseToolset):
 
         Args:
             :param agui_queue: Queue manager for sending function call events to clients
+            :param agui_tools: List of AGUI Tool definitions to expose to the agent
         """
         self.agui_queue = agui_queue
         self.agui_tools = agui_tools
