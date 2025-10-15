@@ -8,7 +8,11 @@ from typing import Any
 from ag_ui.core import BaseEvent, StateSnapshotEvent, Tool
 from google.adk import Runner
 from google.adk.agents import RunConfig
+from google.adk.agents.llm_agent import LlmAgent
 from google.adk.events import Event
+
+from adk_agui_middleware.manager.queue import QueueManager
+from adk_agui_middleware.tools.frontend_tool import FrontendToolset
 
 from ..base_abc.handler import (
     BaseADKEventHandler,
@@ -25,8 +29,6 @@ from ..loggers.record_log import (
     record_event_raw_log,
     record_warning_log,
 )
-from ..manager.queue import QueueManager
-from ..tools.frontend_tool import FrontendToolset
 
 
 class RunningHandler:
@@ -243,29 +245,33 @@ class RunningHandler:
     def update_agent_tools(
         self, agui_queue: QueueManager, frontend_tools: list[Tool]
     ) -> None:
-        """Inject or merge frontend tools into the agent toolset without duplication.
+        """Inject the agui queue manager and frontend tools into the available FrontendToolset instances.
 
-        Merges newly provided frontend Tool definitions into an existing FrontendToolset
-        if present on the agent; otherwise, appends a new FrontendToolset. Deduplication
-        is performed by tool name across existing BaseTool instances and existing
-        FrontendToolset.ag_ui_tools.
+        Recursively processes the main agent and all sub-agents to configure
+        FrontendToolset instances with the provided queue manager. Only processes
+        LlmAgent instances to ensure proper tool handling.
         """
-        if (
-            not self.runner
-            or not hasattr(self.runner.agent, "tools")
-            or not frontend_tools
-        ):
+        if not self.runner or not hasattr(self.runner.agent, "tools"):
             return
-        agent = self.runner.agent
-        existing_tools = (
-            agent.tools
-            if isinstance(agent.tools, list)
-            else ([agent.tools] if agent.tools else [])
-        )
-        existing_names = {t.__name__ for t in existing_tools if hasattr(t, "__name__")}
-        if new_tools := [t for t in frontend_tools if t.name not in existing_names]:
-            existing_tools.append(FrontendToolset(agui_queue, new_tools))
-            agent.tools = existing_tools
+
+        def _update_agent_tools_recursive(agent: Any) -> None:
+            """Recursively update tools for an agent and its sub-agents.
+
+            Args:
+                agent: Agent instance to process
+            """
+            if isinstance(agent, LlmAgent) and hasattr(agent, "tools"):
+                for tool in agent.tools:
+                    if isinstance(tool, FrontendToolset):
+                        tool.set_agui_state(agui_queue, frontend_tools)
+
+                # Recursively process sub-agents if they exist
+                if hasattr(agent, "sub_agents") and agent.sub_agents:
+                    for sub_agent in agent.sub_agents:
+                        if isinstance(sub_agent, LlmAgent):
+                            _update_agent_tools_recursive(sub_agent)
+
+        _update_agent_tools_recursive(self.runner.agent)
 
     def set_long_running_tool_ids(self, long_running_tool_ids: dict[str, str]) -> None:
         """Set long-running tool IDs in the event translator.
