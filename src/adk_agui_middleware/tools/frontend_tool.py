@@ -8,12 +8,16 @@ from typing import Any
 from ag_ui.core import Tool
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools import BaseTool, LongRunningFunctionTool, ToolContext
-from google.adk.tools.base_toolset import BaseToolset
+from google.adk.tools.base_toolset import BaseToolset, ToolPredicate
 from google.genai import types
+from pydantic import TypeAdapter
 
 from ..loggers.record_log import record_error_log
 from ..manager.queue import QueueManager
 from ..utils.translate import FunctionCallEventUtil
+
+
+agui_tools_typeadapter = TypeAdapter(list[Tool])
 
 
 class FrontendTool(BaseTool):
@@ -176,20 +180,32 @@ class FrontendToolset(BaseToolset):
     tool definitions.
 
     Attributes:
-        ag_ui_tools: List of AGUI Tool definitions to convert
-        agui_queue: Queue manager for sending events to clients
+        agui_queue: Class variable for Queue manager for sending events to clients
     """
 
-    def __init__(self, agui_queue: QueueManager, ag_ui_tools: list[Tool]) -> None:
-        """Initialize the frontend toolset with tool definitions and event queue.
+    agui_queue: QueueManager | None = None
+
+    def __init__(
+        self,
+        tool_filter: ToolPredicate | list[str] | None = None,
+        tool_name_prefix: str | None = None,
+    ) -> None:
+        """Initialize the frontend toolset with optional filtering and naming.
+
+        Args:
+            :param tool_filter: Optional filter to include/exclude specific tools by name or predicate
+            :param tool_name_prefix: Optional prefix to prepend to all tool namesent
+        """
+        super().__init__(tool_filter=tool_filter, tool_name_prefix=tool_name_prefix)
+
+    def set_agui_state(self, agui_queue: QueueManager, agui_tools: list[Tool]) -> None:
+        """Set the AGUI queue manager and tools for the toolset.
 
         Args:
             :param agui_queue: Queue manager for sending function call events to clients
-            :param ag_ui_tools: List of AGUI Tool definitions to expose to the agent
         """
-        super().__init__()
-        self.ag_ui_tools = ag_ui_tools
         self.agui_queue = agui_queue
+        self.agui_tools = agui_tools
 
     async def get_tools(self, _: ReadonlyContext | None = None) -> list[BaseTool]:
         """Get all frontend tools wrapped as ADK BaseTool instances.
@@ -204,8 +220,13 @@ class FrontendToolset(BaseToolset):
         Returns:
             List of successfully created FrontendTool instances
         """
+
+        if not self.agui_tools or not self.agui_queue:
+            return []
+
+        # Create FrontendTool instances from AGUI tools, logging and skipping any that fail
         proxy_tools: list[BaseTool] = []
-        for ag_ui_tool in self.ag_ui_tools:
+        for ag_ui_tool in self.agui_tools:
             try:
                 proxy_tools.append(
                     FrontendTool(ag_ui_tool=ag_ui_tool, agui_queue=self.agui_queue)
@@ -214,6 +235,24 @@ class FrontendToolset(BaseToolset):
                 record_error_log(
                     f"Failed to create proxy tool for '{ag_ui_tool.name}'.", e
                 )
+
+        # Apply tool filtering if configured
+        if self.tool_filter is not None:
+            if callable(self.tool_filter):
+                # ToolPredicate - function that takes BaseTool and returns bool
+                proxy_tools = [tool for tool in proxy_tools if self.tool_filter(tool)]
+            elif isinstance(self.tool_filter, list):
+                # List of allowed tool names
+                allowed_names = set(self.tool_filter)
+                proxy_tools = [
+                    tool for tool in proxy_tools if tool.name in allowed_names
+                ]
+
+        # Apply name prefix if configured
+        if self.tool_name_prefix:
+            for tool in proxy_tools:
+                tool.name = f"{self.tool_name_prefix}{tool.name}"
+
         return proxy_tools
 
     def __repr__(self) -> str:
@@ -222,4 +261,4 @@ class FrontendToolset(BaseToolset):
         Returns:
             String describing the toolset and its tools
         """
-        return f"ClientProxyToolset(tools={[tool.name for tool in self.ag_ui_tools]}, all_long_running=True)"
+        return f"ClientProxyToolset(tools={[tool.name for tool in self.agui_tools]}, all_long_running=True)"
