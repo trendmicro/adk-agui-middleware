@@ -53,6 +53,17 @@ class EventTranslator:
         self.message_event_util = MessageEventUtil()
 
     def _add_adk_event(self, raw_event: ADKEvent | None) -> ADKEvent | None:
+        """Optionally attach the original ADK event to emitted AGUI events.
+
+        When ``self.add_raw_event`` is enabled, downstream AGUI events include a
+        reference to the originating ADK event for debugging and tracing.
+
+        Args:
+            :param raw_event: The originating ADK event to optionally attach
+
+        Returns:
+            The ADK event if attachment is enabled; otherwise ``None``
+        """
         return raw_event if self.add_raw_event else None
 
     async def translate(self, adk_event: ADKEvent) -> AsyncGenerator[BaseEvent]:
@@ -251,6 +262,7 @@ class EventTranslator:
         as they are handled separately in the HITL workflow.
 
         Args:
+            :param adk_event: ADK event containing one or more function responses
         Yields:
             AGUI ToolCallResultEvent objects for completed function calls
         """
