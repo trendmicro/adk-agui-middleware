@@ -14,6 +14,7 @@ from ag_ui.core import (
     TextMessageEndEvent,
     TextMessageStartEvent,
 )
+from google.adk.events import Event
 
 from ...event.agui_event import CustomMessagesSnapshotEvent
 from ...event.agui_type import Message
@@ -28,7 +29,7 @@ class MessageEventUtil:
 
     @staticmethod
     async def generate_message_event(
-        message_id: str, message: str
+        message_id: str, message: str, adk_event: Event | None = None
     ) -> AsyncGenerator[BaseEvent]:
         """Generate a complete text message event sequence.
 
@@ -44,18 +45,24 @@ class MessageEventUtil:
             BaseEvent objects for the complete message sequence
         """
         yield TextMessageStartEvent(
-            type=EventType.TEXT_MESSAGE_START, message_id=message_id, role="assistant"
+            type=EventType.TEXT_MESSAGE_START,
+            message_id=message_id,
+            role="assistant",
+            raw_event=adk_event,
         )
         yield TextMessageContentEvent(
-            type=EventType.TEXT_MESSAGE_CONTENT, message_id=message_id, delta=message
+            type=EventType.TEXT_MESSAGE_CONTENT,
+            message_id=message_id,
+            delta=message,
+            raw_event=adk_event,
         )
         yield TextMessageEndEvent(
-            type=EventType.TEXT_MESSAGE_END, message_id=message_id
+            type=EventType.TEXT_MESSAGE_END, message_id=message_id, raw_event=adk_event
         )
 
     @staticmethod
     def create_message_snapshot(
-        message_list: list[Message] | None,
+        message_list: list[Message] | None, adk_event: Event | None = None
     ) -> CustomMessagesSnapshotEvent:
         """Create a message snapshot event from a list of messages.
 
@@ -69,5 +76,7 @@ class MessageEventUtil:
             MessagesSnapshotEvent containing the messages (empty if None provided)
         """
         return CustomMessagesSnapshotEvent(
-            type=EventType.MESSAGES_SNAPSHOT, messages=message_list or []
+            type=EventType.MESSAGES_SNAPSHOT,
+            messages=message_list or [],
+            raw_event=adk_event,
         )

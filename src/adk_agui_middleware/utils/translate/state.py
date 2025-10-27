@@ -4,6 +4,7 @@
 from typing import Any
 
 from ag_ui.core import EventType, StateDeltaEvent, StateSnapshotEvent
+from google.adk.events import Event
 
 
 class StateEventUtil:
@@ -15,7 +16,7 @@ class StateEventUtil:
 
     @staticmethod
     def create_state_delta_event_with_json_patch(
-        delta: list[dict[str, Any]],
+        delta: list[dict[str, Any]], adk_event: Event | None = None
     ) -> StateDeltaEvent:
         """Create a state delta event with JSON Patch operations.
 
@@ -25,11 +26,13 @@ class StateEventUtil:
         Returns:
             StateDeltaEvent containing the JSON Patch operations
         """
-        return StateDeltaEvent(type=EventType.STATE_DELTA, delta=delta)
+        return StateDeltaEvent(
+            type=EventType.STATE_DELTA, delta=delta, raw_event=adk_event
+        )
 
     @staticmethod
     def create_state_snapshot_event(
-        state_snapshot: dict[str, Any],
+        state_snapshot: dict[str, Any], adk_event: Event | None = None
     ) -> StateSnapshotEvent:
         """Create a state snapshot event with complete state data.
 
@@ -40,5 +43,5 @@ class StateEventUtil:
             StateSnapshotEvent containing the full state snapshot
         """
         return StateSnapshotEvent(
-            type=EventType.STATE_SNAPSHOT, snapshot=state_snapshot
+            type=EventType.STATE_SNAPSHOT, snapshot=state_snapshot, raw_event=adk_event
         )
