@@ -1,4 +1,10 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
+"""Common request context and session lock configuration models.
+
+Defines the ``SessionLockConfig`` used by session lock handlers, and the
+``InputInfo`` container that carries request context through the middleware.
+"""
+
 from typing import Any
 
 from ag_ui.core import RunAgentInput

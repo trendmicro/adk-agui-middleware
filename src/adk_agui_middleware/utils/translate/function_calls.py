@@ -19,6 +19,7 @@ from ag_ui.core import (
     ToolCallResultEvent,
     ToolCallStartEvent,
 )
+from google.adk.events import Event
 from google.genai import types
 
 from ...tools.json_encoder import PydanticJsonEncoder
@@ -33,7 +34,9 @@ class FunctionCallEventUtil:
 
     @staticmethod
     def create_function_result_event(
-        tool_call_id: str, content: dict[str, Any] | None
+        tool_call_id: str,
+        content: dict[str, Any] | None,
+        adk_event: Event | None = None,
     ) -> ToolCallResultEvent:
         """Create a tool call result event from function response content.
 
@@ -52,6 +55,7 @@ class FunctionCallEventUtil:
             type=EventType.TOOL_CALL_RESULT,
             tool_call_id=tool_call_id,
             content=json.dumps(content, cls=PydanticJsonEncoder) if content else "",
+            raw_event=adk_event,
         )
 
     @staticmethod
@@ -59,6 +63,7 @@ class FunctionCallEventUtil:
         tool_call_id: str,
         tool_call_name: str,
         tool_call_args: dict[str, Any] | str | None,
+        adk_event: Event | None = None,
     ) -> AsyncGenerator[BaseEvent]:
         """Generate a complete sequence of tool call events.
 
@@ -77,6 +82,7 @@ class FunctionCallEventUtil:
             type=EventType.TOOL_CALL_START,
             tool_call_id=tool_call_id,
             tool_call_name=tool_call_name,
+            raw_event=adk_event,
         )
         if tool_call_args:
             args_str = (
@@ -88,12 +94,14 @@ class FunctionCallEventUtil:
                 type=EventType.TOOL_CALL_ARGS,
                 tool_call_id=tool_call_id,
                 delta=args_str,
+                raw_event=adk_event,
             )
-        yield ToolCallEndEvent(type=EventType.TOOL_CALL_END, tool_call_id=tool_call_id)
+        yield ToolCallEndEvent(
+            type=EventType.TOOL_CALL_END, tool_call_id=tool_call_id, raw_event=adk_event
+        )
 
     async def generate_function_calls_event(
-        self,
-        function_calls: list[types.FunctionCall],
+        self, function_calls: list[types.FunctionCall], adk_event: Event | None = None
     ) -> AsyncGenerator[BaseEvent]:
         """Generate AGUI events for multiple Google GenAI function calls.
 
@@ -114,5 +122,6 @@ class FunctionCallEventUtil:
                 tool_call_id=tool_call_id,
                 tool_call_name=func_call.name,
                 tool_call_args=func_call.args,
+                adk_event=adk_event,
             ):
                 yield agui_event

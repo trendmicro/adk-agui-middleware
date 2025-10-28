@@ -22,6 +22,11 @@ class SessionLockHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, lock_config: SessionLockConfig):
+        """Initialize the session lock handler with configuration.
+
+        Args:
+            :param lock_config: Settings controlling lock timeout and retry policy
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
@@ -87,6 +92,11 @@ class BaseTranslateHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, input_info: InputInfo | None):
+        """Initialize the translate handler with input context.
+
+        Args:
+            :param input_info: Request context, if available, to inform translation
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
@@ -120,6 +130,11 @@ class BaseADKEventHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, input_info: InputInfo | None):
+        """Initialize the ADK event handler with input context.
+
+        Args:
+            :param input_info: Request context, if available, for preprocessing logic
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
@@ -152,6 +167,11 @@ class BaseADKEventTimeoutHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, input_info: InputInfo | None):
+        """Initialize the ADK event timeout handler with input context.
+
+        Args:
+            :param input_info: Request context for determining timeout behavior
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
@@ -198,6 +218,11 @@ class BaseAGUIEventHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, input_info: InputInfo | None):
+        """Initialize the AGUI event handler with input context.
+
+        Args:
+            :param input_info: Request context, if available, for post-translation logic
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod
@@ -232,6 +257,11 @@ class BaseAGUIStateSnapshotHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, input_info: InputInfo | None):
+        """Initialize the state snapshot handler with input context.
+
+        Args:
+            :param input_info: Request context used to shape state snapshots
+        """
         raise NotImplementedError("This method should be implemented by subclasses.")
 
     @abstractmethod

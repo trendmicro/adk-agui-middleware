@@ -1,4 +1,10 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
+"""History handler for listing sessions and building message snapshots.
+
+Provides utilities to retrieve sessions, delete sessions, and convert stored
+ADK events into AGUI message snapshots for client consumption.
+"""
+
 from collections.abc import AsyncGenerator, Callable
 
 from ag_ui.core import BaseEvent, SystemMessage, UserMessage

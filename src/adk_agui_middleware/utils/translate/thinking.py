@@ -5,6 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator
 
 from ag_ui.core import EventType, ThinkingEndEvent, ThinkingStartEvent
+from google.adk.events import Event
 
 from ...data_model.event import TranslateEvent
 from ...event.agui_event import (
@@ -22,7 +23,7 @@ class ThinkingEventUtil:
     """
 
     @staticmethod
-    def create_thinking_event_start() -> TranslateEvent:
+    def create_thinking_event_start(adk_event: Event | None = None) -> TranslateEvent:
         """Create a thinking start event to begin AI reasoning display.
 
         Returns:
@@ -30,12 +31,12 @@ class ThinkingEventUtil:
         """
         return TranslateEvent(
             agui_event=ThinkingStartEvent(
-                type=EventType.THINKING_START,
+                type=EventType.THINKING_START, raw_event=adk_event
             )
         )
 
     @staticmethod
-    def create_thinking_event_end() -> TranslateEvent:
+    def create_thinking_event_end(adk_event: Event | None = None) -> TranslateEvent:
         """Create a thinking end event to conclude AI reasoning display.
 
         Returns:
@@ -43,7 +44,7 @@ class ThinkingEventUtil:
         """
         return TranslateEvent(
             agui_event=ThinkingEndEvent(
-                type=EventType.THINKING_END,
+                type=EventType.THINKING_END, raw_event=adk_event
             )
         )
 
@@ -52,7 +53,9 @@ class ThinkingMessageEventUtil:
     """Utility class for handling thinking event translation and generation."""
 
     @staticmethod
-    def create_thinking_message_start_event(thinking_id: str) -> TranslateEvent:
+    def create_thinking_message_start_event(
+        thinking_id: str, adk_event: Event | None = None
+    ) -> TranslateEvent:
         """Create a thinking text message start event.
 
         Args:
@@ -65,12 +68,13 @@ class ThinkingMessageEventUtil:
             agui_event=CustomThinkingTextMessageStartEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_START,
                 thinking_id=thinking_id,
+                raw_event=adk_event,
             )
         )
 
     @staticmethod
     def create_thinking_message_content_event(
-        message: str, thinking_id: str
+        message: str, thinking_id: str, adk_event: Event | None = None
     ) -> TranslateEvent:
         """Create a thinking text message content event with the provided message.
 
@@ -86,11 +90,14 @@ class ThinkingMessageEventUtil:
                 type=EventType.THINKING_TEXT_MESSAGE_CONTENT,
                 thinking_id=thinking_id,
                 delta=message,
+                raw_event=adk_event,
             )
         )
 
     @staticmethod
-    def create_thinking_message_end_event(thinking_id: str) -> TranslateEvent:
+    def create_thinking_message_end_event(
+        thinking_id: str, adk_event: Event | None = None
+    ) -> TranslateEvent:
         """Create a thinking text message end event.
 
         Args:
@@ -103,11 +110,12 @@ class ThinkingMessageEventUtil:
             agui_event=CustomThinkingTextMessageEndEvent(
                 type=EventType.THINKING_TEXT_MESSAGE_END,
                 thinking_id=thinking_id,
+                raw_event=adk_event,
             )
         )
 
     async def generate_thinking_message_event(
-        self, message: str, uid: str | None = None
+        self, message: str, uid: str | None = None, adk_event: Event | None = None
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a complete thinking message event sequence.
 
@@ -122,12 +130,17 @@ class ThinkingMessageEventUtil:
             TranslateEvent objects for start, content, and end of thinking message
         """
         uid = uid if uid else str(uuid.uuid4())
-        yield self.create_thinking_message_start_event(uid)
-        yield self.create_thinking_message_content_event(message, uid)
-        yield self.create_thinking_message_end_event(uid)
+        yield self.create_thinking_message_start_event(uid, adk_event=adk_event)
+        yield self.create_thinking_message_content_event(
+            message, uid, adk_event=adk_event
+        )
+        yield self.create_thinking_message_end_event(uid, adk_event=adk_event)
 
     async def generate_thinking_message_event_with_generator(
-        self, message: AsyncGenerator[str], uid: str | None = None
+        self,
+        message: AsyncGenerator[str],
+        uid: str | None = None,
+        adk_event: Event | None = None,
     ) -> AsyncGenerator[TranslateEvent]:
         """Generate a sequence of thinking events from an async message stream.
 
@@ -141,7 +154,9 @@ class ThinkingMessageEventUtil:
             TranslateEvent objects representing thinking events sequence (start, content chunks, end)
         """
         uid = uid if uid else str(uuid.uuid4())
-        yield self.create_thinking_message_start_event(uid)
+        yield self.create_thinking_message_start_event(uid, adk_event=adk_event)
         async for text_chunk in message:
-            yield self.create_thinking_message_content_event(text_chunk, uid)
-        yield self.create_thinking_message_end_event(uid)
+            yield self.create_thinking_message_content_event(
+                text_chunk, uid, adk_event=adk_event
+            )
+        yield self.create_thinking_message_end_event(uid, adk_event=adk_event)
