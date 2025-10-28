@@ -94,3 +94,5 @@ class ConfigContext(BaseModel):
     session_lock_config: SessionLockConfig = SessionLockConfig()
     event_source_response_mode: bool = False
     retune_on_stream_complete: bool = False
+    is_add_adk_event_in_agui_event: bool = False
+    auto_remove_agui_raw_event: bool = False

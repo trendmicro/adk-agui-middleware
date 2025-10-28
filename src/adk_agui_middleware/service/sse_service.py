@@ -301,14 +301,15 @@ class SSEService(BaseSSEService):
                     handler_context=self.handler_context,
                     input_info=input_info,
                     event_translator=EventTranslator(
-                        self.config_context.retune_on_stream_complete
+                        retune_on_stream_complete=self.config_context.retune_on_stream_complete,
+                        add_raw_event=self.config_context.is_add_adk_event_in_agui_event,
                     ),
                 ),
                 user_message_handler=UserMessageHandler(
-                    agui_content,
-                    request,
-                    input_info.initial_state,
-                    self.config_context.convert_run_agent_input,
+                    agui_content=agui_content,
+                    request=request,
+                    initial_state=input_info.initial_state,
+                    convert_run_agent_input=self.config_context.convert_run_agent_input,
                 ),
                 session_handler=SessionHandler(
                     session_manager=self.session_manager,
@@ -321,6 +322,8 @@ class SSEService(BaseSSEService):
                 queue_handler=input_info.event_queue,
             )
             async for event in user_handler.run():
+                if self.config_context.auto_remove_agui_raw_event:
+                    event.raw_event = None
                 yield event
 
         in_out_record = await self._create_and_record_message(input_info)
