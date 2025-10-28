@@ -168,6 +168,17 @@ class FrontendTool(BaseTool):
 
 
 class FrontendToolset(BaseToolset):
+    """Toolset adapter that exposes frontend/client tools to the agent.
+
+    Wraps a collection of FrontendTool adapters and optionally filters or
+    prefixes tool names. This toolset integrates with the ADK agent tool
+    mechanism, enabling HITL by forwarding tool calls to the client.
+
+    Attributes:
+        frontend_tools: Materialized list of FrontendTool instances
+        agui_queue: Queue manager used by tools to emit AGUI events
+    """
+
     def __init__(
         self,
         tool_filter: ToolPredicate | list[str] | None = None,
@@ -178,6 +189,15 @@ class FrontendToolset(BaseToolset):
         self.agui_queue: QueueManager | None = None
 
     def _get_filter_func(self) -> Callable[[BaseTool], bool] | None:
+        """Return a predicate function derived from the configured filter.
+
+        Converts the optional ``tool_filter`` into a callable predicate. If a list
+        of tool names is provided, a simple membership test is used; if a callable
+        is provided, it is returned as-is.
+
+        Returns:
+            Callable that returns True if a tool should be included; otherwise None
+        """
         if not self.tool_filter:
             return None
         if callable(self.tool_filter):
@@ -190,6 +210,15 @@ class FrontendToolset(BaseToolset):
     def set_frontend_tools(
         self, agui_queue: QueueManager, agui_tools: list[Tool]
     ) -> None:
+        """Create and store FrontendTool adapters from AGUI tool definitions.
+
+        Builds FrontendTool instances for the provided AGUI tools, applies an
+        optional name prefix and filter predicate, and stores the resulting list.
+
+        Args:
+            :param agui_queue: Queue manager used by tools to emit AGUI events
+            :param agui_tools: List of AGUI Tool schemas from the client
+        """
         self.agui_queue = agui_queue
         filter_func = self._get_filter_func()
         frontend_tools = []
@@ -207,6 +236,11 @@ class FrontendToolset(BaseToolset):
         self.frontend_tools = frontend_tools
 
     async def get_tools(self, _: ReadonlyContext | None = None) -> list[BaseTool]:
+        """Return the list of frontend tools for the agent runtime.
+
+        Returns:
+            List of BaseTool instances backed by frontend/client tools
+        """
         return cast(list[BaseTool], self.frontend_tools)
 
     def __repr__(self) -> str:

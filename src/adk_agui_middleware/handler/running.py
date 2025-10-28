@@ -243,6 +243,17 @@ class RunningHandler:
     def _update_agent_tools_recursive(
         self, agent: BaseAgent, agui_queue: QueueManager, frontend_tools: list[Tool]
     ) -> None:
+        """Recursively inject frontend tools into agent and its sub-agents.
+
+        Walks the agent tree to locate existing FrontendToolset instances and
+        updates them with the latest frontend tools. This ensures both the
+        root agent and any nested sub-agents receive the same toolset.
+
+        Args:
+            :param agent: Root or nested agent to update
+            :param agui_queue: Queue for emitting AGUI tool call events
+            :param frontend_tools: List of frontend Tool definitions to expose
+        """
         for tool in getattr(agent, "tools", []):
             if isinstance(tool, FrontendToolset):
                 tool.set_frontend_tools(agui_queue, frontend_tools)

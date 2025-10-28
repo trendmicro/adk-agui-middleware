@@ -26,7 +26,7 @@ class AGUIErrorEvent:
             :param e: Original exception that caused the encoding failure
 
         Returns:
-            Encoded error event dictionary in SSE format
+            RunErrorEvent representing an encoding failure
         """
         error_event = RunErrorEvent(
             type=EventType.RUN_ERROR,
@@ -48,7 +48,7 @@ class AGUIErrorEvent:
             :param e: Original exception that caused the agent failure
 
         Returns:
-            Encoded error event dictionary in SSE format
+            RunErrorEvent representing an agent execution failure
         """
         error_event = RunErrorEvent(
             type=EventType.RUN_ERROR,
@@ -69,7 +69,7 @@ class AGUIErrorEvent:
             :param e: Exception that caused the execution failure
 
         Returns:
-            RunErrorEvent for the execution error
+            RunErrorEvent representing a general execution failure
         """
         record_error_log("Error in new execution", e)
         return RunErrorEvent(
@@ -87,7 +87,7 @@ class AGUIErrorEvent:
             :param thread_id: ID of the thread where tool results were expected
 
         Returns:
-            RunErrorEvent for missing tool results
+            RunErrorEvent indicating missing tool results
         """
         record_error_log(
             f"Tool result submission without tool results for thread {thread_id}"
@@ -110,7 +110,7 @@ class AGUIErrorEvent:
             :param thread_id: ID of the thread where input message was expected
 
         Returns:
-            RunErrorEvent for missing input message
+            RunErrorEvent indicating missing input message
         """
         record_error_log(f"Input message missing for thread {thread_id}")
         return RunErrorEvent(
@@ -130,7 +130,7 @@ class AGUIErrorEvent:
             :param e: Exception that occurred during tool result processing
 
         Returns:
-            RunErrorEvent for the tool result processing error
+            RunErrorEvent indicating a tool result processing error
         """
         record_error_log("Error handling tool results.", e)
         return RunErrorEvent(
