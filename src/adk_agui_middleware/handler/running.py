@@ -7,7 +7,7 @@ from typing import Any
 
 from ag_ui.core import BaseEvent, StateSnapshotEvent, Tool
 from google.adk import Runner
-from google.adk.agents import RunConfig
+from google.adk.agents import BaseAgent, RunConfig
 from google.adk.events import Event
 
 from ..base_abc.handler import (
@@ -240,6 +240,15 @@ class RunningHandler:
         async for agui_event in translate_func(adk_event):
             yield agui_event
 
+    def _update_agent_tools_recursive(
+        self, agent: BaseAgent, agui_queue: QueueManager, frontend_tools: list[Tool]
+    ) -> None:
+        for tool in getattr(agent, "tools", []):
+            if isinstance(tool, FrontendToolset):
+                tool.set_frontend_tools(agui_queue, frontend_tools)
+        for sub_agent in getattr(agent, "sub_agents", []):
+            self._update_agent_tools_recursive(sub_agent, agui_queue, frontend_tools)
+
     def update_agent_tools(
         self, agui_queue: QueueManager, frontend_tools: list[Tool]
     ) -> None:
@@ -250,22 +259,11 @@ class RunningHandler:
         is performed by tool name across existing BaseTool instances and existing
         FrontendToolset.ag_ui_tools.
         """
-        if (
-            not self.runner
-            or not hasattr(self.runner.agent, "tools")
-            or not frontend_tools
-        ):
+        if not self.runner or not frontend_tools:
             return
-        agent = self.runner.agent
-        existing_tools = (
-            agent.tools
-            if isinstance(agent.tools, list)
-            else ([agent.tools] if agent.tools else [])
+        self._update_agent_tools_recursive(
+            self.runner.agent, agui_queue, frontend_tools
         )
-        existing_names = {t.__name__ for t in existing_tools if hasattr(t, "__name__")}
-        if new_tools := [t for t in frontend_tools if t.name not in existing_names]:
-            existing_tools.append(FrontendToolset(agui_queue, new_tools))
-            agent.tools = existing_tools
 
     def set_long_running_tool_ids(self, long_running_tool_ids: dict[str, str]) -> None:
         """Set long-running tool IDs in the event translator.
