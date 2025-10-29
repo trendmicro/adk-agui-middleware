@@ -241,7 +241,7 @@ class SSEService(BaseSSEService):
         """
         return Runner(
             app_name=app_name,
-            agent=self.agent.model_copy(deep=True),
+            agent=self.agent,
             session_service=self.session_manager.session_service,
             artifact_service=self.runner_config.get_artifact_service(),
             memory_service=self.runner_config.get_memory_service(),
