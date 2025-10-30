@@ -191,16 +191,18 @@ jobs:
         fi
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        body_path: release_notes.md
-        files: |
-          dist/*.whl
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Get the current tag
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+
+        # Create release with notes
+        gh release create "$TAG_NAME" \
+          --title "$TAG_NAME" \
+          --notes-file release_notes.md \
+          dist/*.whl \
           dist/*.tar.gz
-        draft: false
-        prerelease: false
-        generate_release_notes: false  # We're using our own LLM-generated notes
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Upload release notes as artifact
       uses: actions/upload-artifact@v5
