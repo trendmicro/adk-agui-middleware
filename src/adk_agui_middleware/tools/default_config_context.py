@@ -1,6 +1,8 @@
 # Copyright (C) 2025 Trend Micro Inc. All rights reserved.
 """Default session ID extraction utility for AGUI middleware."""
 
+from typing import Any
+
 from ag_ui.core import RunAgentInput
 from fastapi import Request
 
@@ -20,3 +22,10 @@ async def default_session_id(agui_content: RunAgentInput, request: Request) -> s
         Thread ID string to be used as session identifier
     """
     return agui_content.thread_id
+
+
+async def default_extract_initial_state(
+    agui_content: RunAgentInput,
+    request: Request,  # noqa: ARG001
+) -> dict[str, Any]:
+    return agui_content.state or {}
