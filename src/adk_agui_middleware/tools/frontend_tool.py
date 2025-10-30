@@ -3,12 +3,12 @@
 
 import uuid
 from collections.abc import Callable, Coroutine
-from typing import Any
+from typing import Any, cast
 
 from ag_ui.core import Tool
 from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools import BaseTool, LongRunningFunctionTool, ToolContext
-from google.adk.tools.base_toolset import BaseToolset
+from google.adk.tools.base_toolset import BaseToolset, ToolPredicate
 from google.genai import types
 
 from ..loggers.record_log import record_error_log
@@ -36,19 +36,19 @@ class FrontendTool(BaseTool):
         agui_queue: Queue manager for sending AGUI events to clients
     """
 
-    def __init__(self, ag_ui_tool: Tool, agui_queue: QueueManager) -> None:
+    def __init__(self, agui_tool: Tool, agui_queue: QueueManager) -> None:
         """Initialize the frontend tool from AGUI tool definition.
 
         Args:
-            :param ag_ui_tool: AGUI Tool definition containing name, description, and parameters
+            :param agui_tool: AGUI Tool definition containing name, description, and parameters
             :param agui_queue: Queue manager for sending function call events to clients
         """
         super().__init__(
-            name=ag_ui_tool.name,
-            description=ag_ui_tool.description,
+            name=agui_tool.name,
+            description=agui_tool.description,
             is_long_running=True,
         )
-        self.parameters = ag_ui_tool.parameters
+        self.parameters = agui_tool.parameters
         self.agui_queue = agui_queue
         # Ensure parameters is a valid JSON Schema dict
         if not isinstance(self.parameters, dict):
@@ -168,53 +168,80 @@ class FrontendTool(BaseTool):
 
 
 class FrontendToolset(BaseToolset):
-    """Toolset for dynamically creating frontend tools from AGUI Tool definitions.
+    """Toolset adapter that exposes frontend/client tools to the agent.
 
-    Provides a collection of frontend tools that are all marked as long-running
-    for HITL workflows. This toolset converts AGUI Tool schemas into ADK-compatible
-    tools and handles creation errors gracefully by logging and skipping problematic
-    tool definitions.
+    Wraps a collection of FrontendTool adapters and optionally filters or
+    prefixes tool names. This toolset integrates with the ADK agent tool
+    mechanism, enabling HITL by forwarding tool calls to the client.
 
     Attributes:
-        ag_ui_tools: List of AGUI Tool definitions to convert
-        agui_queue: Queue manager for sending events to clients
+        frontend_tools: Materialized list of FrontendTool instances
+        agui_queue: Queue manager used by tools to emit AGUI events
     """
 
-    def __init__(self, agui_queue: QueueManager, ag_ui_tools: list[Tool]) -> None:
-        """Initialize the frontend toolset with tool definitions and event queue.
+    def __init__(
+        self,
+        tool_filter: ToolPredicate | list[str] | None = None,
+        tool_name_prefix: str | None = None,
+    ) -> None:
+        super().__init__(tool_filter=tool_filter, tool_name_prefix=tool_name_prefix)
+        self.frontend_tools: list[FrontendTool] = []
+        self.agui_queue: QueueManager | None = None
 
-        Args:
-            :param agui_queue: Queue manager for sending function call events to clients
-            :param ag_ui_tools: List of AGUI Tool definitions to expose to the agent
-        """
-        super().__init__()
-        self.ag_ui_tools = ag_ui_tools
-        self.agui_queue = agui_queue
+    def _get_filter_func(self) -> Callable[[BaseTool], bool] | None:
+        """Return a predicate function derived from the configured filter.
 
-    async def get_tools(self, _: ReadonlyContext | None = None) -> list[BaseTool]:
-        """Get all frontend tools wrapped as ADK BaseTool instances.
-
-        Converts each AGUI Tool definition into a FrontendTool, logging and skipping
-        any that fail to convert. This enables graceful degradation when tool schemas
-        are invalid or incompatible.
-
-        Args:
-            :param _: ReadonlyContext (unused, required by BaseToolset interface)
+        Converts the optional ``tool_filter`` into a callable predicate. If a list
+        of tool names is provided, a simple membership test is used; if a callable
+        is provided, it is returned as-is.
 
         Returns:
-            List of successfully created FrontendTool instances
+            Callable that returns True if a tool should be included; otherwise None
         """
-        proxy_tools: list[BaseTool] = []
-        for ag_ui_tool in self.ag_ui_tools:
+        if not self.tool_filter:
+            return None
+        if callable(self.tool_filter):
+            return self.tool_filter
+        if isinstance(self.tool_filter, list):
+            tool_names = set(self.tool_filter)
+            return lambda tool: tool.name in tool_names
+        return None
+
+    def set_frontend_tools(
+        self, agui_queue: QueueManager, agui_tools: list[Tool]
+    ) -> None:
+        """Create and store FrontendTool adapters from AGUI tool definitions.
+
+        Builds FrontendTool instances for the provided AGUI tools, applies an
+        optional name prefix and filter predicate, and stores the resulting list.
+
+        Args:
+            :param agui_queue: Queue manager used by tools to emit AGUI events
+            :param agui_tools: List of AGUI Tool schemas from the client
+        """
+        self.agui_queue = agui_queue
+        filter_func = self._get_filter_func()
+        frontend_tools = []
+        for agui_tool in agui_tools:
             try:
-                proxy_tools.append(
-                    FrontendTool(ag_ui_tool=ag_ui_tool, agui_queue=self.agui_queue)
-                )
+                tool = FrontendTool(agui_tool=agui_tool, agui_queue=self.agui_queue)
+                if self.tool_name_prefix:
+                    tool.name = f"{self.tool_name_prefix}{tool.name}"
+                if filter_func is None or filter_func(tool):
+                    frontend_tools.append(tool)
             except Exception as e:
                 record_error_log(
-                    f"Failed to create proxy tool for '{ag_ui_tool.name}'.", e
+                    f"Failed to create proxy tool for '{agui_tool.name}'.", e
                 )
-        return proxy_tools
+        self.frontend_tools = frontend_tools
+
+    async def get_tools(self, _: ReadonlyContext | None = None) -> list[BaseTool]:
+        """Return the list of frontend tools for the agent runtime.
+
+        Returns:
+            List of BaseTool instances backed by frontend/client tools
+        """
+        return cast(list[BaseTool], self.frontend_tools)
 
     def __repr__(self) -> str:
         """Return string representation of the frontend toolset.
@@ -222,4 +249,4 @@ class FrontendToolset(BaseToolset):
         Returns:
             String describing the toolset and its tools
         """
-        return f"ClientProxyToolset(tools={[tool.name for tool in self.ag_ui_tools]}, all_long_running=True)"
+        return f"ClientProxyToolset(tools={[tool.name for tool in self.frontend_tools]}, all_long_running=True)"
