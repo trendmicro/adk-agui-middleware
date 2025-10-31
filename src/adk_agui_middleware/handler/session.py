@@ -137,10 +137,8 @@ class SessionHandler:
         Args:
             :param tool_call_info: Dictionary mapping tool call IDs to function names
         """
-        if not tool_call_info:
-            return
         record_log(
-            f"Adding pending tool call {tool_call_info} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
+            f"Update pending tool call {tool_call_info} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
         )
         try:
             if await self.session_manager.update_session_state(
@@ -148,7 +146,7 @@ class SessionHandler:
                 state_updates={"pending_tool_calls": tool_call_info},
             ):
                 record_log(
-                    f"Added tool call {tool_call_info} to session {self.session_parameter.session_id} pending list"
+                    f"Update tool call {tool_call_info} to session {self.session_parameter.session_id} pending list"
                 )
         except Exception as e:
             record_error_log(
