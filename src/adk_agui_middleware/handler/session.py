@@ -137,8 +137,6 @@ class SessionHandler:
         Args:
             :param tool_call_info: Dictionary mapping tool call IDs to function names
         """
-        if not tool_call_info:
-            return
         record_log(
             f"Adding pending tool call {tool_call_info} for session {self.session_parameter.session_id}, app_name={self.session_parameter.app_name}, user_id={self.session_parameter.user_id}"
         )

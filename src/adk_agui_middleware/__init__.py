@@ -16,7 +16,7 @@ from .service.sse_service import SSEService
 
 __author__ = "Denny Lee"
 __email__ = "denny_lee@trendmicro.com"
-__version__ = "1.3.4"
+__version__ = "1.3.5"
 
 __all__ = [
     "SSEService",
