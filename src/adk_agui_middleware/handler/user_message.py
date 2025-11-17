@@ -123,7 +123,11 @@ class UserMessageHandler:
         if not self.agui_content.messages:
             return None
         for message in reversed(self.agui_content.messages):
-            if isinstance(message, UserMessage) and message.content:
+            if (
+                isinstance(message, UserMessage)
+                and message.content
+                and isinstance(message.content, str)
+            ):
                 return types.Content(
                     role="user", parts=[types.Part(text=message.content)]
                 )

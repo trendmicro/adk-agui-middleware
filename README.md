@@ -38,6 +38,60 @@ pip install adk-agui-middleware
 - AGUI Protocol >= 0.1.7
 - FastAPI >= 0.104.0
 
+## Quick Start
+
+### Basic Implementation
+
+```python
+from fastapi import FastAPI, Request
+from google.adk.agents import BaseAgent
+from adk_agui_middleware import SSEService
+from adk_agui_middleware.endpoint import register_agui_endpoint
+from adk_agui_middleware.data_model.config import PathConfig, RunnerConfig
+from adk_agui_middleware.data_model.context import ConfigContext
+
+# Initialize FastAPI application
+app = FastAPI(title="AI Agent Service", version="1.0.0")
+
+# Define your custom ADK agent
+root_agent = Agent(
+    name="GenericAgent",
+    model="gemini-2.5-flash",
+    instruction="""
+        You are a helpful assistant that provides information about available items.
+        
+        Always check the possibility of using rendering tools to display data visually to the user.
+        You must ensure that the user has the most visual experience possible, using the available rendering tools.
+    """,
+)
+
+# Simple context extraction
+async def extract_user_id(_: object, request: Request) -> str:
+    return request.headers.get("X-User-Id", "default-user")
+
+sse_service = SSEService(
+    agent=root_agent,
+    config_context=ConfigContext(
+        app_name="my-app",
+        user_id=extract_user_id,
+        session_id=lambda content, req: content.thread_id,
+        event_source_response_mode=True,  # Use spec-compliant SSE by default
+    ),
+    runner_config=RunnerConfig(),
+)
+
+# Register endpoint at /agui
+register_agui_endpoint(
+    app,
+    sse_service,
+    path_config=PathConfig(agui_main_path="/agui"),
+)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+```
+
 ## Examples
 
 Jump in with hands-on, progressively richer examples under `examples/`.
@@ -54,6 +108,13 @@ Jump in with hands-on, progressively richer examples under `examples/`.
 - 04_lifecycle_handlers
   - Walks through the full request lifecycle and `HandlerContext` hooks (session lock, ADK/AGUI handlers, translation, state snapshot, I/O recording).
   - Path: `examples/04_lifecycle_handlers/app.py`
+
+Run the examples via uvicorn:
+
+- Minimal SSE: `uvicorn examples.01_minimal_sse.app:app --reload`
+- Context + History + State: `uvicorn examples.02_context_history.app:app --reload`
+- Advanced pipeline: `uvicorn examples.03_advanced_pipeline.app:app --reload`
+- Lifecycle handlers: `uvicorn examples.04_lifecycle_handlers.app:app --reload`
 
 ## Architecture Overview
 
@@ -308,6 +369,172 @@ graph TB
     class ADK_EXCEPTION,AGUI_EXCEPTION,TASK_EXCEPTION,ERROR_EVENT exception
     class ITER_PROTOCOL,NONE_SENTINEL,GRACEFUL_STOP sync
 ```
+
+## Frontend Tool Injection
+
+This feature dynamically injects frontend-declared tools (AGUI `Tool`) into ADK agents at request time, operating as long‑running tools to power Human‑in‑the‑Loop (HITL) workflows.
+
+### Frontend request shape (excerpt)
+
+Provide tools in `RunAgentInput.tools`:
+
+```json
+{
+  "thread_id": "...",
+  "run_id": "...",
+  "messages": [
+    { "role": "user", "content": "Say hi to Sam" }
+  ],
+  "tools": [
+    {
+      "name": "sayHello",
+      "description": "Say hello to a person",
+      "parameters": {
+        "type": "object",
+        "properties": { "to": { "type": "string" } },
+        "required": ["to"]
+      }
+    }
+  ]
+}
+```
+
+Notes:
+- `parameters` should be a valid JSON Schema. If missing or invalid, the middleware falls back to `{ "type": "object", "properties": {} }`, but proper schemas are strongly recommended.
+
+### Enable injection on the backend
+
+1) Declare `FrontendToolset()` on each agent that should see frontend tools (sub‑agents included as needed):
+
+```python
+from adk_agui_middleware.tools.frontend_tool import FrontendToolset
+from google.adk.agents import LlmAgent
+
+agent = LlmAgent(
+    name="MainAgent",
+    model="gemini-2.5-flash",
+    instruction="You are a helpful assistant.",
+    tools=[
+        # Declaring FrontendToolset opt-in exposes request-time frontend tools
+        FrontendToolset(),
+    ],
+)
+```
+
+2) When a request with `tools` arrives, the middleware will:
+   - Extract the tools (`UserMessageHandler.frontend_tools`),
+   - Call `RunningHandler.update_agent_tools(...)` to recursively update all declared `FrontendToolset`s on the root agent and sub‑agents,
+   - Emit tool-call events over SSE and pause the agent when a frontend tool is invoked; resume once the frontend posts a `ToolMessage`.
+
+Tip: agents without a declared `FrontendToolset` will not see any frontend tools, even if their parent or sibling agents do.
+
+### Advanced: filtering and name prefix (PR #18 / #21)
+
+Use `tool_filter` to expose only specific tools, and `tool_name_prefix` to avoid name collisions:
+
+```python
+from adk_agui_middleware.tools.frontend_tool import FrontendToolset
+from google.adk.agents import LlmAgent
+
+agui_toolset_hello = FrontendToolset(tool_filter=["sayHello"], tool_name_prefix="hello_")
+agui_toolset_goodbye = FrontendToolset(tool_filter=["sayGoodbye"], tool_name_prefix="bye_")
+
+hello_agent = LlmAgent(
+    name="HelloAgent",
+    model="gemini-2.5-flash",
+    instruction="Use the sayHello tool to greet the user.",
+    tools=[agui_toolset_hello],
+)
+
+goodbye_agent = LlmAgent(
+    name="GoodbyeAgent",
+    model="gemini-2.5-flash",
+    instruction="Use the sayGoodbye tool to say goodbye.",
+    tools=[agui_toolset_goodbye],
+)
+
+root = LlmAgent(
+    name="MyAgent",
+    model="gemini-2.5-flash",
+    instruction="Route to sub agents.",
+    tools=[],  # No frontend tools here
+    sub_agents=[hello_agent, goodbye_agent],
+)
+```
+
+Notes:
+- `tool_filter` accepts a list of tool names or a callable predicate.
+- `tool_name_prefix` helps avoid collisions with server-side tools or tools that different sub‑agents expose.
+- On every request, the middleware rebuilds the `FrontendTool` list and updates existing `FrontendToolset`s.
+
+### Runtime behavior (HITL quick view)
+
+- When an agent invokes a frontend tool, `FunctionCallEventUtil.generate_function_call_event(...)` emits:
+  - `TOOL_CALL_START` → `TOOL_CALL_ARGS` (if any) → `TOOL_CALL_END`;
+  - The frontend executes the action and posts a `ToolMessage` result;
+  - The middleware converts it into an ADK function response and the agent continues.
+
+### End‑to‑end example
+
+Minimal end‑to‑end flow showing request, agent setup, and tool result submission.
+
+1) Backend agent setup (declare toolset on the agent(s) that should see frontend tools):
+
+```python
+from adk_agui_middleware.tools.frontend_tool import FrontendToolset
+from google.adk.agents import LlmAgent
+
+assistant = LlmAgent(
+    name="Assistant",
+    model="gemini-2.5-flash",
+    instruction="Use tools when needed; otherwise reply directly.",
+    tools=[FrontendToolset()],
+)
+```
+
+2) Frontend sends a request with tool definitions:
+
+```json
+{
+  "thread_id": "t-123",
+  "run_id": "r-001",
+  "messages": [
+    { "role": "user", "content": "Please greet Charlie" }
+  ],
+  "tools": [
+    {
+      "name": "sayHello",
+      "description": "Say hello to a person",
+      "parameters": {
+        "type": "object",
+        "properties": { "to": { "type": "string" } },
+        "required": ["to"]
+      }
+    }
+  ]
+}
+```
+
+3) The agent decides to call `sayHello` with `{ "to": "Charlie" }`.
+   - The middleware streams `TOOL_CALL_START`/`ARGS`/`END` via SSE and pauses.
+
+4) Frontend submits the tool result using `ToolMessage` (HITL completion), e.g.:
+
+```json
+{
+  "thread_id": "t-123",
+  "run_id": "r-001",
+  "messages": [
+    {
+      "type": "tool",
+      "tool_call_id": "<the-id-from-TOOL_CALL_START>",
+      "content": { "ok": true, "message": "Hello, Charlie!" }
+    }
+  ]
+}
+```
+
+5) Middleware converts the `ToolMessage` into an ADK function response, the agent resumes and produces the final reply.
 
 ### Human-in-the-Loop (HITL) Workflow
 
@@ -595,7 +822,9 @@ stateDiagram-v2
     end note
 ```
 
-## ⚠️ Critical Configuration: SSE Response Mode
+## Configuration
+
+### SSE Response Mode
 
 ### CopilotKit Frontend Compatibility Issue
 
@@ -698,59 +927,7 @@ config_context = ConfigContext(
 
 This ensures your implementation follows web standards and maintains long-term compatibility with standard-compliant SSE clients.
 
----
-
-## Quick Start
-
-### Basic Implementation
-
-```python
-from fastapi import FastAPI, Request
-from google.adk.agents import BaseAgent
-from adk_agui_middleware import SSEService
-from adk_agui_middleware.endpoint import register_agui_endpoint
-from adk_agui_middleware.data_model.config import PathConfig, RunnerConfig
-from adk_agui_middleware.data_model.context import ConfigContext
-
-# Initialize FastAPI application
-app = FastAPI(title="AI Agent Service", version="1.0.0")
-
-# Define your custom ADK agent
-class MyAgent(BaseAgent):
-    def __init__(self) -> None:
-        super().__init__()
-        self.instructions = "You are a helpful AI assistant."
-
-# Simple context extraction
-async def extract_user_id(_: object, request: Request) -> str:
-    return request.headers.get("X-User-Id", "default-user")
-
-# Create SSE service
-agent = MyAgent()
-sse_service = SSEService(
-    agent=agent,
-    config_context=ConfigContext(
-        app_name="my-app",
-        user_id=extract_user_id,
-        session_id=lambda content, req: content.thread_id,
-        event_source_response_mode=True,  # Use spec-compliant SSE by default
-    ),
-    runner_config=RunnerConfig(),
-)
-
-# Register endpoint at /agui
-register_agui_endpoint(
-    app,
-    sse_service,
-    path_config=PathConfig(agui_main_path="/agui"),
-)
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-### RunnerConfig Configuration
+### RunnerConfig
 
 The `RunnerConfig` class manages ADK runner setup and service configuration. It provides flexible service configuration with automatic in-memory fallbacks for development and testing environments.
 
@@ -825,53 +1002,7 @@ sse_service = SSEService(
 | `credential_service` | `BaseCredentialService` | `None` | Credential service for authentication |
 | `plugins` | `list[BasePlugin]` | `None` | List of ADK plugins for extending agent capabilities |
 
-#### Configuration Examples
-
-**Development/Testing Setup:**
-```python
-# Uses all in-memory services automatically
-runner_config = RunnerConfig()
-```
-
-**Production Setup with Firestore:**
-```python
-from google.adk.sessions import FirestoreSessionService
-
-runner_config = RunnerConfig(
-    use_in_memory_services=False,
-    session_service=FirestoreSessionService(
-        project_id="my-project",
-        database_id="my-database"
-    )
-)
-```
-
-**Mixed Environment (Some Custom, Some In-Memory):**
-```python
-# Custom session service, auto-creates in-memory for others
-runner_config = RunnerConfig(
-    use_in_memory_services=True,  # Auto-create missing services
-    session_service=FirestoreSessionService(project_id="my-project"),
-    # artifact_service, memory_service, credential_service will be auto-created
-)
-```
-
-**Custom Agent Execution Configuration:**
-```python
-from google.adk.agents import RunConfig
-from google.adk.agents.run_config import StreamingMode
-
-runner_config = RunnerConfig(
-    run_config=RunConfig(
-        streaming_mode=StreamingMode.SSE,  # Server-Sent Events mode
-        max_iterations=100,  # Maximum agent iterations
-        timeout=600,  # Execution timeout in seconds
-        enable_thinking=True,  # Enable thinking/reasoning mode
-    )
-)
-```
-
-### Advanced Configuration with Config Class
+### Advanced Configuration (Config Class)
 
 ```python
 from fastapi import FastAPI, Request
@@ -956,6 +1087,8 @@ if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
+---
+
 ### Custom Event Handlers
 
 ```python
@@ -1010,17 +1143,6 @@ class MyInOutHandler(BaseInOutHandler):
         # Optionally modify the event before encoding to SSE
         return agui_event
 ```
-
-## Examples
-
-Explore ready-to-run usage patterns in the examples folder. Each example is self-contained with comments and can be launched via uvicorn.
-
-- Minimal SSE: `uvicorn examples.01_minimal_sse.app:app --reload`
-- Context + History + State: `uvicorn examples.02_context_history.app:app --reload`
-- Advanced pipeline (I/O recorder + input preprocessing): `uvicorn examples.03_advanced_pipeline.app:app --reload`
-- Lifecycle handlers (full hook set): `uvicorn examples.04_lifecycle_handlers.app:app --reload`
-
-See `examples/README.md` for details.
 
 ## HandlerContext Lifecycle
 

@@ -47,7 +47,7 @@ class QueueManager:
         """
         record_queue_log(
             {
-                "call_function": extract_caller_name(),
+                "call_function": extract_caller_name(full_chain=True, max_depth=5),
                 "type": type(event).__name__ if event is not None else "NoneType",
                 "event": event,
             }
