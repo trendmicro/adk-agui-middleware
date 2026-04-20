@@ -70,7 +70,7 @@ async def extract_user_id(_: object, request: Request) -> str:
     return request.headers.get("X-User-Id", "default-user")
 
 sse_service = SSEService(
-    agent=root_agent,
+    agent=root_agent,  # Or pass 'app=my_adk_app' instead of agent
     config_context=ConfigContext(
         app_name="my-app",
         user_id=extract_user_id,
@@ -933,19 +933,26 @@ The `RunnerConfig` class manages ADK runner setup and service configuration. It 
 
 #### Default Configuration (In-Memory Services)
 
-By default, `RunnerConfig` uses in-memory services, perfect for development and testing:
+By default, `RunnerConfig` uses in-memory services, perfect for development and testing. `SSEService` accepts either an ADK `agent` or an `App` instance:
 
 ```python
 from adk_agui_middleware.data_model.config import RunnerConfig
 from adk_agui_middleware import SSEService
+from google.adk.apps.app import App
 
-# Default: Automatic in-memory services
+# Option 1: Using an agent
 runner_config = RunnerConfig()
-
 sse_service = SSEService(
     agent=MyAgent(),
-    config_context=config_context,
-    runner_config=runner_config  # Optional: uses default if not provided
+    runner_config=runner_config,# Optional: uses default if not provided
+    config_context=config_context
+)
+
+# Option 2: Using an ADK App (recommended for complex setups)
+my_app = App(name="my-app", root_agent=MyAgent(), plugins=[...])
+sse_service = SSEService(
+    app=my_app,
+    config_context=config_context
 )
 ```
 
