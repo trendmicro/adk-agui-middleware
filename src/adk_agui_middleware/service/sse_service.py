@@ -9,6 +9,7 @@ from ag_ui.core import BaseEvent, RunAgentInput
 from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
+from google.adk.apps.app import App
 from sse_starlette import EventSourceResponse
 from starlette.responses import StreamingResponse
 
@@ -43,20 +44,30 @@ class SSEService(BaseSSEService):
 
     def __init__(
         self,
-        agent: BaseAgent,
-        config_context: ConfigContext,
+        agent: BaseAgent | None = None,
+        app: App | None = None,
+        config_context: ConfigContext | None = None,
         runner_config: RunnerConfig | None = None,
         handler_context: HandlerContext | None = None,
     ):
-        """Initialize SSE service with agent and configuration.
+        """Initialize SSE service with agent/app and configuration.
 
         Args:
-            :param agent: Base agent implementation for processing requests
-            :param runner_config: Configuration for agent runners and services
+            :param agent: Optional base agent implementation for processing requests
+            :param app: Optional ADK App implementation for processing requests
             :param config_context: Configuration for extracting context from requests
+            :param runner_config: Configuration for agent runners and services
             :param handler_context: Optional context containing event handlers for processing
         """
+        if agent is None and app is None:
+            raise ValueError("Either agent or app must be provided.")
+        if agent is not None and app is not None:
+            raise ValueError("Only one of agent or app should be provided.")
+        if config_context is None:
+            raise ValueError("config_context must be provided.")
+
         self.agent = agent
+        self.app = app
         self.runner_config = runner_config or RunnerConfig()
         self.session_manager = SessionManager(
             session_service=self.runner_config.session_service
@@ -230,7 +241,7 @@ class SSEService(BaseSSEService):
     async def _create_runner(self, app_name: str) -> Runner:
         """Create a fresh ADK Runner instance for the provided app name.
 
-        Clones the agent to avoid cross-request state leakage and wires in
+        Clones the agent or uses the app to avoid cross-request state leakage and wires in
         session, artifact, memory, and credential services from the runner config.
 
         Args:
@@ -239,6 +250,15 @@ class SSEService(BaseSSEService):
         Returns:
             Configured Runner ready to execute agent operations
         """
+        if self.app:
+            return Runner(
+                app=self.app,
+                app_name=app_name,
+                session_service=self.session_manager.session_service,
+                artifact_service=self.runner_config.get_artifact_service(),
+                memory_service=self.runner_config.get_memory_service(),
+                credential_service=self.runner_config.get_credential_service(),
+            )
         return Runner(
             app_name=app_name,
             agent=self.agent,

@@ -9,6 +9,7 @@ from ag_ui.encoder import EventEncoder
 from fastapi import Request
 from google.adk import Runner
 from google.adk.agents import BaseAgent
+from google.adk.apps.app import App
 
 from adk_agui_middleware.data_model.config import RunnerConfig
 from adk_agui_middleware.data_model.context import ConfigContext
@@ -38,6 +39,21 @@ class TestSSEService(unittest.TestCase):
 
         self.mock_agui_content = Mock(spec=RunAgentInput)
         self.mock_request = Mock(spec=Request)
+
+    def test_init_validation(self):
+        """Test SSEService initialization validation."""
+        # Test missing both agent and app
+        with self.assertRaisesRegex(ValueError, "Either agent or app must be provided."):
+            SSEService(config_context=self.context_config)
+
+        # Test providing both agent and app
+        mock_app = Mock(spec=App)
+        with self.assertRaisesRegex(ValueError, "Only one of agent or app should be provided."):
+            SSEService(
+                agent=self.mock_agent,
+                app=mock_app,
+                config_context=self.context_config,
+            )
 
     def test_init(self):
         """Test SSEService initialization."""
@@ -149,6 +165,30 @@ class TestSSEService(unittest.TestCase):
 
         self.assertEqual(result, "data: error_event_string\n\n")
         mock_agui_error_event.create_encoding_error_event.assert_called_once_with(exception_obj)
+
+    @patch("adk_agui_middleware.service.sse_service.Runner")
+    async def test_create_runner_with_app(self, mock_runner_class):
+        """Test _create_runner with App instance."""
+        mock_app = Mock(spec=App)
+        mock_app.name = "app_from_app_instance"
+
+        # Create service with app instead of agent
+        service = SSEService(
+            app=mock_app,
+            config_context=self.context_config,
+            runner_config=self.runner_config,
+        )
+
+        app_name = "overridden_app_name"
+        await service._create_runner(app_name)
+
+        # Verify Runner was created with app
+        mock_runner_class.assert_called_once()
+        call_kwargs = mock_runner_class.call_args[1]
+        self.assertEqual(call_kwargs["app"], mock_app)
+        self.assertEqual(call_kwargs["app_name"], app_name)
+        self.assertNotIn("agent", call_kwargs)
+        self.assertNotIn("plugins", call_kwargs)
 
     @patch("adk_agui_middleware.service.sse_service.Runner")
     async def test_create_runner_new(self, mock_runner_class):
